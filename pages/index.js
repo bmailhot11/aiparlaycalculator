@@ -517,13 +517,12 @@ export default function Home() {
         {/* Header */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
           <nav className="container mx-auto px-4 flex justify-between items-center py-4">
-            <a href="/" className="text-2xl font-bold text-blue-700">
+            <div className="text-2xl font-bold text-blue-700">
               AI Parlay Calculator
-            </a>
+            </div>
             <div className="hidden md:flex items-center gap-6">
               <a href="#features" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Features</a>
               <a href="#pricing" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Pricing</a>
-              <a href="/terms" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Terms</a>
               {isPremium ? (
                 <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 px-4 py-2 rounded-lg font-semibold">        
                   <Crown className="w-4 h-4" />
@@ -826,32 +825,33 @@ export default function Home() {
               </div>
 
               <div>
-                <h4 className="text-white font-bold mb-4">Legal</h4>
+                <h4 className="text-white font-bold mb-4">Features</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
-                  <li><a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                  <li><a href="/disclaimer" className="hover:text-white transition-colors">Disclaimer</a></li>
-                  <li><a href="/responsible-betting" className="hover:text-white transition-colors">Responsible Betting</a></li>
+                  <li>Bet Slip Analysis</li>
+                  <li>AI Parlay Generation</li>
+                  <li>Mathematical Modeling</li>
+                  <li>Risk Assessment</li>
                 </ul>
               </div>
 
               <div>
-                <h4 className="text-white font-bold mb-4">Support</h4>
+                <h4 className="text-white font-bold mb-4">Sports Coverage</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="/help" className="hover:text-white transition-colors">Help Center</a></li>
-                  <li><a href="/contact" className="hover:text-white transition-colors">Contact Us</a></li>
-                  <li><a href="/api" className="hover:text-white transition-colors">API Documentation</a></li>
+                  <li>NFL Analysis</li>
+                  <li>NBA Analysis</li>
+                  <li>NHL Analysis</li>
+                  <li>MLB Analysis</li>
+                  <li>MMA Analysis</li>
                 </ul>
               </div>
 
               <div>
-                <h4 className="text-white font-bold mb-4">Sports</h4>
+                <h4 className="text-white font-bold mb-4">About</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="/nfl-analysis" className="hover:text-white transition-colors">NFL Analysis</a></li>
-                  <li><a href="/nba-analysis" className="hover:text-white transition-colors">NBA Analysis</a></li>
-                  <li><a href="/nhl-analysis" className="hover:text-white transition-colors">NHL Analysis</a></li>
-                  <li><a href="/mlb-analysis" className="hover:text-white transition-colors">MLB Analysis</a></li>
-                  <li><a href="/mma-analysis" className="hover:text-white transition-colors">MMA Analysis</a></li>
+                  <li>Educational Tool</li>
+                  <li>Responsible Betting</li>
+                  <li>Mathematical Analysis</li>
+                  <li>AI Technology</li>
                 </ul>
               </div>
             </div>
