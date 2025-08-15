@@ -1,11 +1,396 @@
 import Head from 'next/head'
 import { useState, useEffect } from 'react'
 import { Upload, Zap, Target, Brain, Crown, Check, Star, Shield, Calculator, TrendingUp, X } from 'lucide-react'
-import UploadArea from '@/components/UploadArea'
-import ParlayGenerator from '@/components/ParlayGenerator'
-import AnalysisResults from '@/components/AnalysisResults'
-import ParlayResults from '@/components/ParlayResults'
-import PremiumRestore from '@/components/PremiumRestore'
+
+// Simple inline components to replace the missing @/components imports
+function UploadArea({ onAnalysis, uploadsToday, maxUploads, isPremium }) {
+  const [dragActive, setDragActive] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
+
+  const handleDrop = async (e) => {
+    e.preventDefault()
+    setDragActive(false)
+    
+    if (!isPremium && uploadsToday >= maxUploads) {
+      alert('Daily upload limit reached. Upgrade to Premium for unlimited uploads!')
+      return
+    }
+
+    const files = Array.from(e.dataTransfer.files)
+    const imageFile = files.find(file => file.type.startsWith('image/'))
+    
+    if (!imageFile) {
+      alert('Please upload an image file (PNG, JPG, etc.)')
+      return
+    }
+
+    await analyzeImage(imageFile)
+  }
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    
+    if (!isPremium && uploadsToday >= maxUploads) {
+      alert('Daily upload limit reached. Upgrade to Premium for unlimited uploads!')
+      return
+    }
+
+    await analyzeImage(file)
+  }
+
+  const analyzeImage = async (file) => {
+    setAnalyzing(true)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+
+      const response = await fetch('/api/analyze-slip', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error('Analysis failed')
+      }
+
+      const result = await response.json()
+      onAnalysis(result)
+    } catch (error) {
+      console.error('Analysis error:', error)
+      alert('Analysis failed. Please try again.')
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
+  const canUpload = isPremium || uploadsToday < maxUploads
+
+  return (
+    <div className="mb-8">
+      <div
+        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+          dragActive
+            ? 'border-blue-500 bg-blue-50'
+            : canUpload
+            ? 'border-gray-300 hover:border-blue-400'
+            : 'border-gray-200 bg-gray-50'
+        }`}
+        onDragOver={(e) => { e.preventDefault(); setDragActive(true) }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={handleDrop}
+      >
+        {analyzing ? (
+          <div className="py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Analyzing Your Bet Slip</h3>
+            <p className="text-gray-600">AI is processing your image...</p>
+          </div>
+        ) : (
+          <>
+            <Upload className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Upload Your Bet Slip</h3>
+            <p className="text-gray-600 mb-4">
+              Drag and drop your bet slip screenshot or click to browse
+            </p>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+              id="file-upload"
+              disabled={!canUpload}
+            />
+            <label
+              htmlFor="file-upload"
+              className={`inline-block px-6 py-3 rounded-lg font-semibold transition-colors cursor-pointer ${
+                canUpload
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+              }`}
+            >
+              Choose File
+            </label>
+            {!canUpload && (
+              <p className="text-red-600 mt-2 text-sm">Upload limit reached for today</p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ParlayGenerator({ onGeneration, generationsToday, maxGenerations, isPremium }) {
+  const [generating, setGenerating] = useState(false)
+  const [selectedSports, setSelectedSports] = useState(['NFL', 'NBA'])
+
+  const sports = ['NFL', 'NBA', 'NCAAF', 'NCAAB', 'NHL', 'MLB']
+
+  const generateParlay = async () => {
+    if (!isPremium && generationsToday >= maxGenerations) {
+      alert('Daily generation limit reached. Upgrade to Premium for unlimited generations!')
+      return
+    }
+
+    if (selectedSports.length === 0) {
+      alert('Please select at least one sport')
+      return
+    }
+
+    setGenerating(true)
+    try {
+      const response = await fetch('/api/generate-parlay', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sports: selectedSports,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Generation failed')
+      }
+
+      const result = await response.json()
+      onGeneration(result)
+    } catch (error) {
+      console.error('Generation error:', error)
+      alert('Parlay generation failed. Please try again.')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const toggleSport = (sport) => {
+    setSelectedSports(prev =>
+      prev.includes(sport)
+        ? prev.filter(s => s !== sport)
+        : [...prev, sport]
+    )
+  }
+
+  const canGenerate = isPremium || generationsToday < maxGenerations
+
+  return (
+    <div className="mb-8">
+      <h3 className="text-xl font-semibold mb-4">Select Sports</h3>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+        {sports.map(sport => (
+          <button
+            key={sport}
+            onClick={() => toggleSport(sport)}
+            className={`p-3 rounded-lg border-2 font-medium transition-all ${
+              selectedSports.includes(sport)
+                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            {sport}
+          </button>
+        ))}
+      </div>
+
+      <button
+        onClick={generateParlay}
+        disabled={generating || !canGenerate || selectedSports.length === 0}
+        className={`w-full py-4 rounded-lg font-semibold text-lg transition-all ${
+          generating || !canGenerate || selectedSports.length === 0
+            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+            : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg'
+        }`}
+      >
+        {generating ? (
+          <div className="flex items-center justify-center gap-2">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            Generating AI Parlay...
+          </div>
+        ) : (
+          'Generate AI Parlay'
+        )}
+      </button>
+
+      {!canGenerate && (
+        <p className="text-red-600 mt-2 text-sm text-center">Generation limit reached for today</p>
+      )}
+    </div>
+  )
+}
+
+function AnalysisResults({ analysis }) {
+  if (!analysis) return null
+
+  return (
+    <div className="bg-gray-50 rounded-xl p-6 mt-8">
+      <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+        <Target className="w-6 h-6 text-blue-600" />
+        Analysis Results
+      </h3>
+      
+      {analysis.bets && analysis.bets.length > 0 ? (
+        <div className="space-y-4">
+          {analysis.bets.map((bet, index) => (
+            <div key={index} className="bg-white rounded-lg p-4 border">
+              <div className="flex justify-between items-start mb-2">
+                <h4 className="font-semibold">{bet.match || bet.game}</h4>
+                <span className={`px-2 py-1 rounded text-sm font-medium ${
+                  bet.recommendation === 'Strong' ? 'bg-green-100 text-green-800' :
+                  bet.recommendation === 'Moderate' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {bet.recommendation || 'Analyzed'}
+                </span>
+              </div>
+              <p className="text-gray-600 text-sm">{bet.analysis || bet.pick}</p>
+              {bet.odds && <p className="text-sm mt-1"><strong>Odds:</strong> {bet.odds}</p>}
+            </div>
+          ))}
+          
+          {analysis.summary && (
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-4">
+              <h4 className="font-semibold text-blue-800 mb-2">Summary</h4>
+              <p className="text-blue-700 text-sm">{analysis.summary}</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <div className="text-gray-500 mb-2">✅ Analysis Complete</div>
+          <p className="text-gray-600">
+            {analysis.message || 'Your bet slip has been analyzed successfully.'}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ParlayResults({ parlay }) {
+  if (!parlay) return null
+
+  return (
+    <div className="bg-gray-50 rounded-xl p-6 mt-8">
+      <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+        <Brain className="w-6 h-6 text-purple-600" />
+        Generated Parlay
+      </h3>
+      
+      {parlay.picks && parlay.picks.length > 0 ? (
+        <div className="space-y-4">
+          {parlay.picks.map((pick, index) => (
+            <div key={index} className="bg-white rounded-lg p-4 border">
+              <div className="flex justify-between items-start mb-2">
+                <h4 className="font-semibold">{pick.match || pick.game}</h4>
+                <span className="text-sm text-gray-500">{pick.sport}</span>
+              </div>
+              <div className="text-blue-600 font-medium mb-1">{pick.pick}</div>
+              <p className="text-gray-600 text-sm">{pick.reasoning}</p>
+              {pick.odds && <p className="text-sm mt-1"><strong>Odds:</strong> {pick.odds}</p>}
+              {pick.confidence && (
+                <div className="mt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">Confidence:</span>
+                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full" 
+                        style={{ width: `${pick.confidence}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs font-medium">{pick.confidence}%</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          
+          {parlay.summary && (
+            <div className="bg-purple-50 rounded-lg p-4 border border-purple-200 mt-4">
+              <h4 className="font-semibold text-purple-800 mb-2">Parlay Summary</h4>
+              <p className="text-purple-700 text-sm">{parlay.summary}</p>
+              {parlay.totalOdds && (
+                <p className="text-purple-800 font-semibold mt-2">
+                  Combined Odds: {parlay.totalOdds}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <div className="text-gray-500 mb-2">🎯 Parlay Generated</div>
+          <p className="text-gray-600">
+            {parlay.message || 'Your AI parlay has been generated successfully.'}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PremiumRestore() {
+  const [accessCode, setAccessCode] = useState('')
+  const [restoring, setRestoring] = useState(false)
+
+  const handleRestore = async () => {
+    if (!accessCode.trim()) {
+      alert('Please enter your access code')
+      return
+    }
+
+    setRestoring(true)
+    try {
+      const response = await fetch('/api/restore-premium', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accessCode }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Invalid access code')
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        localStorage.setItem('isPremium', 'true')
+        alert('Premium access restored successfully!')
+        window.location.reload()
+      } else {
+        alert('Invalid or expired access code')
+      }
+    } catch (error) {
+      console.error('Restore error:', error)
+      alert('Failed to restore premium access. Please check your code.')
+    } finally {
+      setRestoring(false)
+    }
+  }
+
+  return (
+    <div>
+      <p className="text-gray-600 mb-4">
+        Enter the access code that was sent to your email when you purchased Premium.
+      </p>
+      <input
+        type="text"
+        value={accessCode}
+        onChange={(e) => setAccessCode(e.target.value)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-4"
+        placeholder="Enter your access code"
+      />
+      <button
+        onClick={handleRestore}
+        disabled={restoring}
+        className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+      >
+        {restoring ? 'Restoring...' : 'Restore Premium Access'}
+      </button>
+    </div>
+  )
+}
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('optimize')
@@ -69,7 +454,7 @@ export default function Home() {
 
     setUpgrading(true)
     try {
-      // Mock upgrade process - replace with actual Stripe integration
+      // Create Stripe checkout session
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: {
