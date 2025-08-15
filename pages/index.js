@@ -23,12 +23,12 @@ export default function Home() {
   // Load usage from localStorage - only on client side
   useEffect(() => {
     setMounted(true)
-    
+
     // Only access localStorage after component mounts on client
     if (typeof window !== 'undefined') {
       const today = new Date().toDateString()
       const savedDate = localStorage.getItem('usageDate')
-      
+
       if (savedDate === today) {
         setUploadsToday(parseInt(localStorage.getItem('uploadsToday') || '0'))
         setGenerationsToday(parseInt(localStorage.getItem('generationsToday') || '0'))
@@ -38,7 +38,7 @@ export default function Home() {
         localStorage.setItem('uploadsToday', '0')
         localStorage.setItem('generationsToday', '0')
       }
-      
+
       setIsPremium(localStorage.getItem('isPremium') === 'true')
     }
   }, [])
@@ -80,7 +80,7 @@ export default function Home() {
 
       if (response.ok) {
         const { url } = await response.json()
-        
+
         if (url) {
           window.location.href = url
         }
@@ -113,14 +113,14 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="canonical" href="https://aiparlaycalculator.com/" />
         <link rel="icon" href="/favicon.ico" />
-        
+
         {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://aiparlaycalculator.com/" />
         <meta property="og:title" content="AI Parlay Calculator - Advanced Sports Betting Analysis" />
         <meta property="og:description" content="Professional AI parlay calculator with mathematical analysis. Upload bet slips for optimization insights and strategic recommendations." />
         <meta property="og:image" content="https://aiparlaycalculator.com/og-image.jpg" />
-        
+
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content="https://aiparlaycalculator.com/" />
@@ -140,19 +140,19 @@ export default function Home() {
               <a href="#pricing" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Pricing</a>
               <a href="/terms" className="text-gray-600 hover:text-blue-700 font-medium transition-colors">Terms</a>
               {isPremium ? (
-                <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 px-4 py-2 rounded-lg font-semibold">
+                <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 px-4 py-2 rounded-lg font-semibold">        
                   <Crown className="w-4 h-4" />
                   Premium
                 </div>
               ) : (
                 <div className="flex items-center gap-4">
-                  <button 
-                    className="text-sm text-gray-600 hover:text-blue-700 transition-colors" 
+                  <button
+                    className="text-sm text-gray-600 hover:text-blue-700 transition-colors"
                     onClick={() => setShowRestore(true)}
                   >
                     Restore Premium
                   </button>
-                  <button 
+                  <button
                     onClick={handleUpgrade}
                     disabled={upgrading}
                     className="bg-gradient-to-r from-blue-700 to-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
@@ -189,10 +189,10 @@ export default function Home() {
           <div className="bg-white -mt-10 mx-auto max-w-6xl rounded-xl shadow-2xl overflow-hidden relative z-10">
             {/* Tabs */}
             <div className="flex border-b">
-              <button 
+              <button
                 className={`flex-1 py-5 px-6 font-semibold border-b-3 transition-all ${
-                  activeTab === 'optimize' 
-                  ? 'text-blue-700 border-blue-700 bg-blue-50' 
+                  activeTab === 'optimize'
+                  ? 'text-blue-700 border-blue-700 bg-blue-50'
                   : 'text-gray-600 border-transparent hover:text-blue-700'
                 }`}
                 onClick={() => setActiveTab('optimize')}
@@ -202,10 +202,10 @@ export default function Home() {
                   Optimize Bet Slip
                 </div>
               </button>
-              <button 
+              <button
                 className={`flex-1 py-5 px-6 font-semibold border-b-3 transition-all ${
-                  activeTab === 'generate' 
-                  ? 'text-blue-700 border-blue-700 bg-blue-50' 
+                  activeTab === 'generate'
+                  ? 'text-blue-700 border-blue-700 bg-blue-50'
                   : 'text-gray-600 border-transparent hover:text-blue-700'
                 }`}
                 onClick={() => setActiveTab('generate')}
@@ -216,14 +216,14 @@ export default function Home() {
                 </div>
               </button>
             </div>
-            
+
             <div className="p-10">
               {activeTab === 'optimize' && (
                 <div>
                   {/* Usage Limits */}
                   <div className={`flex gap-5 mb-8 p-5 rounded-lg border-l-4 ${
-                    isPremium 
-                      ? 'bg-yellow-50 border-yellow-500' 
+                    isPremium
+                      ? 'bg-yellow-50 border-yellow-500'
                       : 'bg-green-50 border-green-500'
                   }`}>
                     {isPremium ? (
@@ -247,14 +247,14 @@ export default function Home() {
                       </>
                     )}
                   </div>
-                  
-                  <UploadArea 
+
+                  <UploadArea
                     onAnalysis={handleAnalysis}
                     uploadsToday={uploadsToday}
                     maxUploads={2}
                     isPremium={isPremium}
                   />
-                  
+
                   <AnalysisResults analysis={analysis} />
                 </div>
               )}
@@ -263,8 +263,8 @@ export default function Home() {
                 <div>
                   {/* Usage Limits */}
                   <div className={`flex gap-5 mb-8 p-5 rounded-lg border-l-4 ${
-                    isPremium 
-                      ? 'bg-yellow-50 border-yellow-500' 
+                    isPremium
+                      ? 'bg-yellow-50 border-yellow-500'
                       : 'bg-green-50 border-green-500'
                   }`}>
                     {isPremium ? (
@@ -288,14 +288,14 @@ export default function Home() {
                       </>
                     )}
                   </div>
-                  
-                  <ParlayGenerator 
+
+                  <ParlayGenerator
                     onGeneration={handleGeneration}
                     generationsToday={generationsToday}
                     maxGenerations={1}
                     isPremium={isPremium}
                   />
-                  
+
                   <ParlayResults parlay={generatedParlay} />
                 </div>
               )}
@@ -309,7 +309,7 @@ export default function Home() {
                 <h2 className="text-3xl font-bold text-gray-800 mb-4">Simple, Transparent Pricing</h2>
                 <p className="text-lg text-gray-600">Choose the plan that works for you</p>
               </div>
-              
+
               <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                 {/* Free Plan */}
                 <div className="bg-white p-8 rounded-xl border-2 border-gray-200">
@@ -379,7 +379,7 @@ export default function Home() {
                       <span>Premium support</span>
                     </li>
                   </ul>
-                  <button 
+                  <button
                     onClick={handleUpgrade}
                     disabled={upgrading}
                     className="w-full py-3 bg-yellow-400 text-yellow-900 rounded-lg font-bold hover:bg-yellow-300 transition-colors disabled:opacity-50"
@@ -397,20 +397,20 @@ export default function Home() {
               <h2 className="text-3xl font-bold text-gray-800 mb-4">Professional Betting Analysis Tools</h2>
               <p className="text-lg text-gray-600">Advanced AI technology for smarter betting decisions</p>
             </div>
-            
+
             <div className="grid md:grid-cols-3 gap-8">
               <div className="bg-white p-8 rounded-xl shadow-lg text-center hover:shadow-xl transition-shadow">
                 <Brain className="w-12 h-12 mx-auto mb-4 text-blue-600" />
                 <h3 className="text-xl font-bold mb-3">Advanced Mathematical Analysis</h3>
                 <p className="text-gray-600">AI-powered mathematical models analyze probability distributions, expected values, and risk-adjusted returns for optimal betting strategies.</p>
               </div>
-              
+
               <div className="bg-white p-8 rounded-xl shadow-lg text-center hover:shadow-xl transition-shadow">
                 <Target className="w-12 h-12 mx-auto mb-4 text-blue-600" />
                 <h3 className="text-xl font-bold mb-3">Multi-Sport Coverage</h3>
                 <p className="text-gray-600">Comprehensive analysis across NFL, NBA, NHL, MLB, and MMA with sport-specific statistical models and betting patterns.</p>
               </div>
-              
+
               <div className="bg-white p-8 rounded-xl shadow-lg text-center hover:shadow-xl transition-shadow">
                 <Shield className="w-12 h-12 mx-auto mb-4 text-blue-600" />
                 <h3 className="text-xl font-bold mb-3">Risk Assessment</h3>
@@ -439,7 +439,7 @@ export default function Home() {
                 <h4 className="text-white font-bold mb-4">AI Parlay Calculator</h4>
                 <p className="text-sm leading-relaxed">Professional sports betting analysis using advanced mathematical models and AI technology.</p>
               </div>
-              
+
               <div>
                 <h4 className="text-white font-bold mb-4">Legal</h4>
                 <ul className="space-y-2 text-sm">
@@ -449,7 +449,7 @@ export default function Home() {
                   <li><a href="/responsible-betting" className="hover:text-white transition-colors">Responsible Betting</a></li>
                 </ul>
               </div>
-              
+
               <div>
                 <h4 className="text-white font-bold mb-4">Support</h4>
                 <ul className="space-y-2 text-sm">
@@ -458,7 +458,7 @@ export default function Home() {
                   <li><a href="/api" className="hover:text-white transition-colors">API Documentation</a></li>
                 </ul>
               </div>
-              
+
               <div>
                 <h4 className="text-white font-bold mb-4">Sports</h4>
                 <ul className="space-y-2 text-sm">
@@ -470,7 +470,7 @@ export default function Home() {
                 </ul>
               </div>
             </div>
-            
+
             <div className="text-center pt-5 border-t border-gray-700 text-sm">
               <p>&copy; 2024 AI Parlay Calculator. All rights reserved. • Educational analysis tool only • No guarantees of profits or winnings</p>
             </div>
@@ -514,13 +514,13 @@ export default function Home() {
                   placeholder="Enter your email address"
                 />
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={() => setShowEmailInput(false)}
                     className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       setShowEmailInput(false);
                       handleUpgrade();
