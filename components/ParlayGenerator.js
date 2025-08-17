@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Brain, TrendingUp, Shield, Zap, Target } from 'lucide-react';
+import { Brain, TrendingUp, Shield, Zap, Target, AlertTriangle } from 'lucide-react';
 
 export default function ParlayGenerator({ onGeneration, generationsToday, maxGenerations, isPremium }) {
   const [selectedSport, setSelectedSport] = useState('NFL');
@@ -55,27 +55,64 @@ export default function ParlayGenerator({ onGeneration, generationsToday, maxGen
     setGenerating(true);
 
     try {
+      console.log('🎯 Generating parlay with:', { selectedSport, selectedRisk });
+
       const response = await fetch('/api/generate-parlay', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sport: selectedSport,
-          riskLevel: selectedRisk
+          preferences: {
+            sport: selectedSport,
+            riskLevel: selectedRisk,
+            legs: selectedRisk === 'safe' ? 3 : selectedRisk === 'moderate' ? 4 : 5
+          }
         }),
       });
 
+      // Parse response
       const result = await response.json();
+      console.log('🎯 API Response:', result);
 
-      if (result.success) {
-        onGeneration(result.parlay);
-      } else {
-        setError(result.message || 'Failed to generate parlay');
+      // Handle different response formats
+      if (!response.ok) {
+        throw new Error(result.message || `Server error: ${response.status}`);
       }
+
+      if (result.success === false) {
+        // Handle API errors with helpful messages
+        setError(result.message || 'Failed to generate parlay');
+        
+        // Show troubleshooting tips if available
+        if (result.troubleshooting) {
+          console.log('Troubleshooting tips:', result.troubleshooting);
+        }
+        return;
+      }
+
+      if (result.success && result.parlay) {
+        onGeneration(result.parlay);
+        setError(null);
+      } else {
+        throw new Error('Invalid response format from server');
+      }
+
     } catch (err) {
-      setError('Failed to generate parlay');
-      console.error(err);
+      console.error('Generation error:', err);
+      
+      // Provide helpful error messages
+      if (err.message.includes('fetch')) {
+        setError('Network error. Please check your connection and try again.');
+      } else if (err.message.includes('API key')) {
+        setError('Service configuration issue. Please contact support.');
+      } else if (err.message.includes('rate limit')) {
+        setError('Service temporarily busy. Please wait a moment and try again.');
+      } else if (err.message.includes('No upcoming games')) {
+        setError(`No games available for ${selectedSport} today. Try a different sport or check back later.`);
+      } else {
+        setError(err.message || 'Failed to generate parlay. Please try again.');
+      }
     } finally {
       setGenerating(false);
     }
@@ -84,8 +121,14 @@ export default function ParlayGenerator({ onGeneration, generationsToday, maxGen
   return (
     <div className="space-y-8">
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-          {error}
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <div className="text-red-700 font-medium">Generation Failed</div>
+              <div className="text-red-600 text-sm mt-1">{error}</div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -164,7 +207,7 @@ export default function ParlayGenerator({ onGeneration, generationsToday, maxGen
 
       {/* Generation Info */}
       <div className="text-center text-sm text-gray-500">
-        <p>AI generates optimized parlays based on mathematical analysis</p>
+        <p>AI generates optimized parlays based on live odds and mathematical analysis</p>
         <p>Always verify odds with your sportsbook before placing bets</p>
       </div>
     </div>

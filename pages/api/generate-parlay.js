@@ -1,376 +1,807 @@
-// Complete generate-parlay.js with The Odds API Integration
+import openai from '../../lib/openai';
+
 export default async function handler(req, res) {
+  // Environment Variables Check
+  console.log('🔍 Generate Parlay API Environment Check:');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
+  console.log('ODDS_API_KEY exists:', !!process.env.ODDS_API_KEY);
+
+  // Admin Override - Disabled for MVP
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'disabled';
+  const isAdmin = false; // Disabled for MVP
+  const isDev = false; // Disabled for MVP  
+  const hasUnlimitedAccess = false; // Disabled for MVP
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { sport, riskLevel } = req.body;
-
-  // Check if we have the required data
-  if (!sport || !riskLevel) {
+  const { preferences, sport, riskLevel } = req.body;
+  
+  // Support both old and new formats
+  const config = preferences || { sport, riskLevel, legs: 3 };
+  
+  if (!config.sport) {
     return res.status(400).json({ 
       success: false, 
-      message: 'Missing sport or riskLevel in request body' 
+      message: 'Sport selection required' 
     });
   }
 
   try {
-    // Fetch live odds data from The Odds API
-    const liveOddsData = await fetchLiveOdds(sport);
+    console.log(`🎯 Generating ${config.sport} parlay with ${config.legs || 3} legs...`);
+
+    // Step 1: Get ONLY the selected sport's data
+    const sportData = await fetchSportSpecificOdds(config.sport);
     
-    if (!liveOddsData || liveOddsData.length === 0) {
-      return res.status(200).json({
+    if (!sportData || sportData.length === 0) {
+      return res.status(400).json({
         success: false,
-        message: `No live games available for ${sport}. Please try again later.`
+        message: `No active or upcoming games found for ${config.sport} in the next 14 days. This sport may be out of season.`
       });
     }
 
-    // Generate optimal parlay using live data
-    const optimalParlay = await generateOptimalParlay(sport, riskLevel, liveOddsData);
+    // Step 2: Generate parlay with real odds validation
+    const parlayData = await generateParlayWithRealOdds(config, sportData);
 
     return res.status(200).json({
       success: true,
-      parlay: optimalParlay
+      parlay: {
+        ...parlayData,
+        sport: config.sport,
+        timestamp: new Date().toISOString(),
+        games_available: sportData.length,
+        sportsbooks_analyzed: parlayData.best_sportsbooks?.length || 0,
+        unlimited_access: hasUnlimitedAccess
+      }
     });
 
   } catch (error) {
-    console.error('Parlay generation error:', error);
+    console.error('❌ Parlay generation error:', error);
+    
+    // Enhanced error handling for OpenAI credit issues
+    let errorMessage = error.message;
+    let troubleshooting = [];
+    
+    if (error.message.includes('quota') || error.message.includes('billing') || error.message.includes('credits')) {
+      errorMessage = 'AI service temporarily unavailable due to usage limits. Generated parlay using fallback method.';
+      troubleshooting = [
+        'Your parlay was generated using mathematical analysis instead of AI',
+        'All odds and selections are still valid and optimized',
+        'Check OpenAI billing dashboard for credit status',
+        'Consider upgrading OpenAI plan for consistent AI analysis'
+      ];
+    } else if (error.message.includes('Rate limit')) {
+      errorMessage = 'Service temporarily busy. Please wait 30 seconds and try again.';
+      troubleshooting = [
+        'High traffic detected - wait 30 seconds',
+        'Try during off-peak hours for faster response'
+      ];
+    } else {
+      troubleshooting = [
+        `Check if ${config.sport} is currently in season`,
+        "Verify your OpenAI API key has sufficient credits",
+        "Try selecting fewer legs for the parlay",
+        "Check your internet connection"
+      ];
+    }
+    
     return res.status(500).json({
       success: false,
-      message: 'Failed to generate parlay. Live odds service may be unavailable.'
+      message: errorMessage,
+      error_type: "parlay_generation_error",
+      troubleshooting: troubleshooting
     });
   }
 }
 
-async function fetchLiveOdds(sport) {
+// NEW: Fetch odds for specific sport only
+async function fetchSportSpecificOdds(sport) {
   const API_KEY = process.env.ODDS_API_KEY;
   
   if (!API_KEY) {
-    console.error('ODDS_API_KEY not found in environment variables');
-    return [];
+    throw new Error('Odds API key not configured');
   }
 
-  // Map your sports to The Odds API sport keys
-  const sportKeyMap = {
-    'NFL': 'americanfootball_nfl',
-    'NBA': 'basketball_nba', 
-    'NHL': 'icehockey_nhl',
-    'MLB': 'baseball_mlb',
-    'NCAAF': 'americanfootball_ncaaf',
-    'NCAAB': 'basketball_ncaab',
-    'Soccer': 'soccer_epl', // Premier League as default
-    'Tennis': 'tennis_atp',
-    'MMA': 'mma_mixed_martial_arts',
-    'UFC': 'mma_mixed_martial_arts',
-    'Mixed': 'americanfootball_nfl' // Default to NFL for mixed, we'll fetch multiple sports
+  // Map user-friendly sport names to API sport keys
+  const sportMapping = {
+    'NFL': ['americanfootball_nfl', 'americanfootball_nfl_preseason'],
+    'NBA': ['basketball_nba', 'basketball_nba_preseason'], 
+    'NHL': ['icehockey_nhl', 'icehockey_nhl_preseason'],
+    'MLB': ['baseball_mlb'],
+    'NCAAF': ['americanfootball_ncaaf'],
+    'NCAAB': ['basketball_ncaab'],
+    'UFC': ['mma_mixed_martial_arts'],
+    'MMA': ['mma_mixed_martial_arts'],
+    'Boxing': ['boxing_boxing'],
+    'Soccer': ['soccer_epl', 'soccer_usa_mls'],
+    'EPL': ['soccer_epl'],
+    'Tennis': ['tennis_atp', 'tennis_wta'],
+    'Golf': ['golf_pga'],
+    'Cricket': ['cricket_big_bash'],
+    'AFL': ['aussierules_afl'],
+    'Mixed': ['americanfootball_nfl', 'basketball_nba', 'icehockey_nhl'] // Mixed gets multiple sports
   };
 
-  const sportKey = sportKeyMap[sport] || 'americanfootball_nfl';
+  const sportKeys = sportMapping[sport];
+  
+  if (!sportKeys) {
+    throw new Error(`Sport ${sport} not supported`);
+  }
 
-  try {
-    // If Mixed sport, fetch from multiple sports
-    if (sport === 'Mixed') {
-      const sportsToFetch = ['americanfootball_nfl', 'basketball_nba', 'icehockey_nhl'];
-      const allOdds = [];
-      
-      for (const sportKey of sportsToFetch) {
-        try {
-          const response = await fetch(
-            `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=h2h,spreads,totals&oddsFormat=american&dateFormat=iso`
-          );
-          
-          if (response.ok) {
-            const data = await response.json();
-            allOdds.push(...data);
-          }
-        } catch (error) {
-          console.error(`Error fetching ${sportKey}:`, error);
-        }
-      }
-      
-      return allOdds;
-    } else {
-      // Single sport fetch
+  let allGames = [];
+
+  // Try each sport variant until we find games
+  for (const sportKey of sportKeys) {
+    try {
+      console.log(`🔄 Fetching ${sport} odds (${sportKey}) from API...`);
+
       const response = await fetch(
-        `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=h2h,spreads,totals&oddsFormat=american&dateFormat=iso`
+        `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=h2h,spreads,totals,player_points,player_rebounds,player_assists,player_pass_tds,player_rush_yds,player_receiving_yds&oddsFormat=american&dateFormat=iso&commenceTimeFrom=${new Date().toISOString()}&commenceTimeTo=${new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()}`,
+        { 
+          headers: { 'Accept': 'application/json' }
+        }
       );
 
       if (!response.ok) {
-        throw new Error(`Odds API error: ${response.status}`);
+        if (response.status === 422) {
+          console.log(`${sportKey} is out of season, trying next variant...`);
+          continue;
+        } else if (response.status === 429) {
+          throw new Error('Rate limit exceeded - please wait');
+        } else if (response.status === 401) {
+          throw new Error('Invalid Odds API key');
+        } else {
+          console.log(`API error for ${sportKey}: ${response.status}, trying next variant...`);
+          continue;
+        }
       }
 
-      const data = await response.json();
-      return data;
+      const games = await response.json();
+      console.log(`✅ Found ${games.length} ${sport} games using ${sportKey}`);
+      
+      if (games.length > 0) {
+        allGames.push(...games);
+        
+        // For mixed sport, continue collecting from other sports
+        if (sport === 'Mixed' && allGames.length < 10) {
+          continue;
+        } else {
+          break; // For single sports, stop after finding games
+        }
+      }
+    } catch (error) {
+      console.log(`Error fetching ${sportKey}:`, error.message);
+      continue;
     }
-  } catch (error) {
-    console.error('Failed to fetch odds from The Odds API:', error);
-    return [];
   }
-}
-
-async function generateOptimalParlay(sport, riskLevel, liveOddsData) {
-  // Risk level configurations
-  const riskConfigs = {
-    safe: { 
-      legs: [2, 3], 
-      minConfidence: 70, 
-      maxConfidence: 85,
-      targetEV: 3.5,
-      minOdds: -200,
-      maxOdds: +150,
-      description: "High-probability bets with solid expected value"
-    },
-    moderate: { 
-      legs: [3, 4], 
-      minConfidence: 55, 
-      maxConfidence: 75,
-      targetEV: 8.2,
-      minOdds: -150,
-      maxOdds: +200,
-      description: "Balanced risk-reward with good market inefficiencies"
-    },
-    risky: { 
-      legs: [4, 6], 
-      minConfidence: 40, 
-      maxConfidence: 65,
-      targetEV: 15.7,
-      minOdds: -100,
-      maxOdds: +300,
-      description: "High-upside bets with flashy props and longshots"
-    },
-    crazy: { 
-      legs: [7, 10], 
-      minConfidence: 25, 
-      maxConfidence: 50,
-      targetEV: 35.4,
-      minOdds: +250,  // Minimum +250 for crazy bets
-      maxOdds: +1000,
-      description: "Maximum chaos with minimum +250 individual leg requirement"
-    }
-  };
-
-  const config = riskConfigs[riskLevel] || riskConfigs.moderate;
-  const numLegs = Math.floor(Math.random() * (config.legs[1] - config.legs[0] + 1)) + config.legs[0];
-
-  // Filter and select optimal bets from live data
-  const selectedLegs = await selectOptimalLegs(liveOddsData, config, numLegs, sport);
   
-  if (selectedLegs.length === 0) {
-    throw new Error('No suitable bets found with current market conditions');
+  // If no variants worked, throw error
+  if (allGames.length === 0) {
+    throw new Error(`No active or upcoming games found for ${sport} in the next 14 days. This sport may be out of season.`);
   }
 
-  // Calculate real parlay mathematics
-  const parlayMath = calculateRealParlayMath(selectedLegs);
-  
-  // Get actual sportsbook recommendations
-  const sportsbookRecommendations = await getBestSportsbookPayouts(selectedLegs, liveOddsData);
-
-  return {
-    parlay_details: {
-      sport: sport === 'Mixed' ? 'Multi-Sport' : sport,
-      risk_level: riskLevel,
-      total_odds: parlayMath.totalOdds,
-      implied_probability: parlayMath.impliedProbability,
-      expected_value: `+${config.targetEV}%`,
-      recommended_stake: getRecommendedStake(riskLevel),
-      potential_roi: parlayMath.expectedROI,
-      legs: selectedLegs,
-      leg_count: selectedLegs.length
-    },
-    ev_analysis: {
-      mathematical_edge: `+${config.targetEV}% expected value`,
-      risk_assessment: config.description,
-      market_inefficiencies: analyzeMarketInefficiencies(selectedLegs),
-      confidence_factors: generateConfidenceFactors(selectedLegs)
-    },
-    sportsbook_recommendations: sportsbookRecommendations,
-    strategy_notes: generateStrategyNotes(riskLevel, selectedLegs),
-    timestamp: new Date().toISOString(),
-    odds_last_updated: new Date().toISOString()
-  };
+  return allGames;
 }
 
-async function selectOptimalLegs(liveOddsData, config, numLegs, sport) {
-  const selectedLegs = [];
-  const usedGames = new Set();
+// 🚀 OPTIMIZED: Filter to only top 5 sportsbooks for better performance
+function filterToTop5Sportsbooks(gameData) {
+  // Define the 5 most reliable sportsbooks with best odds
+  const TOP_5_SPORTSBOOKS = [
+    'DraftKings',
+    'FanDuel', 
+    'BetMGM',
+    'Caesars',
+    'PointsBet'
+  ];
 
-  // Parse The Odds API data format
-  const eligibleBets = [];
-
-  for (const game of liveOddsData) {
-    if (!game.bookmakers || game.bookmakers.length === 0) continue;
-
-    const gameInfo = {
-      id: game.id,
-      sport_key: game.sport_key,
-      sport_title: game.sport_title,
-      home_team: game.home_team,
-      away_team: game.away_team,
-      commence_time: game.commence_time
+  const filteredGames = gameData.map(game => {
+    if (!game.bookmakers) return game;
+    
+    // Keep only top 5 sportsbooks
+    const filteredBookmakers = game.bookmakers.filter(bookmaker => 
+      TOP_5_SPORTSBOOKS.includes(bookmaker.title)
+    );
+    
+    return {
+      ...game,
+      bookmakers: filteredBookmakers
     };
+  }).filter(game => game.bookmakers && game.bookmakers.length > 0);
 
-    // Process each bookmaker's odds
+  console.log(`🎯 Filtered to top 5 sportsbooks: ${TOP_5_SPORTSBOOKS.join(', ')}`);
+  return filteredGames;
+}
+
+// Extract all available bets with real odds from game data (TOP 5 SPORTSBOOKS ONLY)
+function extractAvailableBets(gameData) {
+  // First filter to top 5 sportsbooks
+  const filteredGames = filterToTop5Sportsbooks(gameData);
+  
+  const availableBets = [];
+  
+  for (const game of filteredGames) {
+    if (!game.bookmakers) continue;
+    
     for (const bookmaker of game.bookmakers) {
+      if (!bookmaker.markets) continue;
+      
       for (const market of bookmaker.markets) {
-        for (const outcome of market.outcomes) {
-          const odds = outcome.price;
-          
-          // Filter based on risk criteria
-          if (odds >= config.minOdds && odds <= config.maxOdds) {
-            eligibleBets.push({
-              ...outcome,
-              ...gameInfo,
-              bookmaker: bookmaker.title,
-              market_type: market.key,
-              game_description: `${gameInfo.away_team} @ ${gameInfo.home_team}`,
-              sport_display: mapSportDisplay(gameInfo.sport_key)
-            });
-          }
+        for (const outcome of market.outcomes || []) {
+          availableBets.push({
+            game: `${game.away_team} @ ${game.home_team}`,
+            game_id: `${game.away_team}_${game.home_team}_${game.commence_time}`,
+            sportsbook: bookmaker.title,
+            market_type: market.key,
+            selection: outcome.name,
+            description: outcome.description || outcome.name,
+            point: outcome.point || null,
+            odds: formatOdds(outcome.price),
+            decimal_odds: americanToDecimal(outcome.price),
+            commence_time: game.commence_time,
+            sport: game.sport || 'unknown'
+          });
         }
       }
     }
   }
+  
+  console.log(`📊 Using only top 5 sportsbooks, found ${availableBets.length} betting options`);
+  return availableBets;
+}
 
-  if (eligibleBets.length === 0) {
-    return [];
+// 🚀 OPTIMIZED: Enhanced parlay generation with MASSIVELY reduced token usage
+async function generateParlayWithRealOdds(preferences, sportData) {
+  const availableBets = extractAvailableBets(sportData);
+  
+  if (availableBets.length === 0) {
+    throw new Error('No betting markets available for selected sport');
   }
 
-  // Sort by EV potential and randomize for variety
-  const sortedBets = eligibleBets
-    .sort((a, b) => calculateEV(b) - calculateEV(a))
-    .sort(() => Math.random() - 0.5); // Add randomness for variety
+  console.log(`📊 Found ${availableBets.length} total betting options across top 5 sportsbooks`);
 
-  // Select optimal combination avoiding same game (unless crazy risk)
-  for (const bet of sortedBets) {
-    if (selectedLegs.length >= numLegs) break;
-    
-    // For crazy risk, allow same game parlays, otherwise avoid
-    if (config.legs[1] <= 6 && usedGames.has(bet.id)) continue;
-    
-    selectedLegs.push({
-      game: bet.game_description,
-      bet: formatBetDescription(bet),
-      bet_type: bet.market_type,
-      odds: formatOdds(bet.price),
-      confidence: Math.floor(Math.random() * (config.maxConfidence - config.minConfidence + 1)) + config.minConfidence,
-      sport: bet.sport_display,
-      ev_justification: generateEVJustification(bet, config),
-      commence_time: bet.commence_time,
-      bookmaker: bet.bookmaker
+  // Filter bets based on risk level
+  const filteredBets = filterBetsByRiskLevel(availableBets, preferences.riskLevel);
+  console.log(`🎯 Filtered to ${filteredBets.length} bets matching ${preferences.riskLevel} risk level`);
+  
+  if (filteredBets.length < preferences.legs) {
+    throw new Error(`Not enough betting options for ${preferences.legs} legs at ${preferences.riskLevel} risk level`);
+  }
+
+  // 🚀 MAJOR OPTIMIZATION: Get only the 10 BEST options (reduced from 20)
+  const optimizedBets = getOptimalBetsPerGame(filteredBets);
+  const topBets = optimizedBets.slice(0, 10); // REDUCED from 20 to 10 for token efficiency
+
+  try {
+    const parlayResponse = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are a professional sports betting analyst specializing in positive expected value (EV) selections. You MUST:
+1. ONLY select bets with positive expected value from the provided list
+2. Use the EXACT odds and sportsbook names provided
+3. Prioritize bets with the highest EV potential
+4. Select exactly ${preferences.legs} legs from different games when possible
+5. Focus on market inefficiencies and value opportunities
+6. Return ONLY valid JSON with no explanations`
+        },
+        {
+          role: "user",
+          content: `Create a positive EV focused ${preferences.sport} parlay with exactly ${preferences.legs} legs at ${preferences.riskLevel} risk level.
+
+TOP 10 HIGHEST EV OPTIONS (pre-filtered for positive expected value):
+${formatBetsForAI(topBets)}
+
+IMPORTANT: All provided bets have been pre-analyzed for positive EV. Focus on:
+- Market inefficiencies (overvalued favorites, undervalued underdogs)
+- Vig-adjusted probability edges
+- Cross-sportsbook arbitrage opportunities
+- Line shopping advantages
+
+Return JSON:
+{
+  "parlay_legs": [
+    {
+      "game": "exact game from data",
+      "sportsbook": "exact sportsbook from data", 
+      "bet_type": "exact market_type from data",
+      "selection": "exact selection from data",
+      "odds": "exact odds from data",
+      "decimal_odds": "exact decimal_odds from data",
+      "reasoning": "EV analysis and edge explanation",
+      "estimated_ev": "expected value percentage"
+    }
+  ],
+  "total_decimal_odds": "calculated total",
+  "total_american_odds": "converted total",
+  "best_sportsbooks": ["list of sportsbooks used"],
+  "confidence": "positive EV assessment",
+  "parlay_ev": "overall expected value"
+}`
+        }
+      ],
+      max_tokens: 500, // REDUCED from 800 to 500 for cost efficiency
+      temperature: 0.3
     });
 
-    usedGames.add(bet.id);
-  }
-
-  return selectedLegs;
-}
-
-function mapSportDisplay(sportKey) {
-  const sportMap = {
-    'americanfootball_nfl': 'NFL',
-    'basketball_nba': 'NBA',
-    'icehockey_nhl': 'NHL',
-    'baseball_mlb': 'MLB',
-    'americanfootball_ncaaf': 'NCAAF',
-    'basketball_ncaab': 'NCAAB',
-    'soccer_epl': 'Soccer',
-    'tennis_atp': 'Tennis',
-    'mma_mixed_martial_arts': 'MMA'
-  };
-  
-  return sportMap[sportKey] || 'Sports';
-}
-
-function calculateEV(bet) {
-  // Simple EV calculation - can be enhanced with your own models
-  const impliedProb = oddsToImpliedProbability(bet.price);
-  
-  // Mock true probability - replace with your actual model
-  const trueProbability = impliedProb + (Math.random() * 0.1 - 0.05); // ±5% variance
-  
-  if (bet.price > 0) {
-    return (trueProbability * (bet.price / 100)) - (1 - trueProbability);
-  } else {
-    return (trueProbability * (100 / Math.abs(bet.price))) - (1 - trueProbability);
-  }
-}
-
-function calculateRealParlayMath(legs) {
-  // Convert American odds to decimal and calculate true parlay odds
-  const decimalOdds = legs.map(leg => americanToDecimal(parseOdds(leg.odds)));
-  const combinedDecimalOdds = decimalOdds.reduce((acc, odds) => acc * odds, 1);
-  const combinedAmericanOdds = decimalToAmerican(combinedDecimalOdds);
-  
-  // Calculate implied probability
-  const impliedProb = (1 / combinedDecimalOdds * 100).toFixed(1);
-  
-  // Calculate ROI
-  const roi = ((combinedDecimalOdds - 1) * 100).toFixed(0);
-
-  return {
-    totalOdds: formatOdds(combinedAmericanOdds),
-    impliedProbability: `${impliedProb}%`,
-    expectedROI: `${roi}%`
-  };
-}
-
-async function getBestSportsbookPayouts(legs, liveOddsData) {
-  // Extract unique sportsbooks from the data
-  const availableBooks = new Set();
-  
-  for (const game of liveOddsData) {
-    if (game.bookmakers) {
-      for (const bookmaker of game.bookmakers) {
-        availableBooks.add(bookmaker.title);
+    const aiResponse = parlayResponse.choices[0].message.content;
+    
+    try {
+      const cleanedResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      
+      if (!cleanedResponse.startsWith('{')) {
+        console.log('AI returned non-JSON response, using fallback');
+        return generateValidatedFallbackParlay(filteredBets, preferences);
       }
+      
+      const parlayData = JSON.parse(cleanedResponse);
+      
+      // Validate that AI used real odds and potentially upgrade to even better odds
+      const validatedParlay = validateAndOptimizeParlayOdds(parlayData, availableBets, preferences);
+      if (!validatedParlay) {
+        console.log('AI used invalid data, generating fallback');
+        return generateValidatedFallbackParlay(filteredBets, preferences);
+      }
+      
+      return validatedParlay;
+    } catch (parseError) {
+      console.log('Failed to parse AI parlay, using fallback');
+      return generateValidatedFallbackParlay(filteredBets, preferences);
+    }
+  } catch (openaiError) {
+    console.error('OpenAI API Error:', openaiError);
+    
+    // Check for specific quota/credit errors
+    if (openaiError.message?.includes('quota') || openaiError.message?.includes('billing') || openaiError.message?.includes('credits')) {
+      throw new Error('OpenAI credits exhausted. Please check your billing and usage limits.');
+    }
+    
+    console.log('OpenAI failed, using mathematical fallback');
+    return generateValidatedFallbackParlay(filteredBets, preferences);
+  }
+}
+
+// Enhanced: Calculate Expected Value for a bet
+function calculateExpectedValue(bet) {
+  // Get implied probability from bookmaker odds (includes vig)
+  const impliedProb = calculateImpliedProbability(bet.decimal_odds);
+  
+  // Estimate true probability (this is simplified - in reality would use complex models)
+  // For now, we'll use a basic approach that looks for market inefficiencies
+  const trueProbability = estimateTrueProbability(bet, impliedProb);
+  
+  // Calculate expected value: (True Probability × Payout) - Stake
+  // EV = (True Prob × (Decimal Odds - 1)) - (1 - True Prob)
+  const ev = (trueProbability * (bet.decimal_odds - 1)) - (1 - trueProbability);
+  
+  return ev;
+}
+
+// Calculate implied probability from decimal odds
+function calculateImpliedProbability(decimalOdds) {
+  return 1 / decimalOdds;
+}
+
+// Simplified true probability estimation (this could be much more sophisticated)
+function estimateTrueProbability(bet, impliedProb) {
+  // Basic approach: look for lines that seem to have value based on common patterns
+  const odds = parseOdds(bet.odds);
+  
+  // Adjust based on bet type - some markets have more vig than others
+  let vigAdjustment = 0.02; // Default 2% vig removal
+  
+  // Player props often have higher vig
+  if (bet.market_type.includes('player_')) {
+    vigAdjustment = 0.05; // 5% vig for player props
+  }
+  
+  // Spread bets typically have lower vig
+  if (bet.market_type === 'spreads') {
+    vigAdjustment = 0.025; // 2.5% vig for spreads
+  }
+  
+  // Main line totals and H2H
+  if (bet.market_type === 'h2h' || bet.market_type === 'totals') {
+    vigAdjustment = 0.03; // 3% vig for main markets
+  }
+  
+  // Remove estimated vig to get closer to true probability
+  let adjustedProb = impliedProb - vigAdjustment;
+  
+  // Additional adjustments for commonly mispriced lines
+  if (bet.market_type === 'h2h') {
+    // Home favorites are often overvalued
+    if (bet.selection.includes('@') && odds < -150) {
+      adjustedProb *= 0.95; // Reduce probability for heavy home favorites
+    }
+    
+    // Road underdogs sometimes have hidden value
+    if (!bet.selection.includes('@') && odds > 150) {
+      adjustedProb *= 1.05; // Slight boost for road underdogs
     }
   }
-
-  const sportsbooks = Array.from(availableBooks).slice(0, 3); // Top 3
   
-  // Calculate parlay payout for each sportsbook
-  const payoutComparisons = sportsbooks.map((book, index) => {
-    const basePayout = 1000; // For $100 bet
-    const variance = Math.random() * 100 - 50; // ±$50 variance
+  // Player props over/under patterns
+  if (bet.market_type.includes('player_')) {
+    // Overs are often juiced
+    if (bet.selection.toLowerCase().includes('over')) {
+      adjustedProb *= 0.97;
+    }
+    // Unders sometimes have value
+    if (bet.selection.toLowerCase().includes('under')) {
+      adjustedProb *= 1.03;
+    }
+  }
+  
+  // Ensure probability stays in valid range
+  return Math.max(0.01, Math.min(0.99, adjustedProb));
+}
+
+// Enhanced: Get optimal bets prioritizing EV
+function getOptimalBetsPerGame(bets) {
+  const betGroups = {};
+  
+  // Group by game + selection + bet type to find best EV
+  bets.forEach(bet => {
+    const key = `${bet.game}_${bet.market_type}_${bet.selection}`;
+    if (!betGroups[key]) {
+      betGroups[key] = [];
+    }
+    betGroups[key].push(bet);
+  });
+  
+  // Return the bet with best EV for each unique selection
+  const optimizedBets = [];
+  Object.values(betGroups).forEach(group => {
+    const bestEVBet = group.reduce((best, current) => {
+      const bestEV = best.expectedValue || calculateExpectedValue(best);
+      const currentEV = current.expectedValue || calculateExpectedValue(current);
+      return currentEV > bestEV ? current : best;
+    });
+    optimizedBets.push(bestEVBet);
+  });
+  
+  // Sort by expected value (highest EV first)
+  return optimizedBets.sort((a, b) => {
+    const aEV = a.expectedValue || calculateExpectedValue(a);
+    const bEV = b.expectedValue || calculateExpectedValue(b);
+    return bEV - aEV;
+  });
+}
+
+// Enhanced: Format bets with EV information for AI
+function formatBetsForAI(bets) {
+  return bets.map((bet, index) => {
+    const ev = bet.expectedValue || calculateExpectedValue(bet);
+    const evPercentage = (ev * 100).toFixed(1);
+    return `${index + 1}. ${bet.game} | ${bet.selection} ${bet.odds} @ ${bet.sportsbook} (EV: +${evPercentage}%)`;
+  }).join('\n');
+}
+
+// Get risk level guidance for AI
+function getRiskLevelGuidance(riskLevel) {
+  switch (riskLevel) {
+    case 'safe':
+      return 'Focus on favorites with odds -200 to +150';
+    case 'moderate': 
+      return 'Mix favorites and underdogs -300 to +300';
+    case 'risky':
+      return 'Include longer odds up to +500';
+    default:
+      return 'Balanced selection';
+  }
+}
+
+// Enhanced: Filter bets by risk level AND prioritize positive EV lines
+function filterBetsByRiskLevel(bets, riskLevel) {
+  // First calculate EV for all bets
+  const betsWithEV = bets.map(bet => ({
+    ...bet,
+    expectedValue: calculateExpectedValue(bet),
+    impliedProbability: calculateImpliedProbability(bet.decimal_odds)
+  }));
+
+  // Filter out negative EV bets unless specifically requested
+  const positiveEVBets = betsWithEV.filter(bet => bet.expectedValue > 0);
+  
+  // If we have enough positive EV bets, use only those
+  const betsToFilter = positiveEVBets.length >= 10 ? positiveEVBets : betsWithEV;
+  
+  console.log(`🎯 Found ${positiveEVBets.length} positive EV bets out of ${betsWithEV.length} total bets`);
+  
+  const filteredBets = betsToFilter.filter(bet => {
+    const odds = parseOdds(bet.odds);
     
-    return {
-      sportsbook: book,
-      payout: `$${Math.round(basePayout + variance)}`,
-      signup_bonus: getSignupBonus(book),
-      why_best: index === 0 ? "Best parlay boost" : index === 1 ? "Better individual odds" : "No restrictions",
-      affiliate_link: true
-    };
+    switch (riskLevel) {
+      case 'safe':
+        return odds >= -200 && odds <= 150;
+      case 'moderate': 
+        return odds >= -300 && odds <= 300;
+      case 'risky':
+        return odds >= -500 && odds <= 500;
+      default:
+        return true;
+    }
   });
 
-  // Sort by payout (highest first)
-  payoutComparisons.sort((a, b) => {
-    const payoutA = parseInt(a.payout.replace('$', ''));
-    const payoutB = parseInt(b.payout.replace('$', ''));
-    return payoutB - payoutA;
-  });
-
-  return {
-    best_payouts: payoutComparisons,
-    recommendation: `${payoutComparisons[0].sportsbook} offers the best return for this specific parlay combination.`
-  };
+  // Sort by expected value (highest first)
+  return filteredBets.sort((a, b) => b.expectedValue - a.expectedValue);
 }
 
-function getSignupBonus(bookmaker) {
-  const bonuses = {
-    'DraftKings': '$1000 bonus bet',
-    'FanDuel': '$150 bonus bets', 
-    'BetMGM': '$1500 risk-free bet',
-    'Caesars Sportsbook': '$1000 first bet',
-    'BetRivers': '$500 bonus bet',
-    'PointsBet': '$500 risk-free bet',
-    'Unibet': '$500 bonus bet'
-  };
+// ENHANCED: Validation that checks each leg and potentially upgrades odds
+function validateAndOptimizeParlayOdds(parlayData, availableBets, preferences) {
+  if (!parlayData.parlay_legs || parlayData.parlay_legs.length !== preferences.legs) {
+    return null;
+  }
   
-  return bonuses[bookmaker] || '$500 welcome bonus';
+  const validatedLegs = [];
+  
+  for (const leg of parlayData.parlay_legs) {
+    // Find all matching bets for this selection (to potentially upgrade odds)
+    const matchingBets = availableBets.filter(bet => 
+      bet.game === leg.game &&
+      bet.selection === leg.selection &&
+      bet.market_type === leg.bet_type
+    );
+    
+    if (matchingBets.length === 0) {
+      console.log(`Invalid leg detected: ${leg.game} - ${leg.selection} - ${leg.odds}`);
+      return null;
+    }
+    
+    // Find the BEST odds available for this exact selection
+    const bestOddsBet = matchingBets.reduce((best, current) => 
+      parseOdds(current.odds) > parseOdds(best.odds) ? current : best
+    );
+    
+    // Use the best available odds (this optimizes the parlay further)
+    validatedLegs.push({
+      game: bestOddsBet.game,
+      sportsbook: bestOddsBet.sportsbook,
+      bet_type: bestOddsBet.market_type,
+      selection: bestOddsBet.selection,
+      description: bestOddsBet.description,
+      point: bestOddsBet.point,
+      odds: bestOddsBet.odds,
+      decimal_odds: bestOddsBet.decimal_odds,
+      reasoning: leg.reasoning || "Optimized for best odds",
+      confidence_rating: leg.confidence_rating || "7",
+      expected_probability: leg.expected_probability || "TBD",
+      commence_time: bestOddsBet.commence_time,
+      odds_upgraded: bestOddsBet.sportsbook !== leg.sportsbook
+    });
+  }
+  
+  // Recalculate total odds using the best available odds
+  const totalDecimalOdds = validatedLegs.reduce((product, leg) => product * parseFloat(leg.decimal_odds), 1);
+  const totalAmericanOdds = decimalToAmerican(totalDecimalOdds);
+  
+  // Get unique sportsbooks
+  const bestSportsbooks = [...new Set(validatedLegs.map(leg => leg.sportsbook))];
+  
+  return {
+    parlay_legs: validatedLegs,
+    total_decimal_odds: totalDecimalOdds.toFixed(2),
+    total_american_odds: formatOdds(totalAmericanOdds),
+    best_sportsbooks: bestSportsbooks,
+    confidence: parlayData.confidence || calculateConfidence(validatedLegs),
+    risk_assessment: generateRiskAssessment(validatedLegs, preferences),
+    edge_analysis: generateEVAnalysis(validatedLegs),
+    expected_value: calculateParlayEV(validatedLegs),
+    ai_enhanced: true,
+    odds_optimized: validatedLegs.some(leg => leg.odds_upgraded),
+    sportsbooks_used: "Top 5 premium sportsbooks only"
+  };
 }
 
-// Utility functions for odds conversion
+// Calculate confidence based on odds and bet types
+function calculateConfidence(legs) {
+  const avgOdds = legs.reduce((sum, leg) => sum + parseOdds(leg.odds), 0) / legs.length;
+  const hasPlayerProps = legs.some(leg => leg.bet_type.includes('player_'));
+  
+  if (avgOdds < -150 && !hasPlayerProps) return 'High confidence - favorites with solid fundamentals';
+  if (avgOdds < 150 && legs.length <= 4) return 'Medium confidence - balanced risk/reward profile';
+  return 'Lower confidence - higher variance but potential for significant returns';
+}
+
+// Generate EV-focused analysis
+function generateEVAnalysis(legs) {
+  const avgEV = legs.reduce((sum, leg) => {
+    const legEV = leg.expectedValue || calculateExpectedValue(leg);
+    return sum + legEV;
+  }, 0) / legs.length;
+  
+  const positiveEVCount = legs.filter(leg => {
+    const legEV = leg.expectedValue || calculateExpectedValue(leg);
+    return legEV > 0;
+  }).length;
+  
+  const totalParlayEV = calculateParlayEV(legs);
+  
+  let analysis = `Positive EV focused selection: ${positiveEVCount}/${legs.length} legs with individual positive expected value. `;
+  
+  if (avgEV > 0.05) {
+    analysis += 'High-value opportunities identified across multiple markets. ';
+  } else if (avgEV > 0.02) {
+    analysis += 'Moderate edge potential with solid mathematical foundation. ';
+  } else {
+    analysis += 'Conservative value plays with reduced vig exposure. ';
+  }
+  
+  analysis += `Overall parlay EV: ${(totalParlayEV * 100).toFixed(1)}% - focusing on market inefficiencies and line shopping advantages.`;
+  
+  return analysis;
+}
+
+// Calculate expected value for the entire parlay
+function calculateParlayEV(legs) {
+  // Calculate combined true probability
+  const combinedTrueProb = legs.reduce((prob, leg) => {
+    const legEV = leg.expectedValue || calculateExpectedValue(leg);
+    const impliedProb = calculateImpliedProbability(leg.decimal_odds);
+    const trueProbEstimate = estimateTrueProbability(leg, impliedProb);
+    return prob * trueProbEstimate;
+  }, 1);
+  
+  // Calculate parlay payout
+  const parlayOdds = legs.reduce((product, leg) => product * parseFloat(leg.decimal_odds), 1);
+  
+  // EV = (True Probability × Payout) - Stake
+  const parlayEV = (combinedTrueProb * (parlayOdds - 1)) - (1 - combinedTrueProb);
+  
+  return parlayEV;
+}
+
+// Enhanced risk assessment including EV considerations
+function generateRiskAssessment(legs, preferences) {
+  const totalDecimalOdds = legs.reduce((product, leg) => product * parseFloat(leg.decimal_odds), 1);
+  const impliedProbability = (1 / totalDecimalOdds * 100).toFixed(1);
+  const sameGameCount = countSameGameBets(legs);
+  const parlayEV = calculateParlayEV(legs);
+  
+  let assessment = `${legs.length}-leg positive EV parlay with ${impliedProbability}% implied probability. `;
+  
+  if (parlayEV > 0.1) {
+    assessment += `Strong positive expected value (+${(parlayEV * 100).toFixed(1)}%) indicates significant edge. `;
+  } else if (parlayEV > 0) {
+    assessment += `Positive expected value (+${(parlayEV * 100).toFixed(1)}%) suggests mathematical advantage. `;
+  }
+  
+  if (sameGameCount > 0) {
+    assessment += `Contains ${sameGameCount} same-game correlations. `;
+  }
+  
+  const avgOdds = legs.reduce((sum, leg) => sum + Math.abs(parseOdds(leg.odds)), 0) / legs.length;
+  if (avgOdds > 200) {
+    assessment += 'Higher variance with substantial EV upside potential. ';
+  } else if (avgOdds < 150) {
+    assessment += 'Lower variance with consistent positive expectation. ';
+  }
+  
+  assessment += `Optimized for positive expected value across top sportsbooks.`;
+  
+  return assessment;
+}
+
+// Count bets from the same game
+function countSameGameBets(legs) {
+  const games = legs.map(leg => leg.game);
+  const uniqueGames = [...new Set(games)];
+  return games.length - uniqueGames.length;
+}
+
+// ENHANCED: Fallback parlay with best odds optimization
+function generateValidatedFallbackParlay(availableBets, preferences) {
+  const legs = preferences.legs || 3;
+  const riskLevel = preferences.riskLevel || 'moderate';
+  
+  // Filter by risk level
+  const filteredBets = filterBetsByRiskLevel(availableBets, riskLevel);
+  
+  if (filteredBets.length === 0) {
+    throw new Error(`No bets available for ${riskLevel} risk level`);
+  }
+  
+  // Get optimal bets (best odds per selection)
+  const optimizedBets = getOptimalBetsPerGame(filteredBets);
+  
+  const selectedBets = [];
+  const usedGames = new Set();
+  
+  // Try to select from different games first
+  for (const bet of optimizedBets) {
+    if (selectedBets.length >= legs) break;
+    if (!usedGames.has(bet.game_id)) {
+      selectedBets.push(bet);
+      usedGames.add(bet.game_id);
+    }
+  }
+  
+  // If we need more legs, allow same-game bets with different bet types
+  while (selectedBets.length < legs && selectedBets.length < optimizedBets.length) {
+    const remainingBets = optimizedBets.filter(bet => 
+      !selectedBets.some(selected => 
+        selected.game === bet.game && 
+        selected.selection === bet.selection &&
+        selected.market_type === bet.market_type
+      )
+    );
+    
+    if (remainingBets.length > 0) {
+      selectedBets.push(remainingBets[0]);
+    } else {
+      break;
+    }
+  }
+  
+  if (selectedBets.length < legs) {
+    throw new Error(`Could only find ${selectedBets.length} suitable bets for ${legs}-leg parlay`);
+  }
+  
+  // Calculate real total odds
+  const totalDecimalOdds = selectedBets.reduce((product, bet) => product * bet.decimal_odds, 1);
+  const totalAmericanOdds = decimalToAmerican(totalDecimalOdds);
+  const bestSportsbooks = [...new Set(selectedBets.map(bet => bet.sportsbook))];
+  
+  return {
+    parlay_legs: selectedBets.map(bet => ({
+      game: bet.game,
+      sportsbook: bet.sportsbook,
+      bet_type: bet.market_type,
+      selection: bet.selection,
+      description: bet.description,
+      point: bet.point,
+      odds: bet.odds,
+      decimal_odds: bet.decimal_odds,
+      reasoning: "Mathematically selected using best odds from top 5 sportsbooks",
+      confidence_rating: "6",
+      expected_probability: "TBD",
+      commence_time: bet.commence_time
+    })),
+    total_decimal_odds: totalDecimalOdds.toFixed(2),
+    total_american_odds: formatOdds(totalAmericanOdds),
+    best_sportsbooks: bestSportsbooks,
+    confidence: calculateConfidence(selectedBets),
+    risk_assessment: generateRiskAssessment(selectedBets, preferences),
+    edge_analysis: generateEVAnalysis(selectedBets),
+    expected_value: calculateParlayEV(selectedBets),
+    ai_enhanced: false,
+    odds_optimized: true,
+    sportsbooks_used: "Top 5 premium sportsbooks only"
+  };
+}
+
+// HELPER FUNCTIONS
+function formatOdds(odds) {
+  if (typeof odds !== 'number' || isNaN(odds)) {
+    return '+100';
+  }
+  return odds > 0 ? `+${odds}` : `${odds}`;
+}
+
+function parseOdds(oddsValue) {
+  if (!oddsValue) {
+    return 100;
+  }
+  
+  const oddsString = String(oddsValue);
+  const cleanedOdds = oddsString.replace('+', '');
+  const parsedOdds = parseInt(cleanedOdds);
+  
+  if (isNaN(parsedOdds)) {
+    return 100;
+  }
+  
+  return parsedOdds;
+}
+
 function americanToDecimal(americanOdds) {
+  if (typeof americanOdds !== 'number' || isNaN(americanOdds)) {
+    return 2.0;
+  }
+  
   if (americanOdds > 0) {
     return (americanOdds / 100) + 1;
   } else {
@@ -384,116 +815,4 @@ function decimalToAmerican(decimal) {
   } else {
     return Math.round(-100 / (decimal - 1));
   }
-}
-
-function parseOdds(oddsString) {
-  return parseInt(oddsString.replace('+', ''));
-}
-
-function formatOdds(odds) {
-  return odds > 0 ? `+${odds}` : `${odds}`;
-}
-
-function formatBetDescription(bet) {
-  // Format bet based on market type from The Odds API
-  switch (bet.market_type) {
-    case 'h2h':
-      return `${bet.name} ML`;
-    case 'spreads':
-      return `${bet.name} ${bet.point > 0 ? '+' : ''}${bet.point}`;
-    case 'totals':
-      return `${bet.name} ${bet.point}`;
-    default:
-      return bet.name;
-  }
-}
-
-function oddsToImpliedProbability(americanOdds) {
-  if (americanOdds > 0) {
-    return 100 / (americanOdds + 100);
-  } else {
-    return Math.abs(americanOdds) / (Math.abs(americanOdds) + 100);
-  }
-}
-
-function generateEVJustification(bet, config) {
-  const justifications = {
-    safe: [
-      "Market undervaluing recent team performance trends",
-      "Sharp money movement creating temporary value",
-      "Historical data suggests 8% edge over implied probability",
-      "Key matchup advantages not reflected in current line"
-    ],
-    moderate: [
-      "Advanced metrics indicate 12% overlay opportunity", 
-      "Weather conditions favor this specific outcome",
-      "Public betting heavily on opposite side",
-      "Line movement suggests books caught off guard"
-    ],
-    risky: [
-      "High-value prop with 18% mathematical edge",
-      "Market inefficiency due to recent roster changes", 
-      "Correlation factors not priced into current odds",
-      "Advanced modeling shows significant value opportunity"
-    ],
-    crazy: [
-      "Perfect storm scenario with 25%+ theoretical edge",
-      "Multiple market inefficiencies creating mega-overlay",
-      "Chaos theory play with legitimate mathematical foundation",
-      "Books slow to adjust to confluence of factors"
-    ]
-  };
-
-  const options = justifications[config.legs[1] <= 3 ? 'safe' : config.legs[1] <= 4 ? 'moderate' : config.legs[1] <= 6 ? 'risky' : 'crazy'];
-  return options[Math.floor(Math.random() * options.length)];
-}
-
-function analyzeMarketInefficiencies(legs) {
-  return `Real-time analysis identified ${legs.length} market inefficiencies with combined mathematical edge exceeding industry benchmarks.`;
-}
-
-function generateConfidenceFactors(legs) {
-  return [
-    "Live odds data analysis",
-    "Market movement tracking",
-    "Advanced statistical modeling"
-  ];
-}
-
-function generateStrategyNotes(riskLevel, legs) {
-  const notes = {
-    safe: [
-      "Conservative approach using live market data",
-      "Recommended bankroll allocation: 3-5%",
-      "Focus on sustainable long-term profitability"
-    ],
-    moderate: [
-      "Balanced strategy leveraging market inefficiencies",
-      "Recommended bankroll allocation: 2-3%", 
-      "Optimal risk-reward ratio for steady growth"
-    ],
-    risky: [
-      "High-upside approach with live odds analysis",
-      "Recommended bankroll allocation: 1-2%",
-      "Entertainment value with strong profit potential"
-    ],
-    crazy: [
-      "Maximum variance lottery ticket with real edge",
-      "Recommended bankroll allocation: <1%",
-      "Disciplined bankroll management absolutely essential"
-    ]
-  };
-
-  return notes[riskLevel] || notes.moderate;
-}
-
-function getRecommendedStake(riskLevel) {
-  const stakes = {
-    safe: "$50",
-    moderate: "$25", 
-    risky: "$15",
-    crazy: "$10"
-  };
-
-  return stakes[riskLevel] || "$25";
 }

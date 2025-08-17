@@ -1,13 +1,26 @@
 import openai from '../../lib/openai';
 
 export default async function handler(req, res) {
+  // Environment Variables Check
+  console.log('🔍 API Environment Check:');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
+  console.log('ODDS_API_KEY exists:', !!process.env.ODDS_API_KEY);
+
+  // Admin Override - Disabled for MVP
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'disabled';
+  const isAdmin = false;
+  const isDev = false;
+  const hasUnlimitedAccess = false;
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { imageBase64 } = req.body;
+  const { image, imageBase64 } = req.body;
+  const imageData = image || imageBase64;
 
-  if (!imageBase64) {
+  if (!imageData) {
     return res.status(400).json({ 
       success: false, 
       message: 'No image data provided' 
@@ -15,100 +28,115 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log('🔍 Analyzing bet slip with OpenAI and finding best odds...');
+    console.log('🔍 Step 1: Extracting teams/players from bet slip...');
 
-    // Use OpenAI Vision to analyze the bet slip image
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+    // Step 1: Extract teams/players and basic bet info (MINIMAL TOKENS)
+    const visionResponse = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: `Analyze this sports betting slip image and extract the betting information in a structured format. Focus on identifying:
+              text: `Extract team names, player names, and bet details from this betting slip.
 
-1. All individual bets (teams, lines, bet types, odds, stake amounts)
-2. Whether it's a parlay or individual bets
-3. The sportsbook name if visible
-4. Game details and timing
-
-Return ONLY valid JSON in this exact format:
+Return ONLY this JSON format:
 {
+  "teams_found": ["Team1", "Team2"],
+  "players_found": ["Player1", "Player2"],
   "extracted_bets": [
     {
-      "sport": "NFL/NBA/NHL/MLB/etc",
       "home_team": "Team Name",
       "away_team": "Team Name", 
       "bet_type": "moneyline/spread/total/prop",
-      "bet_selection": "specific bet made",
-      "line": "point spread or total if applicable",
-      "odds": "odds in American format (+150, -110, etc)",
-      "stake": "bet amount if visible",
-      "game_time": "if visible"
+      "bet_selection": "specific bet",
+      "odds": "+150 or -110",
+      "stake": "amount if visible"
     }
   ],
-  "slip_details": {
-    "sportsbook": "detected sportsbook name or unknown",
-    "bet_structure": "parlay/individual/round_robin",
-    "total_stake": "total amount wagered",
-    "potential_payout": "potential winnings if visible",
-    "number_of_legs": "count of individual bets"
-  },
-  "confidence": "high/medium/low based on image clarity"
+  "sportsbook": "sportsbook name",
+  "total_stake": "total amount",
+  "potential_payout": "payout if visible"
 }`
             },
             {
               type: "image_url",
               image_url: {
-                url: imageBase64
+                url: `data:image/jpeg;base64,${imageData}`
               }
             }
           ]
         }
       ],
-      max_tokens: 1500,
+      max_tokens: 400, // Reduced from 500
       temperature: 0.1
     });
 
-    const aiResponse = response.choices[0].message.content;
-    console.log('🤖 OpenAI Response:', aiResponse);
+    const aiResponse = visionResponse.choices[0].message.content;
+    console.log('🤖 OpenAI Vision Response received');
 
-    // Parse the JSON response
     let extractedData;
     try {
       const cleanedResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
       extractedData = JSON.parse(cleanedResponse);
     } catch (parseError) {
       console.error('❌ Failed to parse OpenAI response:', parseError);
-      
-      return res.status(200).json({
-        success: true,
-        analysis: {
-          message: "Could not clearly read the bet slip. Please try uploading a clearer image.",
-          sportsbook_comparison: null,
-          optimization_tips: ["Ensure the image is clear and well-lit", "Make sure all text is visible"]
-        }
+      return res.status(500).json({
+        success: false,
+        message: "Failed to parse bet slip image. Please ensure the image is clear and contains a valid bet slip.",
+        error_details: parseError.message
       });
     }
 
-    // Find better odds for the extracted bets
-    const sportsbookComparison = await findBetterOdds(extractedData.extracted_bets);
-    
-    // Generate analysis and recommendations
+    console.log('🎯 Step 2: Finding games for detected teams/players...');
+
+    // Step 2: Smart search for ONLY the detected teams/players (TOP 5 SPORTSBOOKS)
+    const targetedOddsData = await findGamesForTeamsAndPlayers(
+      extractedData.teams_found || [], 
+      extractedData.players_found || []
+    );
+
+    if (!targetedOddsData || targetedOddsData.length === 0) {
+      console.log('🔄 No specific matches found, trying broader sport search...');
+      const broadSearchData = await tryBroadSportSearch();
+      
+      if (!broadSearchData || broadSearchData.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No active or upcoming games found for analysis in the next 14 days. The teams/players in your bet slip may not have scheduled games, or the sports may be out of season.",
+          teams_searched: extractedData.teams_found,
+          players_searched: extractedData.players_found,
+          extracted_data: extractedData
+        });
+      }
+    }
+
+    console.log('🚀 Step 3: Generating analysis with top 5 sportsbooks only...');
+
+    // Step 3: Generate optimization analysis with the targeted data (TOP 5 SPORTSBOOKS)
+    const aiOptimization = await generateTargetedOptimization(extractedData, targetedOddsData || []);
+
+    // Step 4: Build comprehensive response with best sportsbooks
     const analysis = {
       bet_slip_details: {
-        sportsbook: extractedData.slip_details.sportsbook,
-        bet_type: extractedData.slip_details.bet_structure,
-        total_stake: extractedData.slip_details.total_stake,
-        potential_payout: extractedData.slip_details.potential_payout,
-        number_of_legs: extractedData.slip_details.number_of_legs,
+        sportsbook: extractedData.sportsbook,
+        total_stake: extractedData.total_stake,
+        potential_payout: extractedData.potential_payout,
+        number_of_legs: extractedData.extracted_bets?.length || 0,
         extracted_bets: extractedData.extracted_bets
       },
-      sportsbook_comparison: sportsbookComparison,
-      optimization: generateOptimizationTips(extractedData.extracted_bets, sportsbookComparison),
-      confidence_level: extractedData.confidence,
-      timestamp: new Date().toISOString()
+      teams_and_players: {
+        teams_found: extractedData.teams_found || [],
+        players_found: extractedData.players_found || [],
+        games_found: targetedOddsData?.length || 0
+      },
+      sportsbook_comparison: generateOddsComparison(extractedData.extracted_bets, targetedOddsData || []),
+      ai_optimization: aiOptimization,
+      optimization_tips: generateSmartTips(extractedData, targetedOddsData || [], aiOptimization),
+      timestamp: new Date().toISOString(),
+      unlimited_access: hasUnlimitedAccess,
+      sportsbooks_analyzed: "Major US sportsbooks"
     };
 
     return res.status(200).json({
@@ -119,274 +147,574 @@ Return ONLY valid JSON in this exact format:
   } catch (error) {
     console.error('❌ Analysis Error:', error);
 
-    return res.status(200).json({
-      success: true,
-      analysis: {
-        message: "Analysis service temporarily unavailable. Please try again in a moment.",
-        error_type: "service_error",
-        sportsbook_comparison: null,
-        optimization_tips: ["Try again in a few moments", "Ensure your image is clear and readable"]
-      }
+    return res.status(500).json({
+      success: false,
+      message: `Analysis failed: ${error.message}`,
+      error_type: "analysis_error",
+      troubleshooting: [
+        "Check that your OpenAI API key is valid and has credits",
+        "Ensure the image is clear and contains a valid bet slip",
+        "Verify your internet connection",
+        "Try uploading a different image format (PNG, JPG)"
+      ]
     });
   }
 }
 
-async function findBetterOdds(extractedBets) {
-  if (!extractedBets || extractedBets.length === 0) {
-    return null;
-  }
+// 🚀 OPTIMIZED: Filter to top 10 sportsbooks for comprehensive analysis
+function filterToTop10Sportsbooks(gameData) {
+  const TOP_10_SPORTSBOOKS = [
+    'DraftKings',
+    'FanDuel', 
+    'BetMGM',
+    'Caesars',
+    'PointsBet',
+    'BetRivers',
+    'WynnBET',
+    'Unibet',
+    'ESPN BET',
+    'Hard Rock Bet'
+  ];
 
-  try {
-    // Fetch live odds from The Odds API for comparison
-    const oddsComparisons = [];
+  const filteredGames = gameData.map(game => {
+    if (!game.bookmakers) return game;
     
-    for (const bet of extractedBets) {
-      const betterOdds = await findBetterOddsForBet(bet);
-      if (betterOdds) {
-        oddsComparisons.push(betterOdds);
-      }
-    }
-
-    if (oddsComparisons.length === 0) {
-      return {
-        available: false,
-        message: "Live odds comparison temporarily unavailable"
-      };
-    }
-
-    // Calculate potential savings
-    const totalSavings = oddsComparisons.reduce((sum, comparison) => {
-      return sum + (comparison.potential_extra_winnings || 0);
-    }, 0);
-
+    const filteredBookmakers = game.bookmakers.filter(bookmaker => 
+      TOP_10_SPORTSBOOKS.includes(bookmaker.title)
+    );
+    
     return {
-      available: true,
-      comparisons: oddsComparisons,
-      summary: {
-        total_potential_savings: `$${totalSavings.toFixed(2)}`,
-        best_overall_book: findBestOverallBook(oddsComparisons),
-        recommendation: generateRecommendation(oddsComparisons)
-      }
+      ...game,
+      bookmakers: filteredBookmakers
     };
+  }).filter(game => game.bookmakers && game.bookmakers.length > 0);
 
-  } catch (error) {
-    console.error('Error finding better odds:', error);
-    return {
-      available: false,
-      message: "Could not compare odds at this time"
-    };
-  }
+  console.log(`🎯 Analysis limited to top 10 sportsbooks: ${TOP_10_SPORTSBOOKS.join(', ')}`);
+  return filteredGames;
 }
 
-async function findBetterOddsForBet(bet) {
+// SHARED: Use same function as generate-parlay but with TOP 10 FILTER
+async function findGamesForTeamsAndPlayers(teams, players) {
   const API_KEY = process.env.ODDS_API_KEY;
   
   if (!API_KEY) {
-    return null;
+    throw new Error('Odds API key not configured');
   }
 
-  try {
-    // Map sport to API key
-    const sportMap = {
-      'NFL': 'americanfootball_nfl',
-      'NBA': 'basketball_nba',
-      'NHL': 'icehockey_nhl', 
-      'MLB': 'baseball_mlb',
-      'NCAAF': 'americanfootball_ncaaf',
-      'NCAAB': 'basketball_ncaab'
-    };
+  const allGameData = [];
+  const searchTargets = [...teams, ...players];
+  
+  if (searchTargets.length === 0) {
+    console.log('⚠️ No teams or players detected in bet slip');
+    return [];
+  }
 
-    const sportKey = sportMap[bet.sport];
-    if (!sportKey) {
-      return null;
+  console.log(`🔍 Searching for games involving: ${searchTargets.join(', ')}`);
+
+  // Current active sports - focus on in-season sports
+  const sportKeys = [
+    'americanfootball_nfl',
+    'basketball_nba',
+    'icehockey_nhl',
+    'baseball_mlb',
+    'americanfootball_ncaaf',
+    'basketball_ncaab',
+    'soccer_epl',
+    'soccer_usa_mls',
+    'mma_mixed_martial_arts'
+  ];
+
+  // Search through sports until we find the teams/players
+  for (const sportKey of sportKeys) {
+    try {
+      console.log(`🔄 Checking ${sportKey} for target teams/players...`);
+
+      const response = await fetch(
+        `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=h2h,spreads,totals,player_points,player_assists,player_rebounds&oddsFormat=american&dateFormat=iso&commenceTimeFrom=${new Date().toISOString()}&commenceTimeTo=${new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()}`,
+        { 
+          headers: { 'Accept': 'application/json' },
+          timeout: 8000
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 422) {
+          console.log(`${sportKey} out of season, skipping...`);
+          continue;
+        } else if (response.status === 429) {
+          console.log(`Rate limit hit for ${sportKey}, continuing...`);
+          continue;
+        } else {
+          console.log(`Error ${response.status} for ${sportKey}, skipping...`);
+          continue;
+        }
+      }
+
+      const games = await response.json();
+      
+      // Filter games that match our teams/players
+      const matchingGames = games.filter(game => {
+        return searchTargets.some(target => {
+          const targetLower = target.toLowerCase();
+          return (
+            game.home_team?.toLowerCase().includes(targetLower) ||
+            game.away_team?.toLowerCase().includes(targetLower) ||
+            targetLower.includes(game.home_team?.toLowerCase()) ||
+            targetLower.includes(game.away_team?.toLowerCase())
+          );
+        });
+      });
+
+      if (matchingGames.length > 0) {
+        console.log(`✅ Found ${matchingGames.length} matching games in ${sportKey}`);
+        // 🚀 APPLY TOP 10 FILTER HERE
+        const filteredGames = filterToTop10Sportsbooks(matchingGames);
+        allGameData.push(...filteredGames.map(game => ({ ...game, sport: sportKey })));
+      }
+
+      // Stop searching once we have enough data
+      if (allGameData.length >= 5) { // Reduced from 10 to 5
+        console.log('🎯 Found sufficient game data, stopping search');
+        break;
+      }
+
+    } catch (error) {
+      console.log(`Error searching ${sportKey}:`, error.message);
+      continue;
     }
+  }
 
-    // Fetch live odds for this sport
-    const response = await fetch(
-      `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=h2h,spreads,totals&oddsFormat=american&dateFormat=iso`
-    );
+  console.log(`📊 Total games found: ${allGameData.length} (top 10 sportsbooks only)`);
+  return allGameData;
+}
 
-    if (!response.ok) {
-      return null;
+// NEW: Broad search when specific teams/players don't match (TOP 10 SPORTSBOOKS)
+async function tryBroadSportSearch() {
+  const API_KEY = process.env.ODDS_API_KEY;
+  
+  if (!API_KEY) {
+    return [];
+  }
+
+  console.log('🔄 Attempting broad search for any active games...');
+
+  const prioritySports = ['americanfootball_nfl', 'basketball_nba', 'icehockey_nhl'];
+  
+  for (const sportKey of prioritySports) {
+    try {
+      const response = await fetch(
+        `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=h2h&oddsFormat=american&commenceTimeFrom=${new Date().toISOString()}&commenceTimeTo=${new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()}`,
+        { headers: { 'Accept': 'application/json' } }
+      );
+
+      if (response.ok) {
+        const games = await response.json();
+        if (games.length > 0) {
+          console.log(`✅ Found ${games.length} games in ${sportKey} for broad analysis`);
+          // 🚀 APPLY TOP 10 FILTER HERE TOO
+          const filteredGames = filterToTop10Sportsbooks(games);
+          return filteredGames.slice(0, 3).map(game => ({ ...game, sport: sportKey })); // Reduced from 5 to 3
+        }
+      }
+    } catch (error) {
+      continue;
     }
+  }
+  
+  return [];
+}
 
-    const games = await response.json();
+// Extract all available bets with real odds from game data (TOP 10 SPORTSBOOKS ONLY)
+function extractAvailableBets(gameData) {
+  // Games are already filtered to top 10 sportsbooks from the API call
+  const availableBets = [];
+  
+  for (const game of gameData) {
+    if (!game.bookmakers) continue;
     
-    // Find the matching game
-    const matchingGame = games.find(game => 
-      (game.home_team.includes(bet.home_team) || bet.home_team.includes(game.home_team)) &&
-      (game.away_team.includes(bet.away_team) || bet.away_team.includes(game.away_team))
-    );
-
-    if (!matchingGame) {
-      return {
-        bet_description: `${bet.away_team} @ ${bet.home_team} - ${bet.bet_selection}`,
-        original_odds: bet.odds,
-        status: "Game not found in current lines",
-        better_options: []
-      };
-    }
-
-    // Find better odds across all bookmakers
-    const betterOptions = [];
-    const originalOdds = parseInt(bet.odds.replace('+', ''));
-
-    for (const bookmaker of matchingGame.bookmakers) {
+    for (const bookmaker of game.bookmakers) {
+      if (!bookmaker.markets) continue;
+      
       for (const market of bookmaker.markets) {
-        // Match the bet type and selection
-        const matchingOutcome = findMatchingOutcome(market, bet);
-        
-        if (matchingOutcome) {
-          const newOdds = matchingOutcome.price;
-          const improvement = calculateOddsImprovement(originalOdds, newOdds);
-          
-          if (improvement.is_better) {
-            betterOptions.push({
-              sportsbook: bookmaker.title,
-              odds: formatOdds(newOdds),
-              improvement: improvement.improvement_text,
-              potential_extra_winnings: improvement.extra_winnings,
-              signup_bonus: getSignupBonus(bookmaker.title)
-            });
-          }
+        for (const outcome of market.outcomes || []) {
+          availableBets.push({
+            game: `${game.away_team} @ ${game.home_team}`,
+            sportsbook: bookmaker.title,
+            market_type: market.key,
+            selection: outcome.name,
+            description: outcome.description || outcome.name,
+            point: outcome.point || null,
+            odds: formatOdds(outcome.price),
+            decimal_odds: americanToDecimal(outcome.price),
+            commence_time: game.commence_time,
+            sport: game.sport || 'unknown'
+          });
         }
       }
     }
+  }
+  
+  console.log(`📊 Found ${availableBets.length} betting options from top sportsbooks`);
+  return availableBets;
+}
 
-    // Sort by best odds
-    betterOptions.sort((a, b) => b.potential_extra_winnings - a.potential_extra_winnings);
+// 🚀 OPTIMIZED: Enhanced optimization function with MASSIVELY reduced token usage
+async function generateTargetedOptimization(extractedData, gameData) {
+  try {
+    // Create structured data with REAL odds only (TOP 5 SPORTSBOOKS)
+    const availableBets = extractAvailableBets(gameData);
+    
+    if (availableBets.length === 0) {
+      console.log('No valid betting markets found, using fallback optimization');
+      return generateFallbackOptimization(extractedData, gameData);
+    }
 
-    return {
-      bet_description: `${bet.away_team} @ ${bet.home_team} - ${bet.bet_selection}`,
-      original_odds: bet.odds,
-      original_sportsbook: "Current",
-      better_options: betterOptions.slice(0, 3), // Top 3
-      potential_extra_winnings: betterOptions[0]?.potential_extra_winnings || 0
-    };
+    // 🚀 MAJOR TOKEN REDUCTION: Use only first 10 bets instead of 20
+    const limitedBets = availableBets.slice(0, 10);
+
+    const optimizationResponse = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You are a sports betting analyst. Only reference exact odds from the provided data. Return JSON only."
+        },
+        {
+          role: "user",
+          content: `Analyze this bet slip against top 5 sportsbooks:
+
+CURRENT BETS: ${JSON.stringify(extractedData.extracted_bets, null, 2)}
+
+TOP 5 SPORTSBOOKS DATA (first 10 entries):
+${JSON.stringify(limitedBets, null, 2)}
+
+Return JSON:
+{
+  "market_inefficiencies": ["Brief pricing error analysis"],
+  "correlation_analysis": ["Brief correlation issues"], 
+  "line_movement_strategy": ["Brief timing advice"],
+  "ev_optimization": ["Brief mathematical improvements"],
+  "bankroll_management": ["Brief position sizing advice"],
+  "alternative_constructions": ["Brief better structures"],
+  "sharp_money_signals": ["Brief professional indicators"],
+  "advanced_insights": ["Brief strategic advice"]
+}`
+        }
+      ],
+      max_tokens: 400, // REDUCED from 600 to 400
+      temperature: 0.2
+    });
+
+    const optimizationText = optimizationResponse.choices[0].message.content;
+    
+    try {
+      const cleaned = optimizationText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      return JSON.parse(cleaned);
+    } catch (parseError) {
+      console.log('Optimization parsing failed, using fallback');
+      return generateFallbackOptimization(extractedData, gameData);
+    }
 
   } catch (error) {
-    console.error('Error fetching odds for bet:', error);
-    return null;
+    console.log('OpenAI optimization failed, using fallback:', error.message);
+    return generateFallbackOptimization(extractedData, gameData);
   }
 }
 
-function findMatchingOutcome(market, bet) {
-  // Simple matching logic - can be enhanced
-  for (const outcome of market.outcomes) {
-    if (bet.bet_type === 'moneyline' && market.key === 'h2h') {
-      if (outcome.name.includes(bet.bet_selection) || bet.bet_selection.includes(outcome.name)) {
-        return outcome;
-      }
-    } else if (bet.bet_type === 'spread' && market.key === 'spreads') {
-      if (outcome.name.includes(bet.bet_selection) || bet.bet_selection.includes(outcome.name)) {
-        return outcome;
-      }
-    } else if (bet.bet_type === 'total' && market.key === 'totals') {
-      if ((bet.bet_selection.toLowerCase().includes('over') && outcome.name === 'Over') ||
-          (bet.bet_selection.toLowerCase().includes('under') && outcome.name === 'Under')) {
-        return outcome;
+// Enhanced function to find all sportsbooks for specific bets (TOP 10)
+function findAllSportsbooksForBet(bet, gameData) {
+  const matchingGames = gameData.filter(game => {
+    return (
+      (bet.home_team && game.home_team?.toLowerCase().includes(bet.home_team.toLowerCase())) ||
+      (bet.away_team && game.away_team?.toLowerCase().includes(bet.away_team.toLowerCase())) ||
+      (bet.home_team && game.away_team?.toLowerCase().includes(bet.home_team.toLowerCase())) ||
+      (bet.away_team && game.home_team?.toLowerCase().includes(bet.away_team.toLowerCase()))
+    );
+  });
+
+  if (matchingGames.length === 0) return [];
+
+  const game = matchingGames[0];
+  if (!game.bookmakers) return [];
+
+  const allSportsbooks = [];
+
+  for (const bookmaker of game.bookmakers) {
+    if (!bookmaker.markets) continue;
+    
+    for (const market of bookmaker.markets) {
+      const isMatchingMarket = isMatchingBetType(bet, market);
+      if (!isMatchingMarket) continue;
+
+      for (const outcome of market.outcomes || []) {
+        if (isMatchingSelection(bet, outcome, market)) {
+          const odds = outcome.price;
+          
+          allSportsbooks.push({
+            name: bookmaker.title,
+            odds: formatOdds(odds),
+            market: market.key,
+            selection: outcome.name,
+            point: outcome.point || null
+          });
+        }
       }
     }
   }
-  return null;
+
+  return allSportsbooks;
 }
 
-function calculateOddsImprovement(originalOdds, newOdds) {
-  const originalDecimal = americanToDecimal(originalOdds);
-  const newDecimal = americanToDecimal(newOdds);
+// Helper function to match bet type to market
+function isMatchingBetType(bet, market) {
+  const betType = bet.bet_type?.toLowerCase();
+  const marketKey = market.key?.toLowerCase();
   
-  // Assume $100 bet for comparison
-  const originalPayout = 100 * (originalDecimal - 1);
-  const newPayout = 100 * (newDecimal - 1);
-  const extraWinnings = newPayout - originalPayout;
+  if (betType === 'moneyline' && marketKey === 'h2h') return true;
+  if (betType === 'spread' && marketKey === 'spreads') return true;
+  if (betType === 'total' && (marketKey === 'totals' || marketKey === 'over_under')) return true;
+  if (betType === 'player_prop' && marketKey.includes('player_')) return true;
+  if (betType === 'prop' && marketKey.includes('player_')) return true;
+  
+  if (bet.bet_selection?.toLowerCase().includes('points') && marketKey === 'player_points') return true;
+  if (bet.bet_selection?.toLowerCase().includes('rebounds') && marketKey === 'player_rebounds') return true;
+  if (bet.bet_selection?.toLowerCase().includes('assists') && marketKey === 'player_assists') return true;
+  
+  return false;
+}
+
+// Helper function to match selection to outcome
+function isMatchingSelection(bet, outcome, market) {
+  const betSelection = bet.bet_selection?.toLowerCase() || '';
+  const outcomeName = outcome.name?.toLowerCase() || '';
+  
+  if (market.key === 'h2h') {
+    return betSelection.includes(outcomeName) || outcomeName.includes(betSelection.split(' ')[0]);
+  }
+  
+  if (market.key === 'spreads') {
+    const teamMatches = betSelection.includes(outcomeName) || outcomeName.includes(betSelection.split(' ')[0]);
+    if (!teamMatches) return false;
+    
+    const betHasPlus = betSelection.includes('+');
+    const betHasMinus = betSelection.includes('-');
+    const outcomePoint = outcome.point;
+    
+    if (betHasPlus && outcomePoint > 0) return true;
+    if (betHasMinus && outcomePoint < 0) return true;
+    
+    return !betHasPlus && !betHasMinus;
+  }
+  
+  if (market.key === 'totals') {
+    const isOver = betSelection.includes('over') && outcomeName.includes('over');
+    const isUnder = betSelection.includes('under') && outcomeName.includes('under');
+    return isOver || isUnder;
+  }
+  
+  if (market.key.includes('player_')) {
+    return outcome.description?.toLowerCase().includes(betSelection) || betSelection.includes(outcome.description?.toLowerCase());
+  }
+  
+  return false;
+}
+
+// Helper function to determine if odds are better
+function isBetterOdds(newOdds, currentBestOdds) {
+  if (currentBestOdds === null) return true;
+  
+  if (newOdds > 0 && currentBestOdds > 0) {
+    return newOdds > currentBestOdds;
+  } else if (newOdds < 0 && currentBestOdds < 0) {
+    return Math.abs(newOdds) < Math.abs(currentBestOdds);
+  } else if (newOdds > 0 && currentBestOdds < 0) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// Calculate odds improvement
+function calculateOddsImprovement(originalOdds, bestOdds) {
+  const originalPayout = calculatePayout(100, originalOdds);
+  const bestPayout = calculatePayout(100, bestOdds);
+  
+  const improvement = ((bestPayout - originalPayout) / originalPayout) * 100;
+  const extraPayout = bestPayout - originalPayout;
   
   return {
-    is_better: extraWinnings > 0,
-    extra_winnings: Math.max(0, extraWinnings),
-    improvement_text: extraWinnings > 0 ? `+$${extraWinnings.toFixed(2)} better` : "Same or worse"
+    percentage: Math.round(improvement * 100) / 100,
+    description: improvement > 0 ? `${improvement.toFixed(1)}% better payout` : 'No improvement',
+    extraPayout: extraPayout > 0 ? `$${extraPayout.toFixed(2)} extra per $100 bet` : null
   };
 }
 
+// Calculate payout for given stake and odds
+function calculatePayout(stake, odds) {
+  if (odds > 0) {
+    return stake + (stake * odds / 100);
+  } else {
+    return stake + (stake * 100 / Math.abs(odds));
+  }
+}
+
+// ENHANCED: Enhanced odds comparison function - show only top 3 best options
+function generateOddsComparison(extractedBets, gameData) {
+  const allComparisons = [];
+
+  for (const bet of extractedBets || []) {
+    const allSportsbooks = findAllSportsbooksForBet(bet, gameData);
+    
+    if (allSportsbooks && allSportsbooks.length > 0) {
+      // Sort by improvement percentage and take top 3
+      const topSportsbooks = allSportsbooks
+        .map(sportsbook => {
+          const originalOdds = parseOdds(bet.odds);
+          const bestOdds = parseOdds(sportsbook.odds);
+          const improvement = calculateOddsImprovement(originalOdds, bestOdds);
+          
+          return {
+            original_bet: `${bet.away_team} @ ${bet.home_team} - ${bet.bet_selection}`,
+            original_odds: bet.odds,
+            original_sportsbook: bet.sportsbook || 'Your Book',
+            best_sportsbook: sportsbook.name,
+            best_odds: sportsbook.odds,
+            improvement_percentage: improvement.percentage,
+            improvement_description: improvement.description,
+            potential_extra_payout: improvement.extraPayout,
+            recommendation: improvement.percentage > 5 ? 'Switch recommended' : 'Minimal difference'
+          };
+        })
+        .sort((a, b) => b.improvement_percentage - a.improvement_percentage)
+        .slice(0, 3); // Only show top 3
+
+      allComparisons.push(...topSportsbooks);
+    } else {
+      allComparisons.push({
+        original_bet: `${bet.away_team} @ ${bet.home_team} - ${bet.bet_selection}`,
+        original_odds: bet.odds,
+        original_sportsbook: bet.sportsbook || 'Your Book',
+        best_sportsbook: 'No match found',
+        best_odds: null,
+        improvement_percentage: 0,
+        improvement_description: 'Unable to find matching bet in available sportsbooks',
+        recommendation: 'Verify bet details or check if game is available'
+      });
+    }
+  }
+
+  return {
+    available: allComparisons.length > 0,
+    comparisons: allComparisons,
+    summary: {
+      bets_analyzed: allComparisons.length,
+      better_odds_found: allComparisons.filter(c => c.improvement_percentage > 0).length,
+      average_improvement: allComparisons.length > 0 ? 
+        (allComparisons.reduce((sum, c) => sum + c.improvement_percentage, 0) / allComparisons.length).toFixed(1) : 0,
+      sportsbooks_compared: "Major US sportsbooks"
+    }
+  };
+}
+
+// Enhanced smart tips focused on major sportsbooks
+function generateSmartTips(extractedData, gameData, aiOptimization) {
+  const tips = [];
+
+  // Add AI-generated insights with proper icons (if available)
+  if (aiOptimization.market_inefficiencies) {
+    tips.push(...aiOptimization.market_inefficiencies.map(tip => `🎯 Market Inefficiency: ${tip}`));
+  }
+
+  if (aiOptimization.ev_optimization) {
+    tips.push(...aiOptimization.ev_optimization.map(tip => `🧮 EV Optimization: ${tip}`));
+  }
+
+  if (aiOptimization.bankroll_management) {
+    tips.push(...aiOptimization.bankroll_management.map(tip => `💰 Bankroll Strategy: ${tip}`));
+  }
+
+  // Add general sportsbook tips without naming specific books
+  const availableBets = extractAvailableBets(gameData);
+  const uniqueSportsbooks = [...new Set(availableBets.map(bet => bet.sportsbook))];
+  
+  if (uniqueSportsbooks.length > 0) {
+    tips.push(`📱 Sportsbook Analysis: Compared ${uniqueSportsbooks.length} major US sportsbooks for best odds`);
+    tips.push(`🏆 Comprehensive Coverage: Analyzed the biggest sportsbooks in the country for optimal line shopping`);
+  }
+
+  // Add game-specific insights
+  if (gameData.length > 0) {
+    tips.push(`📊 Market Data: Analyzed ${gameData.length} games across major sportsbooks for optimization opportunities`);
+  } else {
+    tips.push(`⚠️ Limited Market Data: No matching games found in available sportsbooks - teams may be out of season`);
+  }
+
+  return tips;
+}
+
+// Enhanced fallback optimization with major sportsbooks
+function generateFallbackOptimization(extractedData, gameData) {
+  const numLegs = extractedData.extracted_bets?.length || 0;
+  const availableBets = extractAvailableBets(gameData);
+  const uniqueBooks = [...new Set(availableBets.map(bet => bet.sportsbook))];
+  
+  return {
+    market_inefficiencies: [
+      `Analysis across major US sportsbooks - found ${availableBets.length} bets across ${uniqueBooks.length} premium books`,
+      `${numLegs}-leg structure optimized for best odds comparison`
+    ],
+    correlation_analysis: [
+      numLegs > 2 ? "Multiple legs may reduce expected value" : "Structure reduces correlation risk",
+      "Major sportsbooks provide reliable correlation analysis"
+    ],
+    line_movement_strategy: [
+      "Monitor major sportsbooks for best line movement timing",
+      "Premium books typically offer most accurate closing lines"
+    ],
+    ev_optimization: [
+      "Compare odds across major sportsbooks for maximum expected value",
+      "Premium sportsbooks typically offer best overall value"
+    ],
+    bankroll_management: [
+      `${numLegs}-leg parlay should represent 1-2% of bankroll maximum`,
+      "Use major sportsbooks for most reliable bankroll tracking"
+    ],
+    alternative_constructions: [
+      "Consider round-robin using major sportsbooks for diversification",
+      "Premium books offer best alternative betting structures"
+    ],
+    sharp_money_signals: [
+      "Monitor line movement across major books for sharp action",
+      "Premium sportsbooks typically reflect sharp money earliest"
+    ],
+    advanced_insights: [
+      "Major US sportsbooks provide most accurate market pricing",
+      "Premium book line shopping can improve EV by 2-5% per bet"
+    ]
+  };
+}
+
+// SHARED Helper functions
+function parseOdds(oddsValue) {
+  if (!oddsValue) return 100;
+  const cleaned = String(oddsValue).replace('+', '');
+  const parsed = parseInt(cleaned);
+  return isNaN(parsed) ? 100 : parsed;
+}
+
+function formatOdds(odds) {
+  if (typeof odds !== 'number' || isNaN(odds)) return '+100';
+  return odds > 0 ? `+${odds}` : `${odds}`;
+}
+
 function americanToDecimal(americanOdds) {
+  if (typeof americanOdds !== 'number' || isNaN(americanOdds)) {
+    return 2.0;
+  }
+  
   if (americanOdds > 0) {
     return (americanOdds / 100) + 1;
   } else {
     return (100 / Math.abs(americanOdds)) + 1;
   }
-}
-
-function formatOdds(odds) {
-  return odds > 0 ? `+${odds}` : `${odds}`;
-}
-
-function getSignupBonus(bookmaker) {
-  const bonuses = {
-    'DraftKings': '$1000 bonus bet',
-    'FanDuel': '$150 bonus bets',
-    'BetMGM': '$1500 risk-free bet',
-    'Caesars Sportsbook': '$1000 first bet',
-    'BetRivers': '$500 bonus bet',
-    'PointsBet': '$500 risk-free bet'
-  };
-  
-  return bonuses[bookmaker] || '$500 welcome bonus';
-}
-
-function findBestOverallBook(comparisons) {
-  const bookCounts = {};
-  let maxCount = 0;
-  let bestBook = "Multiple books recommended";
-  
-  for (const comparison of comparisons) {
-    for (const option of comparison.better_options) {
-      bookCounts[option.sportsbook] = (bookCounts[option.sportsbook] || 0) + 1;
-      if (bookCounts[option.sportsbook] > maxCount) {
-        maxCount = bookCounts[option.sportsbook];
-        bestBook = option.sportsbook;
-      }
-    }
-  }
-  
-  return bestBook;
-}
-
-function generateRecommendation(comparisons) {
-  const totalSavings = comparisons.reduce((sum, comp) => sum + comp.potential_extra_winnings, 0);
-  
-  if (totalSavings > 50) {
-    return "Significant savings available! Consider switching sportsbooks for these bets.";
-  } else if (totalSavings > 20) {
-    return "Moderate savings found. Worth comparing before placing bets.";
-  } else if (totalSavings > 5) {
-    return "Small improvements available across multiple books.";
-  } else {
-    return "Your current sportsbook offers competitive odds for these bets.";
-  }
-}
-
-function generateOptimizationTips(extractedBets, sportsbookComparison) {
-  const tips = [];
-  
-  if (sportsbookComparison && sportsbookComparison.available) {
-    const totalSavings = parseFloat(sportsbookComparison.summary.total_potential_savings.replace('$', ''));
-    
-    if (totalSavings > 20) {
-      tips.push(`💰 You could save ${sportsbookComparison.summary.total_potential_savings} by shopping for better odds`);
-      tips.push(`🏆 ${sportsbookComparison.summary.best_overall_book} offers the best overall value for your bets`);
-    }
-  }
-  
-  // General tips based on bet structure
-  if (extractedBets.length > 4) {
-    tips.push("🎯 Consider breaking large parlays into smaller, higher-probability combinations");
-  }
-  
-  if (extractedBets.some(bet => bet.odds && parseInt(bet.odds.replace('+', '')) > 300)) {
-    tips.push("⚡ High-odds bets detected - ensure you're comfortable with the risk level");
-  }
-  
-  tips.push("📊 Always verify odds before placing bets as lines move frequently");
-  tips.push("🔄 Consider using our AI parlay generator for mathematically optimized combinations");
-  
-  return tips;
 }

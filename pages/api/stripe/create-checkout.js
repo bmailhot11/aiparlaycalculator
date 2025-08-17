@@ -1,136 +1,139 @@
-import { useState } from 'react';
-import { Mail, Key, CheckCircle, AlertCircle } from 'lucide-react';
+// pages/api/stripe/create-checkout.js
+import Stripe from 'stripe';
 
-export default function PremiumRestore() {
-  const [email, setEmail] = useState('');
-  const [accessCode, setAccessCode] = useState('');
-  const [restoring, setRestoring] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-  const handleRestore = async (e) => {
-    e.preventDefault();
-    setRestoring(true);
-    setError('');
+export default async function handler(req, res) {
+  console.log('🏪 Stripe checkout request received');
+  console.log('Method:', req.method);
+  console.log('Body:', req.body);
+  console.log('Origin:', req.headers.origin);
+  console.log('STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY);
 
-    try {
-      const response = await fetch('/api/restore-premium', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, accessCode }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        // Restore premium in localStorage
-        localStorage.setItem('isPremium', 'true');
-        localStorage.setItem('premiumEmail', email);
-        localStorage.setItem('accessCode', accessCode);
-        setSuccess(true);
-        
-        // Refresh page to update UI
-        setTimeout(() => window.location.reload(), 2000);
-      } else {
-        setError(result.message || 'Failed to restore premium access');
-      }
-    } catch (err) {
-      console.error('Premium restore error:', err);
-      setError('Network error. Please try again.');
-    } finally {
-      setRestoring(false);
-    }
-  };
-
-  if (success) {
-    return (
-      <div className="text-center p-6 bg-green-500/10 border border-green-500/30 rounded-xl">
-        <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-400" />
-        <h3 className="text-lg font-semibold text-green-400 mb-2">Premium Restored!</h3>
-        <p className="text-green-300">Your premium access has been restored. Page will reload...</p>
-      </div>
-    );
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  return (
-    <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-white">
-        <Key className="w-5 h-5 text-green-400" />
-        Restore Premium Access
-      </h3>
-      
-      <p className="text-gray-300 mb-6 text-sm">
-        Enter the email and access code from your premium purchase to restore your account.
-      </p>
-      
-      <form onSubmit={handleRestore} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-            <Mail className="w-4 h-4" />
-            Email Address
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-900 text-white placeholder-gray-400"
-            placeholder="Enter your email from purchase"
-            required
-          />
-        </div>
+  try {
+    const { email, plan = 'monthly', userIdentifier } = req.body; // ADD userIdentifier
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-            <Key className="w-4 h-4" />
-            Access Code
-          </label>
-          <input
-            type="text"
-            value={accessCode}
-            onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-            className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-900 text-white placeholder-gray-400 font-mono tracking-wider"
-            placeholder="XXXXXXXX"
-            maxLength={8}
-            style={{ textTransform: 'uppercase' }}
-            required
-          />
-          <p className="text-xs text-gray-500 mt-1">8-character code from your purchase email</p>
-        </div>
+    if (!email) {
+      console.error('❌ No email provided');
+      return res.status(400).json({ error: 'Email is required' });
+    }
 
-        {error && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-            <span className="text-red-400 text-sm">{error}</span>
-          </div>
-        )}
+    if (!userIdentifier) {
+      console.error('❌ No userIdentifier provided');
+      return res.status(400).json({ error: 'User identifier is required' });
+    }
 
-        <button
-          type="submit"
-          disabled={restoring || !email || !accessCode}
-          className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {restoring ? (
-            <div className="flex items-center justify-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              Restoring...
-            </div>
-          ) : (
-            'Restore Premium Access'
-          )}
-        </button>
-      </form>
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.error('❌ Invalid email format:', email);
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
 
-      <div className="mt-6 p-4 bg-gray-900 rounded-lg border border-gray-600">
-        <h4 className="text-sm font-medium text-gray-300 mb-2">Need Help?</h4>
-        <div className="text-xs text-gray-400 space-y-1">
-          <p>• Check your email for the 8-character access code after purchase</p>
-          <p>• Access codes are valid for 30 days after purchase</p>
-          <p>• Lost your code? Contact support with your purchase email</p>
-          <p>• Issues? Email: support@betgenius.com</p>
-        </div>
-      </div>
-    </div>
-  );
+    // Validate plan
+    if (!['monthly', 'yearly'].includes(plan)) {
+      console.error('❌ Invalid plan:', plan);
+      return res.status(400).json({ error: 'Invalid plan. Must be "monthly" or "yearly"' });
+    }
+
+    // Ensure we have a valid origin for redirect URLs
+    const origin = req.headers.origin || req.headers.host 
+      ? `https://${req.headers.host}` 
+      : 'http://localhost:3000'; // Fallback for development
+
+    console.log('✅ Creating checkout session for:', email, 'UserID:', userIdentifier, 'Plan:', plan);
+    console.log('🔗 Using origin:', origin);
+
+    // Define pricing based on plan
+    const pricingConfig = {
+      monthly: {
+        amount: 699, // $6.99
+        interval: 'month',
+        description: 'Monthly subscription with advanced AI analysis'
+      },
+      yearly: {
+        amount: 4999, // $49.99
+        interval: 'year',
+        description: 'Yearly subscription - Save 40%! Advanced AI analysis'
+      }
+    };
+
+    const selectedPricing = pricingConfig[plan];
+
+    // Create Stripe checkout session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      customer_email: email,
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `AiParlayCalculator Premium (${plan.charAt(0).toUpperCase() + plan.slice(1)})`,
+              description: selectedPricing.description,
+              // Remove images if you don't have a valid URL
+              // images: ['https://your-domain.com/logo.png'],
+            },
+            unit_amount: selectedPricing.amount,
+            recurring: {
+              interval: selectedPricing.interval,
+            },
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}&plan=${plan}`,
+      cancel_url: `${origin}/?canceled=true`,
+      metadata: {
+        customer_email: email,
+        user_identifier: userIdentifier, // ADD THIS - KEY ADDITION
+        plan: plan,
+        pricing_tier: plan === 'yearly' ? 'premium_yearly' : 'premium_monthly'
+      },
+      // Add these for better UX
+      allow_promotion_codes: true,
+      billing_address_collection: 'auto',
+      // Optional: Add tax collection if needed
+      // automatic_tax: { enabled: true },
+    });
+
+    console.log('✅ Checkout session created:', session.id);
+    console.log('🔗 Checkout URL:', session.url);
+    console.log('💰 Plan selected:', plan, `($${(selectedPricing.amount / 100).toFixed(2)})`);
+
+    res.status(200).json({ 
+      url: session.url,
+      sessionId: session.id,
+      plan: plan,
+      amount: selectedPricing.amount
+    });
+
+  } catch (error) {
+    console.error('❌ Stripe checkout error:', error);
+    
+    // Provide more specific error messages
+    if (error.type === 'StripeCardError') {
+      res.status(400).json({ error: 'Card error: ' + error.message });
+    } else if (error.type === 'StripeRateLimitError') {
+      res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    } else if (error.type === 'StripeInvalidRequestError') {
+      res.status(400).json({ error: 'Invalid request: ' + error.message });
+    } else if (error.type === 'StripeAPIError') {
+      res.status(500).json({ error: 'Stripe API error. Please try again.' });
+    } else if (error.type === 'StripeConnectionError') {
+      res.status(500).json({ error: 'Network error. Please check your connection.' });
+    } else if (error.type === 'StripeAuthenticationError') {
+      res.status(500).json({ error: 'Stripe authentication failed. Please contact support.' });
+    } else {
+      res.status(500).json({ 
+        error: 'Failed to create checkout session',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
 }

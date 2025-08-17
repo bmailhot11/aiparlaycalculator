@@ -1,114 +1,119 @@
-import { useState } from 'react';
-import { Mail, Key, CheckCircle } from 'lucide-react';
-
-export default function PremiumRestore() {
-  const [email, setEmail] = useState('');
-  const [accessCode, setAccessCode] = useState('');
-  const [restoring, setRestoring] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleRestore = async (e) => {
-    e.preventDefault();
-    setRestoring(true);
-    setError('');
-
-    try {
-      const response = await fetch('/api/restore-premium', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, accessCode }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        // Restore premium in localStorage
-        localStorage.setItem('isPremium', 'true');
-        localStorage.setItem('premiumEmail', email);
-        localStorage.setItem('accessCode', accessCode);
-        setSuccess(true);
-        
-        // Refresh page to update UI
-        setTimeout(() => window.location.reload(), 2000);
-      } else {
-        setError(result.message || 'Failed to restore premium access');
-      }
-    } catch (err) {
-      setError('Network error. Please try again.');
-    } finally {
-      setRestoring(false);
-    }
-  };
-
-  if (success) {
-    return (
-      <div className="text-center p-6 bg-green-50 border border-green-200 rounded-xl">
-        <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500" />
-        <h3 className="text-lg font-semibold text-green-800 mb-2">Premium Restored!</h3>
-        <p className="text-green-600">Your premium access has been restored. Page will reload...</p>
-      </div>
-    );
+// pages/api/restore-premium.js
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  return (
-    <div className="bg-white p-6 rounded-xl border border-gray-200">
-      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-        <Key className="w-5 h-5 text-blue-600" />
-        Restore Premium Access
-      </h3>
+  try {
+    const { email, accessCode } = req.body;
+
+    if (!email || !accessCode) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email and access code are required' 
+      });
+    }
+
+    // Validate access code format
+    if (accessCode.length !== 8 || !accessCode.match(/^[A-Z0-9]+$/)) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid access code format. Must be 8 characters, letters and numbers only.' 
+      });
+    }
+
+    // Check if user exists in premium database
+    const premiumStatus = await checkAndRestorePremium(email, accessCode);
+    
+    if (premiumStatus.success) {
+      return res.status(200).json({ 
+        success: true,
+        message: 'Premium access restored successfully',
+        isPremium: true
+      });
+    } else {
+      return res.status(400).json({ 
+        success: false,
+        message: premiumStatus.message 
+      });
+    }
+
+  } catch (error) {
+    console.error('Restore premium error:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: 'Server error. Please try again.' 
+    });
+  }
+}
+
+async function checkAndRestorePremium(email, accessCode) {
+  try {
+    const fs = require('fs').promises;
+    const path = require('path');
+    const dataFile = path.join(process.cwd(), 'data', 'premium-users.json');
+    
+    try {
+      // Read current premium users
+      const data = await fs.readFile(dataFile, 'utf8');
+      const users = JSON.parse(data);
       
-      <form onSubmit={handleRestore} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email Address
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter your email from purchase"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Access Code
-          </label>
-          <input
-            type="text"
-            value={accessCode}
-            onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter your 8-character code"
-            maxLength={8}
-            required
-          />
-        </div>
-
-        {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={restoring}
-          className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
-        >
-          {restoring ? 'Restoring...' : 'Restore Premium'}
-        </button>
-      </form>
-
-      <div className="mt-4 text-xs text-gray-500">
-        <p>• Check your email for the access code after purchase</p>
-        <p>• Lost your code? Contact support with your email</p>
-      </div>
-    </div>
-  );
+      // For MVP: accept specific test codes or check against stored data
+      const testCodes = ['TEST1234', 'PREMIUM1', 'DEMO8888'];
+      
+      if (testCodes.includes(accessCode) || users[email]) {
+        // Add/update user in premium database
+        users[email] = {
+          isPremium: true,
+          email: email,
+          accessCode: accessCode,
+          activatedAt: users[email]?.activatedAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          restoredAt: new Date().toISOString()
+        };
+        
+        // Save updated data
+        await fs.writeFile(dataFile, JSON.stringify(users, null, 2), 'utf8');
+        
+        console.log('✅ Premium access restored for:', email);
+        return { success: true, message: 'Premium access restored successfully' };
+      } else {
+        console.log('❌ Invalid access code for:', email);
+        return { success: false, message: 'Invalid access code. Please check your purchase confirmation email.' };
+      }
+      
+    } catch (fileError) {
+      // File doesn't exist, create it
+      console.log('📁 Creating new premium users file');
+      
+      const testCodes = ['TEST1234', 'PREMIUM1', 'DEMO8888'];
+      if (testCodes.includes(accessCode)) {
+        const users = {
+          [email]: {
+            isPremium: true,
+            email: email,
+            accessCode: accessCode,
+            activatedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            restoredAt: new Date().toISOString()
+          }
+        };
+        
+        // Ensure data directory exists
+        const dataDir = path.join(process.cwd(), 'data');
+        await fs.mkdir(dataDir, { recursive: true });
+        
+        // Create new file
+        await fs.writeFile(dataFile, JSON.stringify(users, null, 2), 'utf8');
+        
+        console.log('✅ Premium access granted for new user:', email);
+        return { success: true, message: 'Premium access activated successfully' };
+      } else {
+        return { success: false, message: 'Invalid access code. Please check your purchase confirmation email.' };
+      }
+    }
+  } catch (error) {
+    console.error('Error in checkAndRestorePremium:', error);
+    return { success: false, message: 'System error. Please try again later.' };
+  }
 }
