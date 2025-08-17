@@ -11,9 +11,9 @@ const PremiumContext = createContext({
 
 function MyApp({ Component, pageProps }) {
   const [isPremium, setIsPremium] = useState(false);
-  const [premiumLoading, setPremiumLoading] = useState(false); // Start as false
+  const [premiumLoading, setPremiumLoading] = useState(false);
 
-  // Simplified premium check
+  // Simplified premium check with proper error handling
   const checkPremiumStatus = async () => {
     try {
       setPremiumLoading(true);
@@ -94,9 +94,9 @@ function MyApp({ Component, pageProps }) {
     }
   };
 
-  // Initialize on mount
+  // Initialize on mount with proper async handling
   useEffect(() => {
-    const initializePremiumStatus = () => {
+    const initializePremiumStatus = async () => {
       try {
         // Check localStorage first for immediate response
         const localPremium = localStorage.getItem('isPremium');
@@ -127,17 +127,51 @@ function MyApp({ Component, pageProps }) {
 
         // Only check server if we have premium email but no cached status
         console.log('🔍 Has premium email but no cached status - checking server');
-        checkPremiumStatus();
+        
+        // 🚀 FIX: Properly await the async function and handle errors
+        try {
+          await checkPremiumStatus();
+        } catch (error) {
+          console.error('❌ Premium status check failed during initialization:', error);
+          // Ensure loading is stopped even if check fails
+          setIsPremium(false);
+          localStorage.setItem('isPremium', 'false');
+          setPremiumLoading(false);
+        }
         
       } catch (error) {
         console.error('Error initializing premium status:', error);
         setIsPremium(false);
         localStorage.setItem('isPremium', 'false');
+        setPremiumLoading(false);
       }
     };
 
     initializePremiumStatus();
   }, []); // Only run once on mount
+
+  // 🚀 FIX: Add emergency timeout to prevent infinite loading
+  useEffect(() => {
+    const emergencyTimeout = setTimeout(() => {
+      if (premiumLoading) {
+        console.warn('⚠️ Emergency timeout: Premium check took too long, stopping loading');
+        setPremiumLoading(false);
+        
+        // Use cached status or default to free
+        const localPremium = localStorage.getItem('isPremium');
+        if (localPremium === 'true') {
+          setIsPremium(true);
+          console.log('📱 Emergency fallback: Using cached premium status');
+        } else {
+          setIsPremium(false);
+          localStorage.setItem('isPremium', 'false');
+          console.log('📱 Emergency fallback: Setting to free user');
+        }
+      }
+    }, 10000); // 10 second emergency timeout
+
+    return () => clearTimeout(emergencyTimeout);
+  }, [premiumLoading]);
 
   const premiumContextValue = {
     isPremium,
