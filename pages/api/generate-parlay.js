@@ -136,15 +136,23 @@ async function fetchSportSpecificOdds(sport) {
   for (const sportKey of sportKeys) {
     try {
       console.log(`🔄 Fetching ${sport} odds (${sportKey}) from API...`);
-
-      const response = await fetch(
-        `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=h2h,spreads,totals,player_points,player_rebounds,player_assists,player_pass_tds,player_rush_yds,player_receiving_yds&oddsFormat=american&dateFormat=iso&commenceTimeFrom=${new Date().toISOString()}&commenceTimeTo=${new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()}`,
+      
+      // Only request basic markets to avoid 422 errors
+      const markets = 'h2h,spreads,totals'; // Basic markets only for now
+      
+      const url = `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=${markets}&oddsFormat=american&dateFormat=iso`;
+      console.log(`URL: ${url.replace(API_KEY, 'HIDDEN')}`);
+      
+      const response = await fetch(url,
         { 
           headers: { 'Accept': 'application/json' }
         }
       );
 
+      console.log(`Response status for ${sportKey}: ${response.status}`);
+      
       if (!response.ok) {
+        console.log(`Response not OK for ${sportKey}: ${response.status}`);
         if (response.status === 422) {
           console.log(`${sportKey} is out of season, trying next variant...`);
           continue;
@@ -599,7 +607,7 @@ function validateAndOptimizeParlayOdds(parlayData, availableBets, preferences) {
 // Calculate confidence based on odds and bet types
 function calculateConfidence(legs) {
   const avgOdds = legs.reduce((sum, leg) => sum + parseOdds(leg.odds), 0) / legs.length;
-  const hasPlayerProps = legs.some(leg => leg.bet_type.includes('player_'));
+  const hasPlayerProps = legs.some(leg => leg.bet_type && leg.bet_type.includes('player_'));
   
   if (avgOdds < -150 && !hasPlayerProps) return 'High confidence - favorites with solid fundamentals';
   if (avgOdds < 150 && legs.length <= 4) return 'Medium confidence - balanced risk/reward profile';

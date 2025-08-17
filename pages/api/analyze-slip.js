@@ -230,7 +230,8 @@ async function findGamesForTeamsAndPlayers(teams, players) {
       console.log(`🔄 Checking ${sportKey} for target teams/players...`);
 
       const response = await fetch(
-        `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=h2h,spreads,totals,player_points,player_assists,player_rebounds&oddsFormat=american&dateFormat=iso&commenceTimeFrom=${new Date().toISOString()}&commenceTimeTo=${new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()}`,
+        // Don't filter by date - get all upcoming games
+        `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=h2h,spreads,totals,player_points,player_assists,player_rebounds&oddsFormat=american&dateFormat=iso`,
         { 
           headers: { 'Accept': 'application/json' },
           timeout: 8000
@@ -303,7 +304,8 @@ async function tryBroadSportSearch() {
   for (const sportKey of prioritySports) {
     try {
       const response = await fetch(
-        `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=h2h&oddsFormat=american&commenceTimeFrom=${new Date().toISOString()}&commenceTimeTo=${new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()}`,
+        // Don't filter by date - get all upcoming games
+        `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=h2h&oddsFormat=american`,
         { headers: { 'Accept': 'application/json' } }
       );
 
