@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Premium Test</title>
+</head>
+<body>
+    <h1>Premium Status Test</h1>
+    <div id="status">Loading...</div>
+    
+    <button onclick="clearStorage()">Clear Storage</button>
+    <button onclick="setPremiumEmail()">Set Premium Email</button>
+    <button onclick="setPremiumStatus()">Set Premium Status</button>
+    
+    <script>
+        function updateStatus() {
+            const status = document.getElementById('status');
+            const userIdentifier = localStorage.getItem('userIdentifier');
+            const premiumEmail = localStorage.getItem('premiumEmail');
+            const isPremium = localStorage.getItem('isPremium');
+            
+            status.innerHTML = `
+                <p><strong>User Identifier:</strong> ${userIdentifier || 'None'}</p>
+                <p><strong>Premium Email:</strong> ${premiumEmail || 'None'}</p>
+                <p><strong>Is Premium:</strong> ${isPremium || 'None'}</p>
+            `;
+        }
+        
+        function clearStorage() {
+            localStorage.clear();
+            updateStatus();
+        }
+        
+        function setPremiumEmail() {
+            localStorage.setItem('premiumEmail', 'benoit.mailhot999@gmail.com');
+            updateStatus();
+        }
+        
+        function setPremiumStatus() {
+            localStorage.setItem('isPremium', 'true');
+            updateStatus();
+        }
+        
+        updateStatus();
+    </script>
+</body>
+</html>

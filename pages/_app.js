@@ -1,22 +1,19 @@
-// pages/_app.js
-import React from 'react';
-import { useEffect, useState, createContext } from 'react';
-import '../styles/globals.css'
-import { Analytics } from '@vercel/analytics/react';
+import { createContext, useState, useEffect } from 'react';
+import '../styles/globals.css';
 
-// Premium Context Provider
-export const PremiumContext = createContext({
+// Premium Context
+const PremiumContext = createContext({
   isPremium: false,
   setIsPremium: () => {},
   premiumLoading: false,
   checkPremiumStatus: () => {}
 });
 
-export default function App({ Component, pageProps }) {
+function MyApp({ Component, pageProps }) {
   const [isPremium, setIsPremium] = useState(false);
-  const [premiumLoading, setPremiumLoading] = useState(true);
+  const [premiumLoading, setPremiumLoading] = useState(false); // Start as false
 
-  // 🚀 FIXED: Function with timeout and better error handling
+  // Simplified premium check
   const checkPremiumStatus = async () => {
     try {
       setPremiumLoading(true);
@@ -34,15 +31,18 @@ export default function App({ Component, pageProps }) {
         return true;
       }
       
+      // If no identification, user is free
       if (!userIdentifier && !premiumEmail) {
-        console.log('❌ No user identifier or email found');
+        console.log('ℹ️ No user identification - free user');
+        setIsPremium(false);
+        localStorage.setItem('isPremium', 'false');
         setPremiumLoading(false);
         return false;
       }
 
-      // 🚀 ADD TIMEOUT to prevent infinite loading
+      // Try to check with server
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
       
       try {
         let url = '/api/check-premium-status?';
@@ -51,9 +51,7 @@ export default function App({ Component, pageProps }) {
         
         const response = await fetch(url, {
           signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-          }
+          headers: { 'Content-Type': 'application/json' }
         });
         
         clearTimeout(timeoutId);
@@ -67,7 +65,6 @@ export default function App({ Component, pageProps }) {
           return data.isPremium;
         } else {
           console.error('❌ Premium status check failed:', response.status);
-          // Set to false if server says not premium
           setIsPremium(false);
           localStorage.setItem('isPremium', 'false');
           setPremiumLoading(false);
@@ -75,47 +72,43 @@ export default function App({ Component, pageProps }) {
         }
       } catch (fetchError) {
         clearTimeout(timeoutId);
-        if (fetchError.name === 'AbortError') {
-          console.error('❌ Premium status check timeout');
-        } else {
-          console.error('❌ Premium status fetch error:', fetchError);
-        }
+        console.error('❌ Premium status fetch error:', fetchError);
         
-        // 🚀 FALLBACK: Use localStorage if server check fails, otherwise default to false
+        // Fallback to localStorage or default to false
         if (localPremium === 'true') {
           console.log('📱 Using local premium status as fallback');
           setIsPremium(true);
-          setPremiumLoading(false);
-          return true;
         } else {
           setIsPremium(false);
-          setPremiumLoading(false);
-          return false;
+          localStorage.setItem('isPremium', 'false');
         }
+        setPremiumLoading(false);
+        return localPremium === 'true';
       }
-      
     } catch (error) {
       console.error('❌ Premium status error:', error);
       setIsPremium(false);
+      localStorage.setItem('isPremium', 'false');
       setPremiumLoading(false);
       return false;
     }
   };
 
-  // 🚀 FIXED: Better initialization with timeout handling
+  // Initialize on mount
   useEffect(() => {
-    const initializePremiumStatus = async () => {
+    const initializePremiumStatus = () => {
       try {
-        // Check localStorage FIRST for immediate UI update
+        // Check localStorage first for immediate response
         const localPremium = localStorage.getItem('isPremium');
+        console.log('📱 Initializing premium status. Cached:', localPremium);
+        
         if (localPremium === 'true') {
-          console.log('📱 Found cached premium status - setting immediately');
+          console.log('✅ Found cached premium status');
           setIsPremium(true);
-          setPremiumLoading(false); // Stop loading immediately if we have local data
-          return; // Don't check server if we already have premium
+          return; // Don't show loading for cached premium users
         }
 
-        // Generate user identifier if missing
+        // Generate user identifier if missing (for new users)
         let userIdentifier = localStorage.getItem('userIdentifier');
         if (!userIdentifier) {
           userIdentifier = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -123,51 +116,28 @@ export default function App({ Component, pageProps }) {
           console.log('🆔 Generated new user identifier:', userIdentifier);
         }
 
-        // Only check server if we don't have premium cached
-        console.log('🔍 No cached premium - checking with server');
-        setPremiumLoading(true);
-        
-        // Add timeout for server check
-        setTimeout(async () => {
-          try {
-            await checkPremiumStatus();
-          } catch (error) {
-            console.log('⚠️ Server verification failed, defaulting to free');
-            setIsPremium(false);
-            setPremiumLoading(false);
-          }
-        }, 100); // Small delay to prevent blocking
+        // For non-premium users, just set to false immediately
+        const premiumEmail = localStorage.getItem('premiumEmail');
+        if (!premiumEmail) {
+          console.log('ℹ️ No premium email - setting to free user');
+          setIsPremium(false);
+          localStorage.setItem('isPremium', 'false');
+          return;
+        }
+
+        // Only check server if we have premium email but no cached status
+        console.log('🔍 Has premium email but no cached status - checking server');
+        checkPremiumStatus();
         
       } catch (error) {
         console.error('Error initializing premium status:', error);
         setIsPremium(false);
-        setPremiumLoading(false);
+        localStorage.setItem('isPremium', 'false');
       }
     };
 
     initializePremiumStatus();
   }, []); // Only run once on mount
-
-  // 🚀 ADDED: Backup timeout to prevent infinite loading
-  useEffect(() => {
-    const backupTimeout = setTimeout(() => {
-      if (premiumLoading) {
-        console.log('⏰ Backup timeout triggered - stopping premium loading');
-        setPremiumLoading(false);
-        
-        // Check localStorage as final fallback
-        const localPremium = localStorage.getItem('isPremium');
-        if (localPremium === 'true') {
-          setIsPremium(true);
-          console.log('📱 Using localStorage fallback for premium status');
-        } else {
-          setIsPremium(false);
-        }
-      }
-    }, 8000); // 8 second backup timeout
-
-    return () => clearTimeout(backupTimeout);
-  }, [premiumLoading]);
 
   const premiumContextValue = {
     isPremium,
@@ -179,7 +149,9 @@ export default function App({ Component, pageProps }) {
   return (
     <PremiumContext.Provider value={premiumContextValue}>
       <Component {...pageProps} />
-      <Analytics />
     </PremiumContext.Provider>
   );
 }
+
+export default MyApp;
+export { PremiumContext };
