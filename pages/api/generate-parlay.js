@@ -100,20 +100,13 @@ export default async function handler(req, res) {
 function getSportSpecificMarkets(sportKey, useFullMarkets = true) {
   if (!useFullMarkets) {
     // Fallback to basic H2H only
-    console.log(`🔄 ${sportKey} markets (fallback): h2h`);
-    return 'h2h';
-  }
-  
-  // TEMPORARY DEBUG: For NFL, start with H2H only to test if games exist at all
-  if (sportKey.includes('americanfootball')) {
-    console.log(`🐛 DEBUG: Using H2H only for ${sportKey} to test game availability`);
     return 'h2h';
   }
   
   // Try full markets first
   const baseMarkets = 'h2h,spreads,totals';
   
-  // SIMPLIFIED: Start with fewer player props to avoid API limits
+  // Sport-specific player props with corrected market names
   const sportPlayerMarkets = {
     'americanfootball_nfl': 'player_pass_yds,player_rush_yds,player_reception_yds',
     'americanfootball_nfl_preseason': 'player_pass_yds,player_rush_yds',
@@ -129,7 +122,6 @@ function getSportSpecificMarkets(sportKey, useFullMarkets = true) {
   const playerMarkets = sportPlayerMarkets[sportKey] || '';
   const allMarkets = playerMarkets ? `${baseMarkets},${playerMarkets}` : baseMarkets;
   
-  console.log(`🎯 ${sportKey} markets (full): ${allMarkets}`);
   return allMarkets;
 }
 
@@ -141,10 +133,7 @@ async function fetchSportSpecificOdds(sport) {
     throw new Error('Odds API key not configured');
   }
   
-  // Log API key info for debugging (without exposing the key)
-  console.log(`🔑 API Key configured: ${API_KEY.length} chars, starts with: ${API_KEY.substring(0, 8)}...`);
-  console.log(`📅 Current date: ${new Date().toISOString()}`);
-  console.log(`🏈 Requested sport: ${sport}`);
+  // API key configured and ready
 
   // Map user-friendly sport names to API sport keys (CONSISTENT WITH EV FETCHER)  
   const sportMapping = {
@@ -187,45 +176,27 @@ async function fetchSportSpecificOdds(sport) {
         // Use different regions for soccer to increase chances
         const regions = sportKey.startsWith('soccer_') ? 'us,uk,eu' : 'us';
         const url = `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=${regions}&markets=${markets}&oddsFormat=american&dateFormat=iso`;
-        console.log(`URL: ${url.replace(API_KEY, 'HIDDEN')}`);
-        console.log(`Markets requested: ${markets}`);
-        
         const response = await fetch(url, { 
           headers: { 'Accept': 'application/json' }
         });
-
-        console.log(`Response status for ${sportKey} (${marketType}): ${response.status}`);
         
         if (!response.ok) {
-          // Get response body for better error details
-          let errorBody = '';
-          try {
-            errorBody = await response.text();
-            console.log(`Error response body: ${errorBody}`);
-          } catch (e) {
-            console.log('Could not read error response body');
-          }
           
           if (response.status === 422) {
-            console.log(`${sportKey} is out of season or invalid markets (422)`);
             return { success: false, reason: 'out_of_season' };
           } else if (response.status === 429) {
             throw new Error('Rate limit exceeded - please wait');
           } else if (response.status === 401) {
             throw new Error('Invalid Odds API key');
           } else {
-            console.log(`API error for ${sportKey}: ${response.status}`);
             return { success: false, reason: 'api_error' };
           }
         }
 
         const games = await response.json();
-        console.log(`✅ Found ${games.length} ${sport} games using ${sportKey} (${marketType})`);
-        
         return { success: true, games };
         
       } catch (error) {
-        console.log(`Error fetching ${sportKey} (${useFullMarkets ? 'full' : 'H2H'}):`, error.message);
         return { success: false, reason: 'network_error' };
       }
     };
@@ -235,7 +206,6 @@ async function fetchSportSpecificOdds(sport) {
     
     // If full markets failed but not due to out of season, try H2H fallback
     if (!result.success && result.reason !== 'out_of_season') {
-      console.log(`🔄 Full markets failed for ${sportKey}, trying H2H fallback...`);
       result = await attemptFetch(false);
     }
     
@@ -255,11 +225,9 @@ async function fetchSportSpecificOdds(sport) {
     }
   }
   
-  // If no variants worked, throw error with more details
+  // If no variants worked, throw error
   if (allGames.length === 0) {
-    console.log(`❌ [Parlay] No games found for ${sport}. Tried variants: ${sportKeys.join(', ')}`);
-    console.log(`❌ [Parlay] This suggests either: 1) Sport is out of season, 2) API key has insufficient permissions, 3) All variants returned 422 errors`);
-    throw new Error(`No active or upcoming games found for ${sport}. Tried all variants: ${sportKeys.join(', ')}. Check if sport is in season or if API key has sufficient permissions.`);
+    throw new Error(`No active or upcoming games found for ${sport}. This sport may be out of season.`);
   }
 
   return allGames;
