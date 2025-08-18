@@ -1880,12 +1880,12 @@ export default function AiParlayCalculator() {
       </section>
 
       {/* Main App */}
-      <main className="container mx-auto px-4 py-16" id="app">
+      <main className="container mx-auto px-4 py-8 md:py-16" id="app">
         <div className="bg-gray-800 shadow-xl mx-auto max-w-6xl rounded-2xl overflow-hidden border border-gray-700">
           
           {/* Premium Home Page */}
           {isPremium && (
-            <div className="p-10">
+            <div className="p-4 md:p-10">
               <PremiumHomePage setActiveTab={setActiveTab} />
             </div>
           )}
@@ -1893,47 +1893,53 @@ export default function AiParlayCalculator() {
           {/* Tabs */}
           <div className="flex border-b border-gray-700 bg-gray-800">
             <button
-              className={`flex-1 py-6 px-6 font-semibold transition-all ${
+              className={`flex-1 py-4 md:py-6 px-2 md:px-6 font-semibold transition-all ${
                 activeTab === 'optimize'
                 ? 'text-green-400 border-b-2 border-green-500 bg-gray-700'
                 : 'text-gray-400 hover:text-green-400 hover:bg-gray-700/50'
               }`}
               onClick={() => setActiveTab('optimize')}
             >
-              <div className="flex items-center justify-center gap-2">
-                <Upload className="w-5 h-5" />
-                Smart Bet Slip Analysis
+              <div className="flex items-center justify-center gap-1 md:gap-2">
+                <Upload className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="text-sm md:text-base">
+                  <span className="hidden sm:inline">Smart Bet Slip Analysis</span>
+                  <span className="sm:hidden">Analyze</span>
+                </span>
               </div>
             </button>
             <button
-              className={`flex-1 py-6 px-6 font-semibold transition-all ${
+              className={`flex-1 py-4 md:py-6 px-2 md:px-6 font-semibold transition-all ${
                 activeTab === 'generate'
                 ? 'text-green-400 border-b-2 border-green-500 bg-gray-700'
                 : 'text-gray-400 hover:text-green-400 hover:bg-gray-700/50'
               }`}
               onClick={() => setActiveTab('generate')}
             >
-              <div className="flex items-center justify-center gap-2">
-                <Brain className="w-5 h-5" />
-                Generate Parlay
+              <div className="flex items-center justify-center gap-1 md:gap-2">
+                <Brain className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="text-sm md:text-base">
+                  <span className="hidden sm:inline">Generate Parlay</span>
+                  <span className="sm:hidden">Generate</span>
+                </span>
               </div>
             </button>
           </div>
 
-          <div className="p-10 bg-gray-800">
+          <div className="p-4 md:p-10 bg-gray-800">
             {renderTabContent()}
           </div>
         </div>
 
         {/* Features Section */}
-        <section id="features" className="py-20">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-4">Professional Sports Betting Tools</h2>
-            <p className="text-lg text-gray-400">Advanced technology for superior betting decisions</p>
+        <section id="features" className="py-12 md:py-20">
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Professional Sports Betting Tools</h2>
+            <p className="text-base md:text-lg text-gray-400">Advanced technology for superior betting decisions</p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-gray-800 p-8 rounded-xl text-center border border-gray-700">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
+            <div className="bg-gray-800 p-6 md:p-8 rounded-xl text-center border border-gray-700">
               <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-br from-green-400 to-green-600 rounded-lg flex items-center justify-center">
                 <Upload className="w-6 h-6 text-white" />
               </div>
@@ -1941,7 +1947,7 @@ export default function AiParlayCalculator() {
               <p className="text-gray-400 text-sm">Upload images and get instant team/player recognition with optimization</p>
             </div>
 
-            <div className="bg-gray-800 p-8 rounded-xl text-center border border-gray-700">
+            <div className="bg-gray-800 p-6 md:p-8 rounded-xl text-center border border-gray-700">
               <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
                 <Calculator className="w-6 h-6 text-white" />
               </div>
@@ -1949,7 +1955,7 @@ export default function AiParlayCalculator() {
               <p className="text-gray-400 text-sm">Mathematically optimized parlays with risk level customization</p>
             </div>
 
-            <div className="bg-gray-800 p-8 rounded-xl text-center border border-gray-700">
+            <div className="bg-gray-800 p-6 md:p-8 rounded-xl text-center border border-gray-700">
               <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center">
                 <Target className="w-6 h-6 text-white" />
               </div>
@@ -1957,7 +1963,7 @@ export default function AiParlayCalculator() {
               <p className="text-gray-400 text-sm">NFL, NBA, NHL, MLB, UFC, Soccer, Tennis and more</p>
             </div>
 
-            <div className="bg-gray-800 p-8 rounded-xl text-center border border-gray-700">
+            <div className="bg-gray-800 p-6 md:p-8 rounded-xl text-center border border-gray-700">
               <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>

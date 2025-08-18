@@ -104,12 +104,12 @@ export default function UploadArea({ onAnalysis, uploadsToday, maxUploads, isPre
 
   if (uploading) {
     return (
-      <div className="border-2 border-blue-500 rounded-xl p-16 text-center bg-blue-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-        <div className="text-lg font-semibold text-blue-700 mb-2">
+      <div className="border-2 border-blue-500 rounded-xl p-6 md:p-16 text-center bg-blue-50">
+        <div className="animate-spin rounded-full h-8 w-8 md:h-12 md:w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <div className="text-base md:text-lg font-semibold text-blue-700 mb-2">
           Analyzing Your Bet Slip...
         </div>
-        <div className="text-blue-600 text-sm">
+        <div className="text-blue-600 text-xs md:text-sm">
           Our AI is processing your image and calculating optimizations
         </div>
       </div>
@@ -118,17 +118,17 @@ export default function UploadArea({ onAnalysis, uploadsToday, maxUploads, isPre
 
   if (uploadedFile && !error) {
     return (
-      <div className="border-2 border-green-500 rounded-xl p-16 text-center bg-green-50">
-        <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500" />
-        <div className="text-lg font-semibold text-green-700 mb-2">
+      <div className="border-2 border-green-500 rounded-xl p-6 md:p-16 text-center bg-green-50">
+        <CheckCircle className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-4 text-green-500" />
+        <div className="text-base md:text-lg font-semibold text-green-700 mb-2">
           Analysis Complete!
         </div>
-        <div className="text-green-600 text-sm mb-4">
+        <div className="text-green-600 text-xs md:text-sm mb-4">
           Your bet slip has been analyzed with optimization suggestions
         </div>
         <button 
           onClick={resetUpload}
-          className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+          className="bg-green-600 text-white px-4 md:px-6 py-2 text-sm md:text-base rounded-lg hover:bg-green-700 transition-colors"
         >
           Analyze Another
         </button>
@@ -152,7 +152,7 @@ export default function UploadArea({ onAnalysis, uploadsToday, maxUploads, isPre
       )}
       
       <div 
-        className={`border-2 border-dashed rounded-xl p-16 text-center transition-all cursor-pointer ${
+        className={`border-2 border-dashed rounded-xl p-8 md:p-16 text-center transition-all cursor-pointer ${
           dragActive 
             ? 'border-blue-500 bg-blue-50' 
             : 'border-gray-300 bg-gray-50 hover:border-blue-500 hover:bg-blue-50'
@@ -163,11 +163,11 @@ export default function UploadArea({ onAnalysis, uploadsToday, maxUploads, isPre
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
       >
-        <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-        <div className="text-lg font-semibold text-gray-700 mb-2">
+        <Upload className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-4 text-gray-400" />
+        <div className="text-base md:text-lg font-semibold text-gray-700 mb-2">
           Upload Your Bet Slip Screenshot
         </div>
-        <div className="text-gray-500 text-sm">
+        <div className="text-gray-500 text-xs md:text-sm">
           PNG, JPG up to 10MB • Works with all major sportsbooks
         </div>
         <input
