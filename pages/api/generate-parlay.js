@@ -329,13 +329,31 @@ function extractAvailableBets(gameData) {
       
       for (const market of bookmaker.markets) {
         for (const outcome of market.outcomes || []) {
+          // Create a more descriptive selection for player props
+          let enhancedSelection = outcome.name;
+          
+          // For player props, enhance the description with point/line information
+          if (market.key.startsWith('player_') && outcome.point !== undefined) {
+            // Format: "PlayerName Over 2.5 Assists" instead of just "Over"
+            enhancedSelection = `${outcome.name} ${outcome.point}`;
+          } else if (outcome.point !== undefined && outcome.point !== null) {
+            // For spreads/totals with points: "Team +7.5" or "Over 45.5"
+            if (outcome.name.toLowerCase().includes('over') || outcome.name.toLowerCase().includes('under')) {
+              enhancedSelection = `${outcome.name} ${outcome.point}`;
+            } else if (outcome.point > 0) {
+              enhancedSelection = `${outcome.name} +${outcome.point}`;
+            } else if (outcome.point < 0) {
+              enhancedSelection = `${outcome.name} ${outcome.point}`;
+            }
+          }
+          
           availableBets.push({
             game: `${game.away_team} @ ${game.home_team}`,
             game_id: `${game.away_team}_${game.home_team}_${game.commence_time}`,
             sportsbook: bookmaker.title,
             market_type: market.key,
-            selection: outcome.name,
-            description: outcome.description || outcome.name,
+            selection: enhancedSelection,
+            description: outcome.description || enhancedSelection,
             point: outcome.point || null,
             odds: formatOdds(outcome.price),
             decimal_odds: americanToDecimal(outcome.price),
