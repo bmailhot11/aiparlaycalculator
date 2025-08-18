@@ -232,17 +232,16 @@ export default function EVLines() {
               </div>
             </div>
 
-            {/* Arbitrage Opportunities */}
-            {arbitrageOpportunities.length > 0 && (
-              <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-6 mb-6">
-                <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <span className="text-2xl">⚡</span>
-                  Arbitrage Opportunities - {selectedSport}
-                  <span className="text-sm bg-yellow-500 text-black px-2 py-1 rounded-full font-medium">
-                    GUARANTEED PROFIT
-                  </span>
-                </h2>
-                
+            {/* Arbitrage Opportunities - Always show section */}
+            <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-6 mb-6">
+              <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                Arbitrage Opportunities - {selectedSport}
+                <span className="text-sm bg-yellow-500 text-black px-2 py-1 rounded-full font-medium">
+                  GUARANTEED PROFIT
+                </span>
+              </h2>
+              
+              {arbitrageOpportunities.length > 0 ? (
                 <div className="grid gap-4">
                   {arbitrageOpportunities.slice(0, isPremium ? arbitrageOpportunities.length : 1).map((arb, index) => (
                     <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-yellow-500/20">
@@ -305,48 +304,63 @@ export default function EVLines() {
                       </div>
                     </div>
                   ))}
-                </div>
-                
-                {!isPremium && arbitrageOpportunities.length > 1 && (
-                  <div className="mt-4 p-6 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/50 rounded-lg text-center">
-                    <Crown className="w-8 h-8 mx-auto mb-3 text-yellow-400" />
-                    <h3 className="text-xl font-bold text-white mb-2">
-                      {arbitrageOpportunities.length - 1} More Guaranteed Profit Opportunities
-                    </h3>
-                    <p className="text-yellow-400 font-medium mb-4">
-                      Premium members are seeing <span className="text-white font-bold">${
-                        arbitrageOpportunities.slice(1).reduce((sum, arb) => sum + parseFloat(arb.guaranteed_profit), 0).toFixed(2)
-                      } in total guaranteed profit</span> from these {arbitrageOpportunities.length - 1} arbitrage opportunities.
-                    </p>
-                    
-                    <div className="grid gap-2 mb-4 opacity-60">
-                      {arbitrageOpportunities.slice(1, 4).map((arb, index) => (
-                        <div key={index} className="bg-gray-800/50 rounded p-2 text-sm">
-                          <span className="text-white font-medium">{arb.game}</span>
-                          <span className="text-yellow-400 ml-2">{arb.profit_percentage}% profit</span>
-                          <span className="text-green-400 ml-2">${arb.guaranteed_profit} guaranteed</span>
-                        </div>
-                      ))}
-                      {arbitrageOpportunities.length > 4 && (
-                        <div className="text-gray-400 text-sm">
-                          + {arbitrageOpportunities.length - 4} more opportunities
-                        </div>
-                      )}
+                  
+                  {!isPremium && arbitrageOpportunities.length > 1 && (
+                    <div className="mt-4 p-6 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/50 rounded-lg text-center">
+                      <Crown className="w-8 h-8 mx-auto mb-3 text-yellow-400" />
+                      <h3 className="text-xl font-bold text-white mb-2">
+                        {arbitrageOpportunities.length - 1} More Guaranteed Profit Opportunities
+                      </h3>
+                      <p className="text-yellow-400 font-medium mb-4">
+                        Premium members are seeing <span className="text-white font-bold">${
+                          arbitrageOpportunities.slice(1).reduce((sum, arb) => sum + parseFloat(arb.guaranteed_profit), 0).toFixed(2)
+                        } in total guaranteed profit</span> from these {arbitrageOpportunities.length - 1} arbitrage opportunities.
+                      </p>
+                      
+                      <div className="grid gap-2 mb-4 opacity-60">
+                        {arbitrageOpportunities.slice(1, 4).map((arb, index) => (
+                          <div key={index} className="bg-gray-800/50 rounded p-2 text-sm">
+                            <span className="text-white font-medium">{arb.game}</span>
+                            <span className="text-yellow-400 ml-2">{arb.profit_percentage}% profit</span>
+                            <span className="text-green-400 ml-2">${arb.guaranteed_profit} guaranteed</span>
+                          </div>
+                        ))}
+                        {arbitrageOpportunities.length > 4 && (
+                          <div className="text-gray-400 text-sm">
+                            + {arbitrageOpportunities.length - 4} more opportunities
+                          </div>
+                        )}
+                      </div>
+                      
+                      <button
+                        onClick={() => router.push('/')}
+                        className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black px-6 py-3 rounded-lg font-bold hover:from-yellow-600 hover:to-orange-600 transform hover:scale-105 transition-all"
+                      >
+                        Unlock All {arbitrageOpportunities.length} Arbitrage Opportunities
+                      </button>
+                      <p className="text-gray-400 text-xs mt-2">
+                        These opportunities pay for premium in the first use
+                      </p>
                     </div>
-                    
-                    <button
-                      onClick={() => router.push('/')}
-                      className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black px-6 py-3 rounded-lg font-bold hover:from-yellow-600 hover:to-orange-600 transform hover:scale-105 transition-all"
-                    >
-                      Unlock All {arbitrageOpportunities.length} Arbitrage Opportunities
-                    </button>
-                    <p className="text-gray-400 text-xs mt-2">
-                      These opportunities pay for premium in the first use
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-6xl mb-3">🔍</div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Scanning for Arbitrage...</h3>
+                  <p className="text-gray-400 mb-4">
+                    No arbitrage opportunities found for {selectedSport} at this moment.
+                  </p>
+                  <div className="bg-gray-800/50 rounded-lg p-4 text-sm text-gray-300">
+                    <p className="mb-2"><strong>What is arbitrage?</strong></p>
+                    <p>When different sportsbooks have odds that create guaranteed profit regardless of outcome.</p>
+                    <p className="mt-2 text-yellow-400">
+                      💡 Tip: Try refreshing or check different sports. Arbitrage opportunities appear and disappear quickly!
                     </p>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
 
             {/* EV Lines List */}
             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">

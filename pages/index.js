@@ -1763,7 +1763,7 @@ export default function AiParlayCalculator() {
           </div>
           <a href="/ev-lines" className="inline-flex items-center gap-3 bg-gradient-to-r from-green-600 to-yellow-500 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-green-700 hover:to-yellow-600 transition-all hover:scale-105 shadow-lg">
             <span>Find Arbitrage + EV Lines</span>
-            <span className="text-2xl">⚡</span>
+            <TrendingUp className="w-5 h-5" />
           </a>
         </div>
       </section>
