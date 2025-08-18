@@ -1,4 +1,5 @@
 import openai from '../../lib/openai';
+import eventsCache from '../../lib/events-cache.js';
 
 export default async function handler(req, res) {
   // Environment Variables Check
@@ -32,8 +33,8 @@ export default async function handler(req, res) {
   try {
     console.log(`🎯 Generating ${config.sport} parlay with ${config.legs || 3} legs...`);
 
-    // Step 1: Get ONLY the selected sport's data
-    const sportData = await fetchSportSpecificOdds(config.sport);
+    // Step 1: Get ONLY the selected sport's data using cached events approach
+    const sportData = await fetchSportSpecificOddsOptimized(config.sport);
     
     if (!sportData || sportData.length === 0) {
       return res.status(400).json({
@@ -103,29 +104,44 @@ function getSportSpecificMarkets(sportKey, useFullMarkets = true) {
     return 'h2h';
   }
   
-  // Try full markets first
-  const baseMarkets = 'h2h,spreads,totals';
-  
-  // Sport-specific player props with corrected market names
-  const sportPlayerMarkets = {
-    'americanfootball_nfl': 'player_pass_yds,player_rush_yds,player_reception_yds',
-    'americanfootball_nfl_preseason': 'player_pass_yds,player_rush_yds',
-    'americanfootball_ncaaf': 'player_pass_yds,player_rush_yds',
-    'basketball_nba': 'player_points,player_rebounds,player_assists',
-    'basketball_nba_preseason': 'player_points,player_rebounds',
-    'basketball_ncaab': 'player_points,player_rebounds',
-    'icehockey_nhl': 'player_goals,player_assists,player_points',
-    'icehockey_nhl_preseason': 'player_goals,player_assists',
-    'baseball_mlb': 'batter_hits,batter_rbis,pitcher_strikeouts'
-  };
-  
-  const playerMarkets = sportPlayerMarkets[sportKey] || '';
-  const allMarkets = playerMarkets ? `${baseMarkets},${playerMarkets}` : baseMarkets;
-  
-  return allMarkets;
+  // FIXED: Use same simple approach as EV fetcher for reliability
+  // Player props often cause API failures for preseason/out-of-season games
+  return sportKey.startsWith('soccer_') ? 'h2h' : 'h2h,spreads,totals';
 }
 
-// NEW: Fetch odds for specific sport only
+// NEW: Optimized fetch using cached events approach
+async function fetchSportSpecificOddsOptimized(sport) {
+  try {
+    console.log(`🚀 [${sport} Parlay] Using optimized cached events approach`);
+    
+    // Get cached events first (1-hour cache)
+    const upcomingEvents = await eventsCache.cacheUpcomingEvents(sport);
+    
+    if (!upcomingEvents || upcomingEvents.length === 0) {
+      console.log(`⚠️ [${sport} Parlay] No upcoming events found`);
+      throw new Error(`No upcoming events found for ${sport}`);
+    }
+    
+    // Get odds for those specific events (5-minute cache)
+    const markets = sport === 'Soccer' ? 'h2h' : 'h2h,spreads,totals';
+    const oddsData = await eventsCache.getOddsForEvents(upcomingEvents, markets);
+    
+    console.log(`✅ [${sport} Parlay] Optimized approach: ${upcomingEvents.length} events → ${oddsData.length} games with odds`);
+    
+    if (oddsData.length === 0) {
+      throw new Error(`No betting markets available for ${sport} events`);
+    }
+    
+    return oddsData;
+    
+  } catch (error) {
+    console.log(`❌ [${sport} Parlay] Cached approach failed, falling back:`, error.message);
+    // Fallback to original method
+    return await fetchSportSpecificOdds(sport);
+  }
+}
+
+// FALLBACK: Original fetch method
 async function fetchSportSpecificOdds(sport) {
   const API_KEY = process.env.ODDS_API_KEY;
   
