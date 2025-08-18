@@ -39,20 +39,21 @@ function PremiumGate({
   
   if (showUpgradePrompt) {
     return (
-      <div className="bg-gray-800/50 rounded-xl p-6 border border-yellow-500/20 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
-          <Crown className="w-8 h-8 text-white" />
+      <div className="bg-gray-800/50 rounded-xl p-4 sm:p-6 border border-yellow-500/20 text-center">
+        <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
+          <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
         </div>
-        <h3 className="font-bold text-white mb-2">Premium Feature</h3>
-        <p className="text-gray-400 mb-4">
+        <h3 className="font-bold text-white mb-2 text-lg sm:text-xl">Premium Feature</h3>
+        <p className="text-gray-400 mb-4 text-sm sm:text-base">
           Upgrade to premium to access {featureName}
         </p>
         <button 
           onClick={upgradeHandler}
-          className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-6 py-3 rounded-lg font-semibold hover:from-yellow-600 hover:to-yellow-700 transition-all"
+          className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 sm:px-6 sm:py-3 rounded-lg font-semibold hover:from-yellow-600 hover:to-yellow-700 transition-all text-sm sm:text-base w-full sm:w-auto"
         >
           <Crown className="w-4 h-4 inline mr-2" />
-          Upgrade to Premium
+          <span className="hidden xs:inline">Upgrade to Premium</span>
+          <span className="xs:hidden">Upgrade</span>
         </button>
       </div>
     );
@@ -159,77 +160,79 @@ function PremiumBadge({ className = "" }) {
 // Premium Home Page Component
 function PremiumHomePage({ setActiveTab }) {
   return (
-    <div className="bg-gradient-to-br from-yellow-500/10 via-yellow-600/5 to-amber-500/10 rounded-2xl p-8 mb-8 border border-yellow-500/20">
+    <div className="bg-gradient-to-br from-yellow-500/10 via-yellow-600/5 to-amber-500/10 rounded-2xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 border border-yellow-500/20">
       {/* Premium Welcome Header */}
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
-            <Crown className="w-6 h-6 text-white" />
+      <div className="text-center mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
+            <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">Welcome Back, Premium Member!</h2>
-            <p className="text-yellow-400">You have unlimited access to all features</p>
+          <div className="text-center sm:text-left">
+            <h2 className="text-xl sm:text-2xl font-bold text-white">Welcome Back, Premium Member!</h2>
+            <p className="text-yellow-400 text-sm sm:text-base">You have unlimited access to all features</p>
           </div>
         </div>
       </div>
 
       {/* Premium Features Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-gray-800/50 rounded-xl p-6 text-center border border-yellow-500/20">
-          <Upload className="w-8 h-8 mx-auto mb-3 text-yellow-400" />
-          <h3 className="font-bold text-white mb-2">Unlimited Uploads</h3>
-          <p className="text-sm text-gray-400">Upload as many bet slips as you need</p>
-          <div className="mt-3 text-yellow-400 font-bold">∞</div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+        <div className="bg-gray-800/50 rounded-xl p-3 sm:p-6 text-center border border-yellow-500/20">
+          <Upload className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 sm:mb-3 text-yellow-400" />
+          <h3 className="font-bold text-white mb-1 sm:mb-2 text-sm sm:text-base">Unlimited Uploads</h3>
+          <p className="text-xs sm:text-sm text-gray-400 hidden sm:block">Upload as many bet slips as you need</p>
+          <div className="mt-2 sm:mt-3 text-yellow-400 font-bold text-lg sm:text-xl">∞</div>
         </div>
 
-        <div className="bg-gray-800/50 rounded-xl p-6 text-center border border-yellow-500/20">
-          <Brain className="w-8 h-8 mx-auto mb-3 text-yellow-400" />
-          <h3 className="font-bold text-white mb-2">Unlimited Generation</h3>
-          <p className="text-sm text-gray-400">Generate parlays without limits</p>
-          <div className="mt-3 text-yellow-400 font-bold">∞</div>
+        <div className="bg-gray-800/50 rounded-xl p-3 sm:p-6 text-center border border-yellow-500/20">
+          <Brain className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 sm:mb-3 text-yellow-400" />
+          <h3 className="font-bold text-white mb-1 sm:mb-2 text-sm sm:text-base">Unlimited Generation</h3>
+          <p className="text-xs sm:text-sm text-gray-400 hidden sm:block">Generate parlays without limits</p>
+          <div className="mt-2 sm:mt-3 text-yellow-400 font-bold text-lg sm:text-xl">∞</div>
         </div>
 
-        <div className="bg-gray-800/50 rounded-xl p-6 text-center border border-yellow-500/20">
-          <TrendingUp className="w-8 h-8 mx-auto mb-3 text-yellow-400" />
-          <h3 className="font-bold text-white mb-2">Advanced Analysis</h3>
-          <p className="text-sm text-gray-400">Priority AI processing & insights</p>
-          <div className="mt-3 text-green-400 font-bold">✓ Active</div>
+        <div className="bg-gray-800/50 rounded-xl p-3 sm:p-6 text-center border border-yellow-500/20">
+          <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 sm:mb-3 text-yellow-400" />
+          <h3 className="font-bold text-white mb-1 sm:mb-2 text-sm sm:text-base">Advanced Analysis</h3>
+          <p className="text-xs sm:text-sm text-gray-400 hidden sm:block">Priority AI processing & insights</p>
+          <div className="mt-2 sm:mt-3 text-green-400 font-bold text-sm sm:text-base">✓ Active</div>
         </div>
 
-        <div className="bg-gray-800/50 rounded-xl p-6 text-center border border-yellow-500/20">
-          <BarChart3 className="w-8 h-8 mx-auto mb-3 text-yellow-400" />
-          <h3 className="font-bold text-white mb-2">Export & Share</h3>
-          <p className="text-sm text-gray-400">Save parlay images & share results</p>
-          <div className="mt-3 text-green-400 font-bold">✓ Active</div>
+        <div className="bg-gray-800/50 rounded-xl p-3 sm:p-6 text-center border border-yellow-500/20">
+          <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 sm:mb-3 text-yellow-400" />
+          <h3 className="font-bold text-white mb-1 sm:mb-2 text-sm sm:text-base">Export & Share</h3>
+          <p className="text-xs sm:text-sm text-gray-400 hidden sm:block">Save parlay images & share results</p>
+          <div className="mt-2 sm:mt-3 text-green-400 font-bold text-sm sm:text-base">✓ Active</div>
         </div>
       </div>
 
       {/* Quick Action Buttons */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <button
           onClick={() => setActiveTab('optimize')}
-          className="flex items-center justify-center gap-3 bg-gradient-to-r from-green-600 to-green-700 text-white py-4 px-6 rounded-xl font-semibold hover:from-green-700 hover:to-green-800 transition-all"
+          className="flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-green-600 to-green-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-xl font-semibold hover:from-green-700 hover:to-green-800 transition-all text-sm sm:text-base"
         >
-          <Upload className="w-5 h-5" />
-          Analyze Bet Slip
+          <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="hidden xs:inline">Analyze Bet Slip</span>
+          <span className="xs:hidden">Analyze</span>
         </button>
         
         <button
           onClick={() => setActiveTab('generate')}
-          className="flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 px-6 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition-all"
+          className="flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition-all text-sm sm:text-base"
         >
-          <Brain className="w-5 h-5" />
-          Generate Parlay
+          <Brain className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="hidden xs:inline">Generate Parlay</span>
+          <span className="xs:hidden">Generate</span>
         </button>
       </div>
 
       {/* Premium Stats */}
-      <div className="mt-6 p-4 bg-gray-800/30 rounded-lg border border-yellow-500/10">
-        <div className="flex items-center justify-between text-sm">
+      <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gray-800/30 rounded-lg border border-yellow-500/10">
+        <div className="flex items-center justify-between text-xs sm:text-sm">
           <span className="text-gray-400">Premium Status:</span>
           <span className="text-yellow-400 font-semibold">Active</span>
         </div>
-        <div className="flex items-center justify-between text-sm mt-2">
+        <div className="flex items-center justify-between text-xs sm:text-sm mt-2">
           <span className="text-gray-400">Next Billing:</span>
           <span className="text-gray-300">{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
         </div>

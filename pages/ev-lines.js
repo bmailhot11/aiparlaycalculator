@@ -230,21 +230,24 @@ export default function EVLines() {
       <div className="min-h-screen bg-gray-900">
         {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700 sticky top-0 z-40">
-        <nav className="container mx-auto px-4 py-4">
+        <nav className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <button
                 onClick={() => router.push('/')}
                 className="text-gray-400 hover:text-white transition-colors"
               >
-                <Home className="w-5 h-5" />
+                <Home className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <h1 className="text-xl font-bold text-white">Positive EV Lines</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-white">
+                <span className="hidden sm:inline">Positive EV Lines</span>
+                <span className="sm:hidden">EV Lines</span>
+              </h1>
             </div>
             
-            <div className="flex items-center gap-2 md:gap-4">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
               {lastRefresh && (
-                <span className="hidden md:block text-sm text-gray-400">
+                <span className="hidden lg:block text-sm text-gray-400">
                   Last updated: {lastRefresh.toLocaleTimeString()}
                 </span>
               )}
@@ -253,6 +256,14 @@ export default function EVLines() {
                   {evGenerationsToday}/{maxEvGenerations} today
                 </span>
               )}
+              <button
+                onClick={() => router.push('/trends')}
+                className="flex items-center gap-2 bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 text-sm"
+                title="View historical data and trends"
+              >
+                <TrendingUp className="w-4 h-4" />
+                <span className="hidden sm:inline">Trends</span>
+              </button>
               <button
                 onClick={fetchEVLines}
                 disabled={loading}
@@ -267,22 +278,23 @@ export default function EVLines() {
         </nav>
       </header>
 
-      <main className="container mx-auto px-4 py-4 md:py-8">
+      <main className="container mx-auto px-3 sm:px-4 py-4 md:py-8">
         <div className="grid lg:grid-cols-3 gap-4 md:gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 order-2 lg:order-1">
             {/* Sport Filter */}
-            <div className="bg-gray-800 rounded-xl p-4 md:p-6 mb-4 md:mb-6 border border-gray-700">
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Filter className="w-5 h-5 text-blue-400" />
-                Select Sport
+            <div className="bg-gray-800 rounded-xl p-3 sm:p-4 md:p-6 mb-4 md:mb-6 border border-gray-700">
+              <h2 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2">
+                <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+                <span className="hidden xs:inline">Select Sport</span>
+                <span className="xs:hidden">Sport</span>
               </h2>
-              <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3">
                 {sports.map(sport => (
                   <button
                     key={sport}
                     onClick={() => setSelectedSport(sport)}
-                    className={`py-2 px-4 rounded-lg font-medium transition-all ${
+                    className={`py-2 px-2 sm:px-4 rounded-lg font-medium transition-all text-xs sm:text-sm ${
                       selectedSport === sport
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
