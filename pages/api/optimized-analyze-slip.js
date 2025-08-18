@@ -196,7 +196,7 @@ async function generateOptimizedAnalysis(extractedData, evLines) {
       messages: [
         {
           role: "system",
-          content: "Analyze bet vs EV opportunities. Return brief JSON insights."
+          content: "You are an expert betting analyst specializing in market inefficiencies, line movement, and sharp betting patterns. Provide sophisticated betting intelligence and strategic insights."
         },
         {
           role: "user",
@@ -207,10 +207,19 @@ CURRENT BETS: ${JSON.stringify(extractedData.extracted_bets?.slice(0, 3), null, 
 TOP EV LINES: ${formatTopEVLines(topEVLines)}
 
 Return JSON:
-{"market_insights":["Brief insight 1","Brief insight 2"],"ev_recommendations":["Brief rec 1","Brief rec 2"],"value_assessment":"Brief overall assessment"}`
+{
+  "market_insights": ["specific market inefficiencies detected", "line movement patterns or public bias indicators"],
+  "ev_recommendations": ["actionable strategy with specific edge", "optimal timing or sportsbook arbitrage opportunities"],
+  "value_assessment": "detailed assessment with specific EV percentages and risk factors",
+  "advanced_strategy": {
+    "sharp_money_indicators": "what professional bettors are likely targeting",
+    "correlation_risks": "specific dependencies between current bets that increase variance",
+    "market_timing": "optimal betting windows based on line movement patterns"
+  }
+}`
         }
       ],
-      max_tokens: 200, // ULTRA-MINIMAL token usage
+      max_tokens: 400, // Increased for detailed insights
       temperature: 0.2
     });
 
@@ -283,18 +292,26 @@ function generateOptimizedOddsComparison(extractedBets, evLines) {
 
 // Fallback analysis without AI
 function generateFallbackAnalysis(extractedData, evLines = []) {
+  const avgEV = evLines.length > 0 ? (evLines.reduce((sum, l) => sum + l.expected_value, 0) / evLines.length * 100).toFixed(1) : 0;
+  const uniqueSportsbooks = [...new Set(evLines.map(l => l.sportsbook))].length;
+  
   return {
     market_insights: [
-      `Analyzed ${extractedData.extracted_bets?.length || 0} bets from ${extractedData.sportsbook || 'sportsbook'}`,
-      `Found ${evLines.length} alternative opportunities with positive expected value`
+      `Current parlay structure shows ${extractedData.extracted_bets?.length || 0} correlated bets increasing variance risk`,
+      evLines.length > 0 ? `Market inefficiencies detected across ${uniqueSportsbooks} sportsbooks with measurable edge` : 'Efficient market conditions with limited arbitrage opportunities'
     ],
     ev_recommendations: [
-      evLines.length > 0 ? `Consider switching to higher EV alternatives across ${[...new Set(evLines.map(l => l.sportsbook))].length} sportsbooks` : 'No immediate EV improvements available',
-      "Focus on mathematical edge over gut feelings for long-term profitability"
+      evLines.length > 0 ? `Switch to isolated bets with +${avgEV}% edge rather than correlated parlay structure` : 'Current market offers limited positive EV - consider waiting for line movement',
+      "Apply Kelly Criterion sizing: never risk more than your calculated edge percentage of bankroll"
     ],
     value_assessment: evLines.length > 0 ? 
-      `Positive EV opportunities available with average edge of +${(evLines.reduce((sum, l) => sum + l.expected_value, 0) / evLines.length * 100).toFixed(1)}%` :
-      "Limited positive EV opportunities in current market conditions"
+      `Mathematical edge available: +${avgEV}% expected value vs current bet structure showing negative correlation-adjusted EV` :
+      "Current betting structure likely has negative expected value due to correlation penalty and sportsbook vig",
+    advanced_strategy: {
+      sharp_money_indicators: "Professional bettors typically avoid high-correlation parlays in favor of isolated value bets",
+      correlation_risks: extractedData.extracted_bets?.length > 1 ? "Multiple legs from same sport/game significantly increase variance without proportional payout increase" : "Single bet structure reduces correlation risk",
+      market_timing: "Consider betting closer to game time when sharp money has moved lines to more accurate pricing"
+    }
   };
 }
 

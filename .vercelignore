@@ -1,0 +1,13 @@
+node_modules
+.next
+.env.local
+.env
+.DS_Store
+*.log
+coverage
+.nyc_output
+.cache
+dist
+build
+.vercel
+TESTING_AND_OPTIMIZATION_REPORT.md

@@ -378,7 +378,7 @@ async function generateParlayWithRealOdds(preferences, sportData) {
       messages: [
         {
           role: "system",
-          content: `You are a sports betting analyst. Select exactly ${preferences.legs} legs with positive expected value from the provided options. CRITICAL: Do not select the same bet (game + selection + market type) from multiple sportsbooks - choose ONLY ONE sportsbook per unique bet. Ensure all legs are DIFFERENT bets from DIFFERENT games when possible. Use EXACT odds and sportsbook names. Return ONLY valid JSON, no explanations.`
+          content: `You are an expert sports betting analyst with deep knowledge of market inefficiencies, line movement patterns, and advanced betting strategies. Select exactly ${preferences.legs} legs with positive expected value from the provided options. CRITICAL: Do not select the same bet (game + selection + market type) from multiple sportsbooks - choose ONLY ONE sportsbook per unique bet. Ensure all legs are DIFFERENT bets from DIFFERENT games when possible. Use EXACT odds and sportsbook names. Provide sophisticated betting intelligence in your reasoning. Return ONLY valid JSON, no explanations.`
         },
         {
           role: "user",
@@ -397,12 +397,23 @@ Return this exact JSON structure:
       "selection": "team or over/under",
       "odds": "+150 or -110 format",
       "decimal_odds": "number like 2.5",
-      "reasoning": "why this has positive EV (1 sentence)"
+      "reasoning": "specific market inefficiency exploited (line movement, public bias, sharp money indicator, etc.)"
     }
   ],
   "total_decimal_odds": "multiply all decimal odds",
-  "total_american_odds": "+450 format",
-  "confidence": "High/Medium/Low based on EV"
+  "total_american_odds": "+450 format", 
+  "confidence": "High/Medium/Low based on EV",
+  "risk_assessment": "detailed risk analysis considering correlation and variance",
+  "strategic_insights": [
+    "specific market edge being exploited",
+    "optimal betting timing/conditions", 
+    "key factors that could invalidate the edge"
+  ],
+  "advanced_metrics": {
+    "kelly_criterion_size": "optimal bet size percentage",
+    "correlation_risk": "Low/Medium/High based on leg dependencies",
+    "market_efficiency_score": "1-100 rating of market inefficiency"
+  }
 }`
         }
       ],

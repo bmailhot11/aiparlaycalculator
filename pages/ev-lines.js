@@ -278,12 +278,12 @@ export default function EVLines() {
         </nav>
       </header>
 
-      <main className="container mx-auto px-3 sm:px-4 py-4 md:py-8">
-        <div className="grid lg:grid-cols-3 gap-4 md:gap-8">
+      <main className="container mx-auto px-2 sm:px-4 py-3 sm:py-4 md:py-8">
+        <div className="grid lg:grid-cols-3 gap-3 sm:gap-4 md:gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 order-2 lg:order-1">
             {/* Sport Filter */}
-            <div className="bg-gray-800 rounded-xl p-3 sm:p-4 md:p-6 mb-4 md:mb-6 border border-gray-700">
+            <div className="bg-gray-800 rounded-xl p-2 sm:p-4 md:p-6 mb-3 sm:mb-4 md:mb-6 border border-gray-700">
               <h2 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2">
                 <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                 <span className="hidden xs:inline">Select Sport</span>
@@ -307,8 +307,8 @@ export default function EVLines() {
             </div>
 
             {/* Arbitrage Opportunities - Always show section */}
-            <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-4 md:p-6 mb-4 md:mb-6">
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-3 sm:p-4 md:p-6 mb-3 sm:mb-4 md:mb-6">
+              <h2 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4 flex items-center gap-1 sm:gap-2">
                 Arbitrage Opportunities - {selectedSport}
                 <span className="text-sm bg-yellow-500 text-black px-2 py-1 rounded-full font-medium">
                   GUARANTEED PROFIT
@@ -318,10 +318,10 @@ export default function EVLines() {
               {arbitrageOpportunities.length > 0 ? (
                 <div className="grid gap-4">
                   {arbitrageOpportunities.slice(0, isPremium ? arbitrageOpportunities.length : 1).map((arb, index) => (
-                    <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-yellow-500/20">
-                      <div className="flex justify-between items-start mb-3">
+                    <div key={index} className="bg-gray-800/50 rounded-lg p-3 sm:p-4 border border-yellow-500/20">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-0 mb-2 sm:mb-3">
                         <div>
-                          <h3 className="font-semibold text-white">{arb.game}</h3>
+                          <h3 className="font-semibold text-white text-sm sm:text-base">{arb.game}</h3>
                           <div className="flex items-center gap-2 text-sm text-yellow-400">
                             <span className="font-bold">{arb.profit_percentage}% Profit</span>
                             <span>•</span>
@@ -333,7 +333,7 @@ export default function EVLines() {
                         </span>
                       </div>
                       
-                      <div className="grid md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                         <div className="bg-gray-900/50 rounded-lg p-3">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-green-400 font-medium">{arb.side1.selection}</span>
@@ -470,10 +470,10 @@ export default function EVLines() {
                     const isInParlay = userParlay.find(l => l.game === line.game && l.selection === line.selection);
                     
                     return (
-                      <div key={index} className="bg-gray-700 rounded-lg p-4 border border-gray-600">
-                        <div className="flex justify-between items-start">
+                      <div key={index} className="bg-gray-700 rounded-lg p-3 sm:p-4 border border-gray-600">
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-0">
                           <div className="flex-1">
-                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
                               <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
                                 +{(line.expected_value * 100).toFixed(1)}% EV
                               </span>
@@ -635,7 +635,7 @@ export default function EVLines() {
                 <>
                   <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
                     {userParlay.map((line, index) => (
-                      <div key={index} className="bg-gray-700 rounded-lg p-3 text-sm">
+                      <div key={index} className="bg-gray-700 rounded-lg p-2 sm:p-3 text-xs sm:text-sm">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <div className="text-white font-medium">{line.selection}</div>
