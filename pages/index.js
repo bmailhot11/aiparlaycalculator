@@ -243,7 +243,45 @@ function ParlayResultsModal({ parlay, isOpen, onClose, handleUpgrade }) {
   const { isPremium } = usePremium();
   const [shareClicked, setShareClicked] = useState(false)
   const [downloadingImage, setDownloadingImage] = useState(false)
+  const [loadingBestSportsbook, setLoadingBestSportsbook] = useState(false)
+  const [bestSportsbookAnalysis, setBestSportsbookAnalysis] = useState(null)
   const parlayCardRef = useRef(null)
+
+  // Load best sportsbook analysis when parlay opens
+  useEffect(() => {
+    if (isOpen && parlay && parlay.parlay_legs && parlay.parlay_legs.length > 0) {
+      fetchBestSportsbookAnalysis();
+    }
+  }, [isOpen, parlay]);
+
+  const fetchBestSportsbookAnalysis = async () => {
+    if (!parlay || !parlay.parlay_legs) return;
+    
+    setLoadingBestSportsbook(true);
+    try {
+      const response = await fetch('/api/find-best-sportsbook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          parlay: parlay.parlay_legs,
+          totalOdds: parlay.total_american_odds || parlay.total_odds
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.analysis) {
+          setBestSportsbookAnalysis(result.analysis);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching best sportsbook analysis:', error);
+    } finally {
+      setLoadingBestSportsbook(false);
+    }
+  };
 
   if (!isOpen || !parlay) return null
 
@@ -354,8 +392,17 @@ function ParlayResultsModal({ parlay, isOpen, onClose, handleUpgrade }) {
                 <p className="text-gray-400">{parlay.risk_assessment || 'Professional mathematical analysis'}</p>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-black text-green-400">{parlay.total_odds || 'TBD'}</div>
-                <div className="text-sm text-gray-400">{parlay.confidence || 'Medium'} confidence</div>
+                <div className="text-3xl font-black text-green-400">
+                  {bestSportsbookAnalysis?.calculated_total_odds || parlay.total_american_odds || parlay.total_odds || 'TBD'}
+                </div>
+                <div className="text-sm text-gray-400">
+                  {bestSportsbookAnalysis?.confidence_assessment || parlay.confidence || 'Medium confidence'}
+                </div>
+                {bestSportsbookAnalysis?.recommended_sportsbook && (
+                  <div className="text-xs text-yellow-400 mt-1">
+                    Best at: {bestSportsbookAnalysis.recommended_sportsbook}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -384,22 +431,82 @@ function ParlayResultsModal({ parlay, isOpen, onClose, handleUpgrade }) {
               ))}
             </div>
 
+            {/* GPT Analysis Results */}
+            {bestSportsbookAnalysis && (
+              <div className="bg-gray-800 rounded-lg p-4 mb-4 border border-blue-500/30">
+                <h4 className="font-semibold text-blue-400 mb-3 flex items-center gap-2">
+                  <Brain className="w-5 h-5" />
+                  GPT Analysis Results
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="text-green-400 font-bold">{bestSportsbookAnalysis.payout_100}</div>
+                    <div className="text-gray-400">$100 Payout</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-blue-400 font-bold">{bestSportsbookAnalysis.win_probability}</div>
+                    <div className="text-gray-400">Win Probability</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-purple-400 font-bold">{bestSportsbookAnalysis.decimal_odds}</div>
+                    <div className="text-gray-400">Decimal Odds</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-orange-400 font-bold">{bestSportsbookAnalysis.risk_profile}</div>
+                    <div className="text-gray-400">Risk Profile</div>
+                  </div>
+                </div>
+                
+                {bestSportsbookAnalysis.recommended_sportsbook && (
+                  <div className="mt-3 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
+                    <div className="text-yellow-400 font-medium text-sm mb-1">
+                      🏆 Recommended Sportsbook: {bestSportsbookAnalysis.recommended_sportsbook}
+                    </div>
+                    <div className="text-yellow-300 text-xs">
+                      {bestSportsbookAnalysis.sportsbook_reasoning}
+                    </div>
+                  </div>
+                )}
+                
+                {bestSportsbookAnalysis.key_insights && (
+                  <div className="mt-3">
+                    <div className="text-gray-300 text-sm font-medium mb-2">Key Insights:</div>
+                    <ul className="text-gray-400 text-xs space-y-1">
+                      {bestSportsbookAnalysis.key_insights.map((insight, index) => (
+                        <li key={index}>• {insight}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Loading state for analysis */}
+            {loadingBestSportsbook && (
+              <div className="bg-gray-800 rounded-lg p-4 mb-4 border border-gray-600">
+                <div className="flex items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+                  <span className="text-blue-400 text-sm">Calculating optimal returns and best sportsbook...</span>
+                </div>
+              </div>
+            )}
+
             {/* Footer */}
             <div className="text-center text-gray-500 text-sm">
               Generated by AiParlayCalculator • {new Date().toLocaleDateString()} • Mathematical Analysis Tool
             </div>
           </div>
 
-          {/* Premium-only advanced statistics */}
+          {/* Premium-only advanced betting options */}
           <PremiumGate
-            featureName="advanced parlay statistics"
+            featureName="advanced betting tools"
             upgradeHandler={handleUpgrade}
             fallback={
               <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-center">
                 <Crown className="w-6 h-6 mx-auto mb-2 text-yellow-400" />
-                <h4 className="font-semibold text-white mb-2">Premium Statistics Available</h4>
+                <h4 className="font-semibold text-white mb-2">Premium Tools Available</h4>
                 <p className="text-gray-400 text-sm mb-3">
-                  Get detailed win probability, bankroll recommendations, and more
+                  Get bet size calculator, stake recommendations, and portfolio tracking
                 </p>
                 <button 
                   onClick={handleUpgrade}
@@ -410,25 +517,29 @@ function ParlayResultsModal({ parlay, isOpen, onClose, handleUpgrade }) {
               </div>
             }
           >
-            <div className="bg-gray-900 rounded-lg p-4 space-y-3">
-              <h4 className="font-semibold text-yellow-400">📊 Premium Statistics</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                <div className="text-center">
-                  <div className="text-green-400 font-bold">Calculated</div>
-                  <div className="text-gray-400">Win Probability</div>
+            <div className="bg-gray-900 rounded-lg p-4 space-y-4">
+              <h4 className="font-semibold text-yellow-400">🎯 Premium Betting Tools</h4>
+              
+              {/* Bet Size Recommendations */}
+              {bestSportsbookAnalysis && (
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="text-center p-3 bg-gray-800 rounded">
+                    <div className="text-green-400 font-bold">${bestSportsbookAnalysis.payout_25}</div>
+                    <div className="text-gray-400">$25 Bet Payout</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-800 rounded">
+                    <div className="text-blue-400 font-bold">${bestSportsbookAnalysis.payout_50}</div>
+                    <div className="text-gray-400">$50 Bet Payout</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-800 rounded">
+                    <div className="text-purple-400 font-bold">${bestSportsbookAnalysis.payout_100}</div>
+                    <div className="text-gray-400">$100 Bet Payout</div>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-blue-400 font-bold">+EV</div>
-                  <div className="text-gray-400">Expected Value</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-purple-400 font-bold">Kelly</div>
-                  <div className="text-gray-400">Bet Size</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-orange-400 font-bold">Edge</div>
-                  <div className="text-gray-400">Value vs Market</div>
-                </div>
+              )}
+              
+              <div className="text-xs text-gray-400">
+                💡 Bet sizing calculated using Kelly Criterion and risk management principles
               </div>
             </div>
           </PremiumGate>

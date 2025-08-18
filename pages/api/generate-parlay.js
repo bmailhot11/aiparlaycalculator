@@ -96,27 +96,34 @@ export default async function handler(req, res) {
   }
 }
 
-// 🚀 NEW: Get sport-specific markets including player spreads
-function getSportSpecificMarkets(sportKey) {
+// 🚀 SMART: Get sport-specific markets with fallback
+function getSportSpecificMarkets(sportKey, useFullMarkets = true) {
+  if (!useFullMarkets) {
+    // Fallback to basic H2H only
+    console.log(`🔄 ${sportKey} markets (fallback): h2h`);
+    return 'h2h';
+  }
+  
+  // Try full markets first
   const baseMarkets = 'h2h,spreads,totals';
   
-  // Add sport-specific player spread markets with validation
+  // Add player props for major leagues that support them (CORRECTED MARKET NAMES FROM OFFICIAL API DOCS)
   const sportPlayerMarkets = {
-    'americanfootball_nfl': 'player_pass_yds,player_rush_yds,player_receiving_yds,player_pass_tds,player_rush_tds,player_receiving_tds',
-    'americanfootball_nfl_preseason': 'player_pass_yds,player_rush_yds,player_receiving_yds',
-    'americanfootball_ncaaf': 'player_pass_yds,player_rush_yds,player_receiving_yds',
+    'americanfootball_nfl': 'player_pass_yds,player_rush_yds,player_reception_yds,player_pass_tds,player_rush_tds,player_reception_tds',
+    'americanfootball_nfl_preseason': 'player_pass_yds,player_rush_yds,player_reception_yds',
+    'americanfootball_ncaaf': 'player_pass_yds,player_rush_yds,player_reception_yds',
     'basketball_nba': 'player_points,player_rebounds,player_assists,player_threes,player_blocks,player_steals',
     'basketball_nba_preseason': 'player_points,player_rebounds,player_assists',
     'basketball_ncaab': 'player_points,player_rebounds,player_assists',
     'icehockey_nhl': 'player_goals,player_assists,player_points,player_shots_on_goal',
     'icehockey_nhl_preseason': 'player_goals,player_assists,player_points',
-    'baseball_mlb': 'player_hits,player_total_bases,player_rbis,player_runs_scored,player_home_runs'
+    'baseball_mlb': 'batter_hits,batter_home_runs,batter_rbis,batter_runs_scored,pitcher_strikeouts'
   };
   
   const playerMarkets = sportPlayerMarkets[sportKey] || '';
   const allMarkets = playerMarkets ? `${baseMarkets},${playerMarkets}` : baseMarkets;
   
-  console.log(`🎯 ${sportKey} markets: ${allMarkets}`);
+  console.log(`🎯 ${sportKey} markets (full): ${allMarkets}`);
   return allMarkets;
 }
 
@@ -128,7 +135,7 @@ async function fetchSportSpecificOdds(sport) {
     throw new Error('Odds API key not configured');
   }
 
-  // Map user-friendly sport names to API sport keys
+  // Map user-friendly sport names to API sport keys (CONSISTENT WITH EV FETCHER)
   const sportMapping = {
     'NFL': ['americanfootball_nfl', 'americanfootball_nfl_preseason'],
     'NBA': ['basketball_nba', 'basketball_nba_preseason'], 
@@ -139,13 +146,13 @@ async function fetchSportSpecificOdds(sport) {
     'UFC': ['mma_mixed_martial_arts'],
     'MMA': ['mma_mixed_martial_arts'],
     'Boxing': ['boxing_boxing'],
-    'Soccer': ['soccer_epl', 'soccer_usa_mls'],
+    'Soccer': ['soccer_epl', 'soccer_usa_mls', 'soccer_uefa_champs_league', 'soccer_uefa_europa_league', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_germany_bundesliga', 'soccer_france_ligue_one'],
     'EPL': ['soccer_epl'],
     'Tennis': ['tennis_atp', 'tennis_wta'],
     'Golf': ['golf_pga'],
     'Cricket': ['cricket_big_bash'],
     'AFL': ['aussierules_afl'],
-    'Mixed': ['americanfootball_nfl', 'basketball_nba', 'icehockey_nhl'] // Mixed gets multiple sports
+    'Mixed': ['americanfootball_nfl_preseason', 'baseball_mlb', 'soccer_epl', 'soccer_usa_mls', 'tennis_atp'] // Mixed gets sports likely in season
   };
 
   const sportKeys = sportMapping[sport];
@@ -155,63 +162,92 @@ async function fetchSportSpecificOdds(sport) {
   }
 
   let allGames = [];
-
-  // Try each sport variant until we find games
+  
+  // Try each sport variant with full markets first, then fallback to H2H only
   for (const sportKey of sportKeys) {
-    try {
-      console.log(`🔄 Fetching ${sport} odds (${sportKey}) from API...`);
-      
-      // 🚀 ENHANCED: Sport-specific player spread markets with validation
-      const markets = getSportSpecificMarkets(sportKey);
-      
-      const url = `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=${markets}&oddsFormat=american&dateFormat=iso`;
-      console.log(`URL: ${url.replace(API_KEY, 'HIDDEN')}`);
-      
-      const response = await fetch(url,
-        { 
-          headers: { 'Accept': 'application/json' }
-        }
-      );
-
-      console.log(`Response status for ${sportKey}: ${response.status}`);
-      
-      if (!response.ok) {
-        console.log(`Response not OK for ${sportKey}: ${response.status}`);
-        if (response.status === 422) {
-          console.log(`${sportKey} is out of season, trying next variant...`);
-          continue;
-        } else if (response.status === 429) {
-          throw new Error('Rate limit exceeded - please wait');
-        } else if (response.status === 401) {
-          throw new Error('Invalid Odds API key');
-        } else {
-          console.log(`API error for ${sportKey}: ${response.status}, trying next variant...`);
-          continue;
-        }
-      }
-
-      const games = await response.json();
-      console.log(`✅ Found ${games.length} ${sport} games using ${sportKey}`);
-      
-      if (games.length > 0) {
-        allGames.push(...games);
+    // Try full markets first
+    const attemptFetch = async (useFullMarkets) => {
+      try {
+        const marketType = useFullMarkets ? 'full' : 'H2H fallback';
+        console.log(`🔄 Fetching ${sport} odds (${sportKey}) - ${marketType}...`);
         
-        // For mixed sport, continue collecting from other sports
-        if (sport === 'Mixed' && allGames.length < 10) {
-          continue;
-        } else {
-          break; // For single sports, stop after finding games
+        const markets = getSportSpecificMarkets(sportKey, useFullMarkets);
+        
+        // Use different regions for soccer to increase chances
+        const regions = sportKey.startsWith('soccer_') ? 'us,uk,eu' : 'us';
+        const url = `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=${regions}&markets=${markets}&oddsFormat=american&dateFormat=iso`;
+        console.log(`URL: ${url.replace(API_KEY, 'HIDDEN')}`);
+        console.log(`Markets requested: ${markets}`);
+        
+        const response = await fetch(url, { 
+          headers: { 'Accept': 'application/json' }
+        });
+
+        console.log(`Response status for ${sportKey} (${marketType}): ${response.status}`);
+        
+        if (!response.ok) {
+          // Get response body for better error details
+          let errorBody = '';
+          try {
+            errorBody = await response.text();
+            console.log(`Error response body: ${errorBody}`);
+          } catch (e) {
+            console.log('Could not read error response body');
+          }
+          
+          if (response.status === 422) {
+            console.log(`${sportKey} is out of season or invalid markets (422)`);
+            return { success: false, reason: 'out_of_season' };
+          } else if (response.status === 429) {
+            throw new Error('Rate limit exceeded - please wait');
+          } else if (response.status === 401) {
+            throw new Error('Invalid Odds API key');
+          } else {
+            console.log(`API error for ${sportKey}: ${response.status}`);
+            return { success: false, reason: 'api_error' };
+          }
         }
+
+        const games = await response.json();
+        console.log(`✅ Found ${games.length} ${sport} games using ${sportKey} (${marketType})`);
+        
+        return { success: true, games };
+        
+      } catch (error) {
+        console.log(`Error fetching ${sportKey} (${useFullMarkets ? 'full' : 'H2H'}):`, error.message);
+        return { success: false, reason: 'network_error' };
       }
-    } catch (error) {
-      console.log(`Error fetching ${sportKey}:`, error.message);
+    };
+    
+    // Try full markets first
+    let result = await attemptFetch(true);
+    
+    // If full markets failed but not due to out of season, try H2H fallback
+    if (!result.success && result.reason !== 'out_of_season') {
+      console.log(`🔄 Full markets failed for ${sportKey}, trying H2H fallback...`);
+      result = await attemptFetch(false);
+    }
+    
+    // If we got games, process them
+    if (result.success && result.games && result.games.length > 0) {
+      allGames.push(...result.games);
+      
+      // For mixed sport, continue collecting from other sports
+      if (sport === 'Mixed' && allGames.length < 10) {
+        continue;
+      } else {
+        break; // For single sports, stop after finding games
+      }
+    } else if (result.reason === 'out_of_season') {
+      // Sport is out of season, try next variant
       continue;
     }
   }
   
-  // If no variants worked, throw error
+  // If no variants worked, throw error with more details
   if (allGames.length === 0) {
-    throw new Error(`No active or upcoming games found for ${sport} in the next 14 days. This sport may be out of season.`);
+    console.log(`❌ [Parlay] No games found for ${sport}. Tried variants: ${sportKeys.join(', ')}`);
+    throw new Error(`No active or upcoming games found for ${sport}. This sport may be out of season or the API variants (${sportKeys.join(', ')}) are currently inactive.`);
   }
 
   return allGames;
@@ -609,7 +645,7 @@ function validateAndOptimizeParlayOdds(parlayData, availableBets, preferences) {
     expected_value: calculateParlayEV(validatedLegs),
     ai_enhanced: true,
     odds_optimized: validatedLegs.some(leg => leg.odds_upgraded),
-    sportsbooks_used: "Top 5 premium sportsbooks only"
+    sportsbooks_used: "Premium sportsbooks"
   };
 }
 
@@ -772,7 +808,7 @@ function generateValidatedFallbackParlay(availableBets, preferences) {
       point: bet.point,
       odds: bet.odds,
       decimal_odds: bet.decimal_odds,
-      reasoning: "Mathematically selected using best odds from top 5 sportsbooks",
+      reasoning: "Mathematically selected using best odds from premium sportsbooks",
       confidence_rating: "6",
       expected_probability: "TBD",
       commence_time: bet.commence_time
@@ -786,7 +822,7 @@ function generateValidatedFallbackParlay(availableBets, preferences) {
     expected_value: calculateParlayEV(selectedBets),
     ai_enhanced: false,
     odds_optimized: true,
-    sportsbooks_used: "Top 5 premium sportsbooks only"
+    sportsbooks_used: "Premium sportsbooks"
   };
 }
 
