@@ -1,0 +1,1 @@
+- no i dont want to have a temporary h2h. have a fall back option where if player props don'T work we do h2h rather than nothing

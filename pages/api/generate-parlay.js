@@ -104,20 +104,26 @@ function getSportSpecificMarkets(sportKey, useFullMarkets = true) {
     return 'h2h';
   }
   
+  // TEMPORARY DEBUG: For NFL, start with H2H only to test if games exist at all
+  if (sportKey.includes('americanfootball')) {
+    console.log(`🐛 DEBUG: Using H2H only for ${sportKey} to test game availability`);
+    return 'h2h';
+  }
+  
   // Try full markets first
   const baseMarkets = 'h2h,spreads,totals';
   
-  // Add player props for major leagues that support them (CORRECTED MARKET NAMES FROM OFFICIAL API DOCS)
+  // SIMPLIFIED: Start with fewer player props to avoid API limits
   const sportPlayerMarkets = {
-    'americanfootball_nfl': 'player_pass_yds,player_rush_yds,player_reception_yds,player_pass_tds,player_rush_tds,player_reception_tds',
-    'americanfootball_nfl_preseason': 'player_pass_yds,player_rush_yds,player_reception_yds',
-    'americanfootball_ncaaf': 'player_pass_yds,player_rush_yds,player_reception_yds',
-    'basketball_nba': 'player_points,player_rebounds,player_assists,player_threes,player_blocks,player_steals',
-    'basketball_nba_preseason': 'player_points,player_rebounds,player_assists',
-    'basketball_ncaab': 'player_points,player_rebounds,player_assists',
-    'icehockey_nhl': 'player_goals,player_assists,player_points,player_shots_on_goal',
-    'icehockey_nhl_preseason': 'player_goals,player_assists,player_points',
-    'baseball_mlb': 'batter_hits,batter_home_runs,batter_rbis,batter_runs_scored,pitcher_strikeouts'
+    'americanfootball_nfl': 'player_pass_yds,player_rush_yds,player_reception_yds',
+    'americanfootball_nfl_preseason': 'player_pass_yds,player_rush_yds',
+    'americanfootball_ncaaf': 'player_pass_yds,player_rush_yds',
+    'basketball_nba': 'player_points,player_rebounds,player_assists',
+    'basketball_nba_preseason': 'player_points,player_rebounds',
+    'basketball_ncaab': 'player_points,player_rebounds',
+    'icehockey_nhl': 'player_goals,player_assists,player_points',
+    'icehockey_nhl_preseason': 'player_goals,player_assists',
+    'baseball_mlb': 'batter_hits,batter_rbis,pitcher_strikeouts'
   };
   
   const playerMarkets = sportPlayerMarkets[sportKey] || '';
@@ -134,10 +140,15 @@ async function fetchSportSpecificOdds(sport) {
   if (!API_KEY) {
     throw new Error('Odds API key not configured');
   }
+  
+  // Log API key info for debugging (without exposing the key)
+  console.log(`🔑 API Key configured: ${API_KEY.length} chars, starts with: ${API_KEY.substring(0, 8)}...`);
+  console.log(`📅 Current date: ${new Date().toISOString()}`);
+  console.log(`🏈 Requested sport: ${sport}`);
 
-  // Map user-friendly sport names to API sport keys (CONSISTENT WITH EV FETCHER)
+  // Map user-friendly sport names to API sport keys (CONSISTENT WITH EV FETCHER)  
   const sportMapping = {
-    'NFL': ['americanfootball_nfl', 'americanfootball_nfl_preseason'],
+    'NFL': ['americanfootball_nfl_preseason', 'americanfootball_nfl'], // Try preseason first in August
     'NBA': ['basketball_nba', 'basketball_nba_preseason'], 
     'NHL': ['icehockey_nhl', 'icehockey_nhl_preseason'],
     'MLB': ['baseball_mlb'],
@@ -247,7 +258,8 @@ async function fetchSportSpecificOdds(sport) {
   // If no variants worked, throw error with more details
   if (allGames.length === 0) {
     console.log(`❌ [Parlay] No games found for ${sport}. Tried variants: ${sportKeys.join(', ')}`);
-    throw new Error(`No active or upcoming games found for ${sport}. This sport may be out of season or the API variants (${sportKeys.join(', ')}) are currently inactive.`);
+    console.log(`❌ [Parlay] This suggests either: 1) Sport is out of season, 2) API key has insufficient permissions, 3) All variants returned 422 errors`);
+    throw new Error(`No active or upcoming games found for ${sport}. Tried all variants: ${sportKeys.join(', ')}. Check if sport is in season or if API key has sufficient permissions.`);
   }
 
   return allGames;
