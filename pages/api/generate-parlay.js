@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     if (!sportData || sportData.length === 0) {
       return res.status(400).json({
         success: false,
-        message: `No active or upcoming games found for ${config.sport} in the next 14 days. This sport may be out of season.`
+        message: `No active or upcoming games found for ${config.sport}. This sport may be out of season or have no available betting markets.`
       });
     }
 
@@ -194,6 +194,7 @@ async function fetchSportSpecificOdds(sport) {
         }
 
         const games = await response.json();
+        console.log(`📈 [${sport} API] Got ${games.length} games from ${sportKey}`);
         return { success: true, games };
         
       } catch (error) {
@@ -230,7 +231,41 @@ async function fetchSportSpecificOdds(sport) {
     throw new Error(`No active or upcoming games found for ${sport}. This sport may be out of season.`);
   }
 
-  return allGames;
+  // Smart date filtering: prefer games in next 7 days, but if fewer than 7 games, extend to 30 days
+  const now = new Date();
+  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  // First, try games in next 7 days
+  const gamesNext7Days = allGames.filter(game => {
+    if (!game.commence_time) return true; // Include games without start time
+    const gameTime = new Date(game.commence_time);
+    return gameTime >= now && gameTime <= sevenDaysFromNow;
+  });
+
+  let filteredGames = gamesNext7Days;
+
+  // If we have fewer than 7 games in the next week, extend to 30 days
+  if (gamesNext7Days.length < 7) {
+    const gamesNext30Days = allGames.filter(game => {
+      if (!game.commence_time) return true; // Include games without start time
+      const gameTime = new Date(game.commence_time);
+      return gameTime >= now && gameTime <= thirtyDaysFromNow;
+    });
+    
+    filteredGames = gamesNext30Days;
+    console.log(`📅 [${sport} Parlay] Extended to 30-day window: ${gamesNext7Days.length} games (7 days) → ${gamesNext30Days.length} games (30 days)`);
+  }
+
+  // If still no games in 30 days, use all available games (no date filtering)
+  if (filteredGames.length === 0) {
+    filteredGames = allGames;
+    console.log(`📅 [${sport} Parlay] Using all available games regardless of date: ${allGames.length} games`);
+  }
+
+  console.log(`📊 [${sport} Parlay] Final game count: ${filteredGames.length} games`);
+  console.log(`📊 [${sport} Parlay] Date filtering details: All games: ${allGames.length}, 7-day: ${gamesNext7Days ? gamesNext7Days.length : 'N/A'}, Final: ${filteredGames.length}`);
+  return filteredGames;
 }
 
 // 🚀 OPTIMIZED: Filter to only top 5 sportsbooks for better performance
