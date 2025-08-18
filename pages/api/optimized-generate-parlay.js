@@ -75,7 +75,7 @@ async function generateOptimizedParlay(preferences, positiveEVLines) {
   console.log(`🧮 [OptimizedParlay] Generating parlay from ${positiveEVLines.length} EV+ lines`);
   
   // Filter by risk level and select best EV options
-  const riskFilteredLines = filterByRiskLevel(positiveEVLines, preferences.riskLevel);
+  const riskFilteredLines = filterByRiskLevel(positiveEVLines, preferences.riskLevel, preferences.legs);
   console.log(`🎯 [OptimizedParlay] Risk-filtered to ${riskFilteredLines.length} lines`);
   
   if (riskFilteredLines.length < preferences.legs) {
@@ -89,16 +89,22 @@ async function generateOptimizedParlay(preferences, positiveEVLines) {
 
   try {
     // ULTRA-COMPACT AI prompt for minimal token usage
+    const riskGuidance = {
+      'safe': 'Select ONLY favorites (negative odds) with highest EV',
+      'moderate': 'Balance EV and odds, mix favorites and slight underdogs',
+      'risky': 'Include underdogs for higher payout potential'
+    };
+    
     const parlayResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: "Select highest EV bets for parlay. Return only JSON."
+          content: `${riskGuidance[preferences.riskLevel]}. Return only JSON.`
         },
         {
           role: "user",
-          content: `Select ${preferences.legs} highest EV bets from different games:
+          content: `Risk: ${preferences.riskLevel}. Select ${preferences.legs} bets from different games:
 
 ${formatCompactEVLines(topEVLines)}
 
@@ -107,7 +113,7 @@ JSON format:
         }
       ],
       max_tokens: 300, // DRASTICALLY REDUCED from 500+ tokens
-      temperature: 0.1
+      temperature: preferences.riskLevel === 'risky' ? 0.3 : 0.1 // Higher temp for risky
     });
 
     const aiResponse = parlayResponse.choices[0].message.content;
@@ -133,31 +139,41 @@ function formatCompactEVLines(lines) {
   ).join('\n');
 }
 
-// OPTIMIZATION: Fast risk level filtering
-function filterByRiskLevel(lines, riskLevel) {
-  const riskRanges = {
-    'safe': { min: -200, max: 150 },
-    'moderate': { min: -300, max: 300 },
-    'risky': { min: -500, max: 500 }
+// OPTIMIZATION: Simple EV-based risk scaling
+function filterByRiskLevel(lines, riskLevel, neededLegs = 3) {
+  // Sort by EV first (highest to lowest)
+  const sortedByEV = [...lines].sort((a, b) => b.expected_value - a.expected_value);
+  
+  // Scale selection based on risk level - prioritize higher EV lines
+  const selectionRatio = {
+    'safe': 0.6,     // Top 60% highest EV lines only (more conservative selection)
+    'moderate': 0.8, // Top 80% of EV lines (balanced)
+    'risky': 1.0     // All positive EV lines (maximum opportunities)
   };
   
-  const range = riskRanges[riskLevel] || riskRanges.moderate;
+  const ratio = selectionRatio[riskLevel] || selectionRatio.moderate;
+  let maxLines = Math.max(1, Math.floor(sortedByEV.length * ratio));
   
-  return lines.filter(line => {
-    const odds = parseOdds(line.odds);
-    return odds >= range.min && odds <= range.max;
-  });
+  // Ensure we have enough lines for the requested parlay size
+  if (maxLines < neededLegs && sortedByEV.length >= neededLegs) {
+    maxLines = Math.min(neededLegs, sortedByEV.length);
+  }
+  
+  return sortedByEV.slice(0, maxLines);
 }
 
 // OPTIMIZATION: Mathematical parlay generation (no AI tokens)
 function generateMathematicalParlay(evLines, preferences) {
-  console.log('🔢 [OptimizedParlay] Using mathematical selection');
+  console.log('🔢 [OptimizedParlay] Using mathematical selection for', preferences.riskLevel, 'risk');
   
   const selectedLegs = [];
   const usedGames = new Set();
   
-  // Select highest EV from different games
-  for (const line of evLines) {
+  // Always prioritize highest EV first (simplest and most optimal)
+  const sortedLines = evLines.sort((a, b) => b.expected_value - a.expected_value);
+  
+  // Select legs from different games based on highest EV
+  for (const line of sortedLines) {
     if (selectedLegs.length >= preferences.legs) break;
     
     const gameKey = line.game;
@@ -172,7 +188,7 @@ function generateMathematicalParlay(evLines, preferences) {
         expected_value: line.expected_value,
         confidence_score: line.confidence_score,
         edge_type: line.edge_type,
-        reasoning: `Positive EV: +${(line.expected_value * 100).toFixed(1)}% (${line.edge_type})`
+        reasoning: `${preferences.riskLevel.charAt(0).toUpperCase() + preferences.riskLevel.slice(1)} pick: +${(line.expected_value * 100).toFixed(1)}% EV (${line.edge_type})`
       });
       usedGames.add(gameKey);
     }
@@ -303,10 +319,21 @@ function generateRiskAssessment(legs, preferences) {
   const totalDecimalOdds = legs.reduce((product, leg) => product * parseFloat(leg.decimal_odds), 1);
   const impliedProb = (1 / totalDecimalOdds * 100).toFixed(1);
   
-  let assessment = `${legs.length}-leg positive EV parlay with ${impliedProb}% implied probability. `;
-  assessment += `Average expected value: +${(avgEV * 100).toFixed(1)}%. `;
-  assessment += `Optimized cost-efficient selection from pre-filtered positive EV opportunities. `;
-  assessment += `Risk level: ${preferences.riskLevel} with mathematical edge validation.`;
+  // Calculate average odds to assess actual risk
+  const avgOdds = legs.reduce((sum, leg) => {
+    const odds = parseOdds(leg.odds);
+    return sum + Math.abs(odds);
+  }, 0) / legs.length;
+  
+  const riskDescriptions = {
+    'safe': `Conservative ${legs.length}-leg parlay focusing on favorites (avg odds: ${avgOdds.toFixed(0)}). Lower variance, steady returns. ${impliedProb}% implied probability.`,
+    'moderate': `Balanced ${legs.length}-leg parlay mixing favorites and underdogs (avg odds: ${avgOdds.toFixed(0)}). Moderate risk/reward. ${impliedProb}% implied probability.`,
+    'risky': `Aggressive ${legs.length}-leg parlay including underdogs (avg odds: ${avgOdds.toFixed(0)}). Higher variance, bigger potential payouts. ${impliedProb}% implied probability.`
+  };
+  
+  let assessment = riskDescriptions[preferences.riskLevel] || riskDescriptions.moderate;
+  assessment += ` Average expected value: +${(avgEV * 100).toFixed(1)}%. `;
+  assessment += `${preferences.riskLevel.charAt(0).toUpperCase() + preferences.riskLevel.slice(1)} risk profile with mathematical edge validation.`;
   
   return assessment;
 }

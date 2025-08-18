@@ -45,6 +45,7 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('❌ EV lines fetch error:', error);
+    console.error('Error stack:', error.stack);
     
     return res.status(500).json({
       success: false,

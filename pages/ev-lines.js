@@ -46,6 +46,11 @@ export default function EVLines() {
 
   // Fetch EV lines when component mounts or sport changes
   useEffect(() => {
+    // Clear previous sport's data when switching
+    setEvLines([]);
+    setArbitrageOpportunities([]);
+    setError(null);
+    
     if (evGenerationsToday === 0) { // Only auto-fetch on first load
       fetchEVLines();
     }
