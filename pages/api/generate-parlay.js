@@ -123,8 +123,9 @@ async function fetchSportSpecificOddsOptimized(sport) {
     }
     
     // Get odds for those specific events (5-minute cache)
+    // Include player props for sports that support them
     const markets = sport === 'Soccer' ? 'h2h' : 'h2h,spreads,totals';
-    const oddsData = await eventsCache.getOddsForEvents(upcomingEvents, markets);
+    const oddsData = await eventsCache.getOddsForEvents(upcomingEvents, markets, true); // Enable player props
     
     console.log(`✅ [${sport} Parlay] Optimized approach: ${upcomingEvents.length} events → ${oddsData.length} games with odds`);
     
