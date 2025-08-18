@@ -890,7 +890,7 @@ function ParlayGenerator({ onGeneration, generationsToday, maxGenerations, isPre
         ) : !selectedSport ? (
           'Select a Sport First'
         ) : (
-          Generate Positive EV {selectedSport} Parlay
+          `Generate Positive EV ${selectedSport} Parlay`
         )}
       </button>
 
