@@ -29,7 +29,8 @@ export default async function handler(req, res) {
         message: result.reason === 'no_candidates' 
           ? `No positive EV lines found for ${sport}. This sport may be out of season.`
           : `Failed to fetch EV lines: ${result.reason}`,
-        lines: []
+        lines: [],
+        arbitrage: []
       });
     }
 
@@ -48,7 +49,9 @@ export default async function handler(req, res) {
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch positive EV lines. Please try again.',
-      error: error.message
+      error: error.message,
+      lines: [],
+      arbitrage: []
     });
   }
 }
