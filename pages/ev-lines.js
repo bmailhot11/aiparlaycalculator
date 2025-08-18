@@ -16,11 +16,13 @@ export default function EVLines() {
   const [error, setError] = useState(null);
   const [evGenerationsToday, setEvGenerationsToday] = useState(0);
   const maxEvGenerations = 1; // 1 per day for free users
+  const [filterChangesToday, setFilterChangesToday] = useState(0);
+  const maxFilterChanges = 2; // 2 filter changes per day for free users
   const [userParlay, setUserParlay] = useState([]);
   const [showParlayAnalysis, setShowParlayAnalysis] = useState(false);
   const [parlayComparison, setParlayComparison] = useState(null);
 
-  const sports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'UFC', 'Soccer', 'Tennis'];
+  const sports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'UFC', 'MLS', 'UEFA', 'Tennis'];
   
   // Sportsbook URLs (informational links only)
   const getSportsbookUrl = (sportsbook) => {
@@ -51,10 +53,46 @@ export default function EVLines() {
     setArbitrageOpportunities([]);
     setError(null);
     
-    if (evGenerationsToday === 0) { // Only auto-fetch on first load
-      fetchEVLines();
+    // Auto-refresh logic with usage tracking
+    const handleSportChange = async () => {
+      if (evGenerationsToday === 0) {
+        // First load - always fetch
+        fetchEVLines();
+      } else if (isPremium) {
+        // Premium users - always auto-refresh
+        fetchEVLines();
+      } else if (filterChangesToday < maxFilterChanges) {
+        // Free users - auto-refresh if under limit
+        await trackFilterChange();
+        fetchEVLines();
+      } else {
+        // Free users over limit - show message
+        setError(`Daily filter limit reached (${maxFilterChanges}). Upgrade to Premium for unlimited filter changes or manually refresh.`);
+      }
+    };
+    
+    handleSportChange();
+  }, [selectedSport, evGenerationsToday, filterChangesToday, isPremium]);
+
+  const trackFilterChange = async () => {
+    if (isPremium) return; // Premium users don't have limits
+    
+    try {
+      const identifier = localStorage.getItem('userIdentifier');
+      const response = await fetch('/api/track-usage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'filter_change', userIdentifier: identifier })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setFilterChangesToday(data.usage.filter_changes);
+      }
+    } catch (error) {
+      console.error('Failed to track filter change:', error);
     }
-  }, [selectedSport]);
+  };
 
   const loadUsageData = async () => {
     try {
@@ -73,6 +111,7 @@ export default function EVLines() {
       if (response.ok) {
         const data = await response.json();
         setEvGenerationsToday(data.usage?.ev_generations || 0);
+        setFilterChangesToday(data.usage?.filter_changes || 0);
       }
     } catch (error) {
       console.error('Failed to load usage data:', error);
@@ -257,9 +296,10 @@ export default function EVLines() {
                 </span>
               )}
               {!isPremium && (
-                <span className="text-xs text-gray-400">
-                  {evGenerationsToday}/{maxEvGenerations} today
-                </span>
+                <div className="text-xs text-gray-400">
+                  <div>Refreshes: {evGenerationsToday}/{maxEvGenerations} today</div>
+                  <div>Filters: {filterChangesToday}/{maxFilterChanges} today</div>
+                </div>
               )}
               <button
                 onClick={() => router.push('/trends')}

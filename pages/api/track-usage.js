@@ -26,12 +26,13 @@ export default async function handler(req, res) {
     }
     
     // Get current usage
-    const currentUsage = global.usageStore.get(key) || { uploads: 0, generations: 0, ev_generations: 0, date: today };
+    const currentUsage = global.usageStore.get(key) || { uploads: 0, generations: 0, ev_generations: 0, filter_changes: 0, date: today };
     
     // Check limits
     const maxUploads = 2;
     const maxGenerations = 1;
     const maxEvGenerations = 1;
+    const maxFilterChanges = 2;
     
     if (action === 'upload') {
       if (currentUsage.uploads >= maxUploads) {
@@ -60,6 +61,15 @@ export default async function handler(req, res) {
         });
       }
       currentUsage.ev_generations += 1;
+    } else if (action === 'filter_change') {
+      if (currentUsage.filter_changes >= maxFilterChanges) {
+        return res.status(429).json({ 
+          error: 'Daily filter change limit reached',
+          usage: currentUsage,
+          limits: { uploads: maxUploads, generations: maxGenerations, ev_generations: maxEvGenerations, filter_changes: maxFilterChanges }
+        });
+      }
+      currentUsage.filter_changes += 1;
     }
     
     // Save updated usage

@@ -124,7 +124,8 @@ async function fetchSportSpecificOddsOptimized(sport) {
     
     // Get odds for those specific events (5-minute cache)
     // Include player props for sports that support them
-    const markets = sport === 'Soccer' ? 'h2h' : 'h2h,spreads,totals';
+    const soccerSports = ['Soccer', 'MLS', 'UEFA'];
+    const markets = soccerSports.includes(sport) ? 'h2h' : 'h2h,spreads,totals';
     const oddsData = await eventsCache.getOddsForEvents(upcomingEvents, markets, true); // Enable player props
     
     console.log(`✅ [${sport} Parlay] Optimized approach: ${upcomingEvents.length} events → ${oddsData.length} games with odds`);
@@ -163,7 +164,9 @@ async function fetchSportSpecificOdds(sport) {
     'UFC': ['mma_mixed_martial_arts'],
     'MMA': ['mma_mixed_martial_arts'],
     'Boxing': ['boxing_boxing'],
-    'Soccer': ['soccer_epl', 'soccer_usa_mls', 'soccer_uefa_champs_league', 'soccer_uefa_europa_league', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_germany_bundesliga', 'soccer_france_ligue_one'],
+    'MLS': ['soccer_usa_mls'],
+    'UEFA': ['soccer_uefa_champs_league', 'soccer_epl', 'soccer_uefa_europa_league', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_germany_bundesliga', 'soccer_france_ligue_one'],
+    'Soccer': ['soccer_epl', 'soccer_usa_mls', 'soccer_uefa_champs_league', 'soccer_uefa_europa_league', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_germany_bundesliga', 'soccer_france_ligue_one'], // Legacy support
     'EPL': ['soccer_epl'],
     'Tennis': ['tennis_atp', 'tennis_wta'],
     'Golf': ['golf_pga'],

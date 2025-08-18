@@ -290,143 +290,50 @@ function ParlayResultsModal({ parlay, isOpen, onClose, handleUpgrade }) {
   if (!isOpen || !parlay) return null
 
   const handleSaveImage = async () => {
-    if (!parlayCardRef.current) {
-      console.error('Parlay card ref not found')
-      alert('Unable to capture parlay card. Please try again.')
+    if (!parlay) {
+      console.error('No parlay data available')
+      alert('No parlay data available to generate image.')
       return
     }
     
-    console.log('Starting image generation...', parlayCardRef.current)
     setDownloadingImage(true)
     
     try {
-      // Add a small delay to ensure the UI is fully rendered
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
-      console.log('Capturing with html2canvas...')
-      const canvas = await html2canvas(parlayCardRef.current, {
-        backgroundColor: '#111827',
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        foreignObjectRendering: true,
-        scrollX: 0,
-        scrollY: 0,
-        width: parlayCardRef.current.offsetWidth,
-        height: parlayCardRef.current.offsetHeight,
-        logging: true, // Enable logging for debugging
-        removeContainer: false
+      const response = await fetch('/api/generate-parlay-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ parlay })
       })
       
-      console.log('Canvas created:', canvas.width, 'x', canvas.height)
-      
-      if (canvas.width === 0 || canvas.height === 0) {
-        throw new Error('Canvas has zero dimensions')
+      if (!response.ok) {
+        throw new Error(`Failed to generate image: ${response.status}`)
       }
       
-      // Convert to blob and create download
-      const dataURL = canvas.toDataURL('image/png', 1.0)
-      console.log('DataURL length:', dataURL.length)
+      // Get the image blob
+      const blob = await response.blob()
       
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
+      link.href = url
       link.download = `aiparlaycalculator-parlay-${Date.now()}.png`
-      link.href = dataURL
       
-      // Force download
+      // Trigger download
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       
-      console.log('Image download triggered successfully')
+      // Clean up
+      window.URL.revokeObjectURL(url)
+      
     } catch (error) {
       console.error('Error generating image:', error)
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        elementExists: !!parlayCardRef.current,
-        elementDimensions: parlayCardRef.current ? {
-          width: parlayCardRef.current.offsetWidth,
-          height: parlayCardRef.current.offsetHeight,
-          scrollWidth: parlayCardRef.current.scrollWidth,
-          scrollHeight: parlayCardRef.current.scrollHeight
-        } : null
-      })
-      // Fallback: Try creating a simple canvas-based image
-      try {
-        console.log('Attempting fallback image generation...')
-        await createFallbackImage()
-      } catch (fallbackError) {
-        console.error('Fallback image generation failed:', fallbackError)
-        alert(`Failed to generate image: ${error.message}. Your browser may not support this feature.`)
-      }
+      alert(`Failed to generate image: ${error.message}. Please try again.`)
     } finally {
       setDownloadingImage(false)
     }
-  }
-  
-  const createFallbackImage = async () => {
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    
-    // Set canvas size
-    canvas.width = 800
-    canvas.height = 600
-    
-    // Background
-    ctx.fillStyle = '#111827'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    
-    // Header
-    ctx.fillStyle = '#10b981'
-    ctx.font = 'bold 24px system-ui'
-    ctx.fillText('AiParlayCalculator', 50, 60)
-    
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 32px system-ui'
-    const parlayTitle = `${parlay.parlay_legs?.length || 0}-Leg ${parlay.sport || 'Multi-Sport'} Parlay`
-    ctx.fillText(parlayTitle, 50, 100)
-    
-    // Total odds
-    ctx.fillStyle = '#10b981'
-    ctx.font = 'bold 48px system-ui'
-    const odds = parlay.total_american_odds || parlay.total_odds || 'TBD'
-    ctx.fillText(odds, 50, 160)
-    
-    // Legs
-    let yPos = 220
-    ctx.fillStyle = '#ffffff'
-    ctx.font = '18px system-ui'
-    
-    (parlay.parlay_legs || []).forEach((leg, index) => {
-      const legText = `${index + 1}. ${leg.game || 'Game'}`
-      ctx.fillText(legText, 50, yPos)
-      
-      ctx.fillStyle = '#10b981'
-      ctx.font = '16px system-ui'
-      const selectionText = `${leg.selection || 'Bet'} (${leg.odds || 'N/A'})`
-      ctx.fillText(selectionText, 70, yPos + 25)
-      
-      ctx.fillStyle = '#ffffff'
-      ctx.font = '18px system-ui'
-      yPos += 70
-    })
-    
-    // Footer
-    ctx.fillStyle = '#9ca3af'
-    ctx.font = '14px system-ui'
-    ctx.fillText('Generated by AiParlayCalculator.com', 50, canvas.height - 30)
-    
-    // Download the fallback image
-    const dataURL = canvas.toDataURL('image/png', 1.0)
-    const link = document.createElement('a')
-    link.download = `aiparlaycalculator-parlay-${Date.now()}.png`
-    link.href = dataURL
-    
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    
-    console.log('Fallback image generated successfully')
   }
 
   const handleShare = async () => {
@@ -2252,7 +2159,7 @@ export default function AiParlayCalculator() {
             <div>
               <h4 className="font-semibold text-white mb-4">Legal</h4>
               <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-green-400 text-sm">Privacy Policy</a></li>
+                <li><a href="/privacy" className="text-gray-400 hover:text-green-400 text-sm">Privacy Policy</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-green-400 text-sm">Terms of Service</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-green-400 text-sm">Disclaimer</a></li>
               </ul>
