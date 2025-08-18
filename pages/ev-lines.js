@@ -14,6 +14,8 @@ export default function EVLines() {
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [error, setError] = useState(null);
+  const [evGenerationsToday, setEvGenerationsToday] = useState(0);
+  const maxEvGenerations = 1; // 1 per day for free users
   const [userParlay, setUserParlay] = useState([]);
   const [showParlayAnalysis, setShowParlayAnalysis] = useState(false);
   const [parlayComparison, setParlayComparison] = useState(null);
@@ -37,12 +39,48 @@ export default function EVLines() {
     return urls[sportsbook] || '#';
   };
 
+  // Load usage data on component mount
+  useEffect(() => {
+    loadUsageData();
+  }, []);
+
   // Fetch EV lines when component mounts or sport changes
   useEffect(() => {
-    fetchEVLines();
+    if (evGenerationsToday === 0) { // Only auto-fetch on first load
+      fetchEVLines();
+    }
   }, [selectedSport]);
 
+  const loadUsageData = async () => {
+    try {
+      let identifier = localStorage.getItem('userIdentifier');
+      if (!identifier) {
+        identifier = 'user_' + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('userIdentifier', identifier);
+      }
+
+      const response = await fetch('/api/get-usage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEvGenerationsToday(data.usage?.ev_generations || 0);
+      }
+    } catch (error) {
+      console.error('Failed to load usage data:', error);
+    }
+  };
+
   const fetchEVLines = async () => {
+    // Check usage limits for non-premium users
+    if (!isPremium && evGenerationsToday >= maxEvGenerations) {
+      setError('Daily EV line limit reached. Upgrade to Premium for unlimited access.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
@@ -64,6 +102,25 @@ export default function EVLines() {
         setEvLines(data.lines || []);
         setArbitrageOpportunities(data.arbitrage || []);
         setLastRefresh(new Date());
+
+        // Track usage for non-premium users
+        if (!isPremium) {
+          try {
+            const identifier = localStorage.getItem('userIdentifier');
+            await fetch('/api/track-usage', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'ev_generation', userIdentifier: identifier })
+            }).then(async (trackResponse) => {
+              if (trackResponse.ok) {
+                const trackData = await trackResponse.json();
+                setEvGenerationsToday(trackData.usage.ev_generations);
+              }
+            });
+          } catch (err) {
+            console.error('Failed to track EV generation usage:', err);
+          }
+        }
       } else {
         setError(data.message || 'Failed to fetch EV lines');
         setEvLines([]);
@@ -191,6 +248,11 @@ export default function EVLines() {
                   Last updated: {lastRefresh.toLocaleTimeString()}
                 </span>
               )}
+              {!isPremium && (
+                <span className="text-xs text-gray-400">
+                  {evGenerationsToday}/{maxEvGenerations} today
+                </span>
+              )}
               <button
                 onClick={fetchEVLines}
                 disabled={loading}
@@ -210,7 +272,7 @@ export default function EVLines() {
           {/* Main Content */}
           <div className="lg:col-span-2 order-2 lg:order-1">
             {/* Sport Filter */}
-            <div className="bg-gray-800 rounded-xl p-6 mb-6 border border-gray-700">
+            <div className="bg-gray-800 rounded-xl p-4 md:p-6 mb-4 md:mb-6 border border-gray-700">
               <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <Filter className="w-5 h-5 text-blue-400" />
                 Select Sport
@@ -233,7 +295,7 @@ export default function EVLines() {
             </div>
 
             {/* Arbitrage Opportunities - Always show section */}
-            <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-6 mb-6">
+            <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-4 md:p-6 mb-4 md:mb-6">
               <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 Arbitrage Opportunities - {selectedSport}
                 <span className="text-sm bg-yellow-500 text-black px-2 py-1 rounded-full font-medium">
@@ -399,7 +461,7 @@ export default function EVLines() {
                       <div key={index} className="bg-gray-700 rounded-lg p-4 border border-gray-600">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
                               <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
                                 +{(line.expected_value * 100).toFixed(1)}% EV
                               </span>
@@ -419,11 +481,11 @@ export default function EVLines() {
                               )}
                             </div>
                             <h3 className="font-semibold text-white mb-1">{line.game}</h3>
-                            <div className="flex items-center gap-4">
+                            <div className="flex flex-wrap items-center gap-2 md:gap-4">
                               <span className="text-green-400 font-medium">{line.selection}</span>
                               <span className="text-white font-bold">{line.odds}</span>
                               {line.market_type && (
-                                <span className="text-gray-400 text-sm">{line.market_type}</span>
+                                <span className="text-gray-400 text-xs md:text-sm">{line.market_type}</span>
                               )}
                             </div>
                             
@@ -460,17 +522,17 @@ export default function EVLines() {
                             
                             {/* Probability Comparison */}
                             {line.implied_probability && line.no_vig_probability && (
-                              <div className="mt-2 flex items-center gap-4 text-xs">
+                              <div className="mt-2 flex flex-wrap items-center gap-2 md:gap-4 text-xs">
                                 <span className="text-gray-500">
                                   Implied: <span className="text-gray-300">{line.implied_probability}%</span>
                                 </span>
-                                <span className="text-gray-500">→</span>
+                                <span className="text-gray-500 hidden md:inline">→</span>
                                 <span className="text-gray-500">
                                   No-Vig: <span className="text-blue-300">{line.no_vig_probability}%</span>
                                 </span>
                                 {line.probability_edge && (
                                   <>
-                                    <span className="text-gray-500">→</span>
+                                    <span className="text-gray-500 hidden md:inline">→</span>
                                     <span className="text-gray-500">
                                       Edge: <span className={`font-medium ${
                                         parseFloat(line.probability_edge) > 0 ? 'text-green-400' : 'text-red-400'
@@ -536,7 +598,7 @@ export default function EVLines() {
 
           {/* Parlay Builder Sidebar */}
           <div className="lg:col-span-1 order-1 lg:order-2">
-            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 sticky top-24">
+            <div className="bg-gray-800 rounded-xl p-4 md:p-6 border border-gray-700 lg:sticky lg:top-24">
               <h2 className="text-lg font-semibold text-white mb-4 flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <Calculator className="w-5 h-5 text-purple-400" />

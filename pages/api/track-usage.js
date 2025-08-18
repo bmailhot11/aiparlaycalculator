@@ -26,18 +26,19 @@ export default async function handler(req, res) {
     }
     
     // Get current usage
-    const currentUsage = global.usageStore.get(key) || { uploads: 0, generations: 0, date: today };
+    const currentUsage = global.usageStore.get(key) || { uploads: 0, generations: 0, ev_generations: 0, date: today };
     
     // Check limits
     const maxUploads = 2;
     const maxGenerations = 1;
+    const maxEvGenerations = 1;
     
     if (action === 'upload') {
       if (currentUsage.uploads >= maxUploads) {
         return res.status(429).json({ 
           error: 'Daily upload limit reached',
           usage: currentUsage,
-          limits: { uploads: maxUploads, generations: maxGenerations }
+          limits: { uploads: maxUploads, generations: maxGenerations, ev_generations: maxEvGenerations }
         });
       }
       currentUsage.uploads += 1;
@@ -46,10 +47,19 @@ export default async function handler(req, res) {
         return res.status(429).json({ 
           error: 'Daily generation limit reached',
           usage: currentUsage,
-          limits: { uploads: maxUploads, generations: maxGenerations }
+          limits: { uploads: maxUploads, generations: maxGenerations, ev_generations: maxEvGenerations }
         });
       }
       currentUsage.generations += 1;
+    } else if (action === 'ev_generation') {
+      if (currentUsage.ev_generations >= maxEvGenerations) {
+        return res.status(429).json({ 
+          error: 'Daily EV line limit reached',
+          usage: currentUsage,
+          limits: { uploads: maxUploads, generations: maxGenerations, ev_generations: maxEvGenerations }
+        });
+      }
+      currentUsage.ev_generations += 1;
     }
     
     // Save updated usage
@@ -72,7 +82,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       usage: currentUsage,
-      limits: { uploads: maxUploads, generations: maxGenerations }
+      limits: { uploads: maxUploads, generations: maxGenerations, ev_generations: maxEvGenerations }
     });
 
   } catch (error) {

@@ -327,7 +327,7 @@ async function generateParlayWithRealOdds(preferences, sportData) {
       messages: [
         {
           role: "system",
-          content: `You are a sports betting analyst. Select exactly ${preferences.legs} legs with positive expected value from the provided options. Use EXACT odds and sportsbook names. Return ONLY valid JSON, no explanations.`
+          content: `You are a sports betting analyst. Select exactly ${preferences.legs} legs with positive expected value from the provided options. CRITICAL: Do not select the same bet (game + selection + market type) from multiple sportsbooks - choose ONLY ONE sportsbook per unique bet. Ensure all legs are DIFFERENT bets from DIFFERENT games when possible. Use EXACT odds and sportsbook names. Return ONLY valid JSON, no explanations.`
         },
         {
           role: "user",
@@ -370,6 +370,29 @@ Return this exact JSON structure:
       }
       
       const parlayData = JSON.parse(cleanedResponse);
+      
+      // Remove duplicate bets (same game + selection + bet_type)
+      const seenBets = new Set();
+      const uniqueLegs = [];
+      
+      for (const leg of parlayData.parlay_legs || []) {
+        const betKey = `${leg.game}_${leg.selection}_${leg.bet_type}`;
+        if (!seenBets.has(betKey)) {
+          seenBets.add(betKey);
+          uniqueLegs.push(leg);
+        } else {
+          console.log(`Removed duplicate bet: ${leg.game} - ${leg.selection} (${leg.bet_type})`);
+        }
+      }
+      
+      // Update parlay data with unique legs only
+      parlayData.parlay_legs = uniqueLegs;
+      
+      // If we don't have enough unique legs, return null to trigger fallback
+      if (uniqueLegs.length < preferences.legs) {
+        console.log(`Only found ${uniqueLegs.length} unique bets, need ${preferences.legs}. Using fallback.`);
+        return generateValidatedFallbackParlay(filteredBets, preferences);
+      }
       
       // Validate that AI used real odds and potentially upgrade to even better odds
       const validatedParlay = validateAndOptimizeParlayOdds(parlayData, availableBets, preferences);
