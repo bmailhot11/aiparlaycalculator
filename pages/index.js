@@ -354,7 +354,7 @@ function ParlayResultsModal({ parlay, isOpen, onClose, handleUpgrade }) {
                 <p className="text-gray-400">{parlay.risk_assessment || 'Professional mathematical analysis'}</p>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-black text-green-400">{parlay.total_odds || '+450'}</div>
+                <div className="text-3xl font-black text-green-400">{parlay.total_odds || 'TBD'}</div>
                 <div className="text-sm text-gray-400">{parlay.confidence || 'Medium'} confidence</div>
               </div>
             </div>
@@ -414,19 +414,19 @@ function ParlayResultsModal({ parlay, isOpen, onClose, handleUpgrade }) {
               <h4 className="font-semibold text-yellow-400">📊 Premium Statistics</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                 <div className="text-center">
-                  <div className="text-green-400 font-bold">73.2%</div>
+                  <div className="text-green-400 font-bold">Calculated</div>
                   <div className="text-gray-400">Win Probability</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-blue-400 font-bold">+8.7%</div>
+                  <div className="text-blue-400 font-bold">+EV</div>
                   <div className="text-gray-400">Expected Value</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-purple-400 font-bold">2.3%</div>
-                  <div className="text-gray-400">Kelly Bet Size</div>
+                  <div className="text-purple-400 font-bold">Kelly</div>
+                  <div className="text-gray-400">Bet Size</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-orange-400 font-bold">4.2x</div>
+                  <div className="text-orange-400 font-bold">Edge</div>
                   <div className="text-gray-400">Value vs Market</div>
                 </div>
               </div>
@@ -610,12 +610,14 @@ function UploadArea({ onAnalysis, uploadsToday, maxUploads, isPremium, hasUnlimi
           </div>
         ) : (
           <>
-            <h3 className="text-xl font-semibold text-white mb-2">Upload Your Bet Slip</h3>
+            <h3 className="text-xl font-semibold text-white mb-2">
+              Upload Your Bet Slip
+            </h3>
             <p className="text-gray-300 mb-2 font-medium">
-              We'll scan <span className="text-yellow-400">5 premium sportsbooks</span> to find you better odds instantly
+              <span className="text-yellow-400">Premium sportsbooks</span> analysis to find you better odds instantly
             </p>
             <p className="text-gray-400 text-sm mb-4">
-              Supported: DraftKings, FanDuel, BetMGM, Caesars, PointsBet
+              Analyze expected value, identify profitable opportunities, and get smart betting suggestions
             </p>
             <input
               type="file"
@@ -669,7 +671,7 @@ function ParlayGenerator({ onGeneration, generationsToday, maxGenerations, isPre
       borderColor: 'border-blue-500',
       bgColor: 'bg-blue-500/10',
       description: 'Lower risk, positive EV focus',
-      details: '2-3 legs • High-probability positive EV bets • 60-75% win rate'
+      details: '2-3 legs • High-probability positive EV bets'
     },
     { 
       id: 'moderate', 
@@ -679,7 +681,7 @@ function ParlayGenerator({ onGeneration, generationsToday, maxGenerations, isPre
       borderColor: 'border-yellow-500',
       bgColor: 'bg-yellow-500/10',
       description: 'Balanced EV opportunities',
-      details: '3-4 legs • Mixed positive EV markets • 40-60% win rate'
+      details: '3-4 legs • Mixed positive EV markets'
     },
     { 
       id: 'risky', 
@@ -689,7 +691,7 @@ function ParlayGenerator({ onGeneration, generationsToday, maxGenerations, isPre
       borderColor: 'border-red-500',
       bgColor: 'bg-red-500/10',
       description: 'High EV, higher variance',
-      details: '4-6 legs • Aggressive positive EV plays • 15-40% win rate'
+      details: '4-6 legs • Aggressive positive EV plays'
     }
   ]
 
@@ -764,7 +766,7 @@ function ParlayGenerator({ onGeneration, generationsToday, maxGenerations, isPre
     <div className="space-y-6">
       {/* Value proposition banner */}
       <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-4 text-white">
-        <div className="font-bold text-lg mb-1">🎯 Positive EV Parlay Generator</div>
+        <div className="font-bold text-lg mb-1">Positive EV Parlay Generator</div>
         <div className="text-sm text-purple-100">
           <strong>Only generates parlays with positive expected value</strong> - mathematical edge guaranteed
         </div>
@@ -888,10 +890,7 @@ function ParlayGenerator({ onGeneration, generationsToday, maxGenerations, isPre
         ) : !selectedSport ? (
           'Select a Sport First'
         ) : (
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-xl">🏆</span>
-            Generate Positive EV {selectedSport} Parlay
-          </div>
+          Generate Positive EV {selectedSport} Parlay
         )}
       </button>
 
@@ -1112,16 +1111,16 @@ function AnalysisResults({ analysis, handleUpgrade }) {
             
             <div className="grid md:grid-cols-3 gap-4 mb-4 opacity-50">
               <div className="bg-gray-700 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-green-400">92%</div>
+                <div className="text-2xl font-bold text-green-400">Live</div>
                 <div className="text-sm text-gray-400">Win Probability</div>
               </div>
               <div className="bg-gray-700 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-blue-400">+15.2%</div>
+                <div className="text-2xl font-bold text-blue-400">+EV</div>
                 <div className="text-sm text-gray-400">Expected Value</div>
               </div>
               <div className="bg-gray-700 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-purple-400">4.1%</div>
-                <div className="text-sm text-gray-400">Kelly Bet Size</div>
+                <div className="text-2xl font-bold text-purple-400">Kelly</div>
+                <div className="text-sm text-gray-400">Bet Size</div>
               </div>
             </div>
             
@@ -1155,19 +1154,19 @@ function AnalysisResults({ analysis, handleUpgrade }) {
           <div className="grid md:grid-cols-3 gap-4 mb-4">
             <div className="bg-gray-800/50 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-green-400">
-                {analysis.confidence_score || '87%'}
+                {analysis.confidence_score || 'High'}
               </div>
               <div className="text-sm text-gray-400">Confidence Score</div>
             </div>
             <div className="bg-gray-800/50 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-blue-400">
-                {analysis.expected_value || '+12.3%'}
+                {analysis.expected_value || '+EV'}
               </div>
               <div className="text-sm text-gray-400">Expected Value</div>
             </div>
             <div className="bg-gray-800/50 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-purple-400">
-                {analysis.kelly_criterion || '3.2%'}
+                {analysis.kelly_criterion || 'Kelly'}
               </div>
               <div className="text-sm text-gray-400">Kelly Criterion</div>
             </div>
@@ -1493,23 +1492,30 @@ export default function AiParlayCalculator() {
         // Success - user has premium
         console.log('✅ Premium restored successfully');
         
-        // Update all the necessary storage items
+        // ✅ COMPREHENSIVE PREMIUM STORAGE: Store all necessary data immediately
         setIsPremium(true)
         localStorage.setItem('isPremium', 'true')
         localStorage.setItem('premiumEmail', email)
+        localStorage.setItem('accessCode', accessCode) // Store access code for future verification
         
         // Link the email to the current user identifier
-        const userIdentifier = localStorage.getItem('userIdentifier');
-        if (userIdentifier) {
-          localStorage.setItem('premiumUserIdentifier', userIdentifier);
-        }
+        const userIdentifier = getUserIdentifier(); // Use the function to ensure we have an identifier
+        localStorage.setItem('premiumUserIdentifier', userIdentifier);
+        
+        console.log('💾 Premium storage completed:', {
+          isPremium: 'true',
+          premiumEmail: email,
+          userIdentifier: userIdentifier
+        });
         
         setShowRestore(false)
         alert('Premium access restored successfully!')
         
-        // Trigger a premium status check to sync everything
+        // Optional: Background sync without affecting UI
         if (checkPremiumStatus) {
-          await checkPremiumStatus();
+          checkPremiumStatus().catch(error => 
+            console.warn('Background sync failed:', error)
+          );
         }
       } else {
         alert(result.message || 'Failed to restore premium access. Please check your email and access code.')
@@ -1522,21 +1528,9 @@ export default function AiParlayCalculator() {
     }
   }
 
-  // Render usage limits with loading state
+  // Render usage limits without loading screen - premium users are recognized instantly
   const renderUsageLimits = () => {
-    if (premiumLoading) {
-      return (
-        <div className="flex gap-5 mb-8 p-6 rounded-xl border bg-gray-500/10 border-gray-500/30">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
-            <div>
-              <div className="font-semibold text-gray-300">Loading...</div>
-              <div className="text-sm text-gray-400">Checking premium status...</div>
-            </div>
-          </div>
-        </div>
-      );
-    }
+    // ✅ REMOVED: Premium loading screen - users are recognized immediately via localStorage
 
     if (isPremium) {
       return (
@@ -1767,9 +1761,9 @@ export default function AiParlayCalculator() {
               <div className="text-gray-300 text-sm">Find the best odds across 10+ premium sportsbooks</div>
             </div>
           </div>
-          <a href="#app" className="inline-flex items-center gap-3 bg-green-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-green-700 transition-all hover:scale-105 shadow-lg">
-            <span>Start Analyzing</span>
-            <Activity className="w-5 h-5" />
+          <a href="/ev-lines" className="inline-flex items-center gap-3 bg-gradient-to-r from-green-600 to-yellow-500 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-green-700 hover:to-yellow-600 transition-all hover:scale-105 shadow-lg">
+            <span>Find Arbitrage + EV Lines</span>
+            <span className="text-2xl">⚡</span>
           </a>
         </div>
       </section>
@@ -1876,8 +1870,8 @@ export default function AiParlayCalculator() {
               <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
                 <Users className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-3 text-white">100,000+ Users</h3>
-              <p className="text-gray-400">Trusted by serious bettors worldwide for consistent results</p>
+              <h3 className="text-xl font-bold mb-3 text-white">Affordable Alternative</h3>
+              <p className="text-gray-400">Same advanced features as expensive tools at a fraction of the cost</p>
             </div>
 
             <div className="text-center">

@@ -11,7 +11,7 @@ const PremiumContext = createContext({
 
 function MyApp({ Component, pageProps }) {
   const [isPremium, setIsPremium] = useState(false);
-  const [premiumLoading, setPremiumLoading] = useState(false);
+  const [premiumLoading, setPremiumLoading] = useState(false); // ✅ REMOVED LOADING: Set to false by default
 
   // Simplified premium check with proper error handling
   const checkPremiumStatus = async () => {
@@ -94,20 +94,16 @@ function MyApp({ Component, pageProps }) {
     }
   };
 
-  // Initialize on mount with proper async handling
+  // ✅ IMPROVED: Immediate premium recognition without loading screens
   useEffect(() => {
-    const initializePremiumStatus = async () => {
+    const initializePremiumStatus = () => {
       try {
-        // Check localStorage first for immediate response
+        // Always check localStorage first for immediate UI response
         const localPremium = localStorage.getItem('isPremium');
+        const premiumEmail = localStorage.getItem('premiumEmail');
+        
         console.log('📱 Initializing premium status. Cached:', localPremium);
         
-        if (localPremium === 'true') {
-          console.log('✅ Found cached premium status');
-          setIsPremium(true);
-          return; // Don't show loading for cached premium users
-        }
-
         // Generate user identifier if missing (for new users)
         let userIdentifier = localStorage.getItem('userIdentifier');
         if (!userIdentifier) {
@@ -116,27 +112,25 @@ function MyApp({ Component, pageProps }) {
           console.log('🆔 Generated new user identifier:', userIdentifier);
         }
 
-        // For non-premium users, just set to false immediately
-        const premiumEmail = localStorage.getItem('premiumEmail');
-        if (!premiumEmail) {
-          console.log('ℹ️ No premium email - setting to free user');
+        // ✅ IMMEDIATE PREMIUM RECOGNITION: Set status from localStorage instantly
+        if (localPremium === 'true') {
+          console.log('✅ Premium user detected - setting status immediately');
+          setIsPremium(true);
+          setPremiumLoading(false);
+        } else {
+          console.log('ℹ️ Free user detected - setting status immediately');
           setIsPremium(false);
+          setPremiumLoading(false);
           localStorage.setItem('isPremium', 'false');
-          return;
         }
 
-        // Only check server if we have premium email but no cached status
-        console.log('🔍 Has premium email but no cached status - checking server');
-        
-        // 🚀 FIX: Properly await the async function and handle errors
-        try {
-          await checkPremiumStatus();
-        } catch (error) {
-          console.error('❌ Premium status check failed during initialization:', error);
-          // Ensure loading is stopped even if check fails
-          setIsPremium(false);
-          localStorage.setItem('isPremium', 'false');
-          setPremiumLoading(false);
+        // ✅ BACKGROUND VERIFICATION: Optionally verify with server without blocking UI
+        if (premiumEmail && checkPremiumStatus) {
+          console.log('🔍 Background verification for premium email:', premiumEmail);
+          checkPremiumStatus().catch(error => {
+            console.warn('Background premium check failed:', error);
+            // Don't change UI state on background check failure
+          });
         }
         
       } catch (error) {

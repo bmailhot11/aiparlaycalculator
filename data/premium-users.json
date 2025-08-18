@@ -6,5 +6,13 @@
     "activatedAt": "2025-08-16T22:56:00.000Z",
     "updatedAt": "2025-08-16T22:56:00.000Z",
     "userIdentifier": "benoit.mailhot999@gmail.com"
+  },
+  "test@premium.com": {
+    "isPremium": true,
+    "email": "test@premium.com",
+    "accessCode": "TEST1234",
+    "activatedAt": "2025-08-17T20:37:46.899Z",
+    "updatedAt": "2025-08-17T20:37:46.899Z",
+    "restoredAt": "2025-08-17T20:37:46.899Z"
   }
 }

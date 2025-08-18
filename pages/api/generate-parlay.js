@@ -96,6 +96,30 @@ export default async function handler(req, res) {
   }
 }
 
+// 🚀 NEW: Get sport-specific markets including player spreads
+function getSportSpecificMarkets(sportKey) {
+  const baseMarkets = 'h2h,spreads,totals';
+  
+  // Add sport-specific player spread markets with validation
+  const sportPlayerMarkets = {
+    'americanfootball_nfl': 'player_pass_yds,player_rush_yds,player_receiving_yds,player_pass_tds,player_rush_tds,player_receiving_tds',
+    'americanfootball_nfl_preseason': 'player_pass_yds,player_rush_yds,player_receiving_yds',
+    'americanfootball_ncaaf': 'player_pass_yds,player_rush_yds,player_receiving_yds',
+    'basketball_nba': 'player_points,player_rebounds,player_assists,player_threes,player_blocks,player_steals',
+    'basketball_nba_preseason': 'player_points,player_rebounds,player_assists',
+    'basketball_ncaab': 'player_points,player_rebounds,player_assists',
+    'icehockey_nhl': 'player_goals,player_assists,player_points,player_shots_on_goal',
+    'icehockey_nhl_preseason': 'player_goals,player_assists,player_points',
+    'baseball_mlb': 'player_hits,player_total_bases,player_rbis,player_runs_scored,player_home_runs'
+  };
+  
+  const playerMarkets = sportPlayerMarkets[sportKey] || '';
+  const allMarkets = playerMarkets ? `${baseMarkets},${playerMarkets}` : baseMarkets;
+  
+  console.log(`🎯 ${sportKey} markets: ${allMarkets}`);
+  return allMarkets;
+}
+
 // NEW: Fetch odds for specific sport only
 async function fetchSportSpecificOdds(sport) {
   const API_KEY = process.env.ODDS_API_KEY;
@@ -137,8 +161,8 @@ async function fetchSportSpecificOdds(sport) {
     try {
       console.log(`🔄 Fetching ${sport} odds (${sportKey}) from API...`);
       
-      // Only request basic markets to avoid 422 errors
-      const markets = 'h2h,spreads,totals'; // Basic markets only for now
+      // 🚀 ENHANCED: Sport-specific player spread markets with validation
+      const markets = getSportSpecificMarkets(sportKey);
       
       const url = `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=${markets}&oddsFormat=american&dateFormat=iso`;
       console.log(`URL: ${url.replace(API_KEY, 'HIDDEN')}`);
@@ -287,50 +311,35 @@ async function generateParlayWithRealOdds(preferences, sportData) {
       messages: [
         {
           role: "system",
-          content: `You are a professional sports betting analyst specializing in positive expected value (EV) selections. You MUST:
-1. ONLY select bets with positive expected value from the provided list
-2. Use the EXACT odds and sportsbook names provided
-3. Prioritize bets with the highest EV potential
-4. Select exactly ${preferences.legs} legs from different games when possible
-5. Focus on market inefficiencies and value opportunities
-6. Return ONLY valid JSON with no explanations`
+          content: `You are a sports betting analyst. Select exactly ${preferences.legs} legs with positive expected value from the provided options. Use EXACT odds and sportsbook names. Return ONLY valid JSON, no explanations.`
         },
         {
           role: "user",
-          content: `Create a positive EV focused ${preferences.sport} parlay with exactly ${preferences.legs} legs at ${preferences.riskLevel} risk level.
+          content: `Create ${preferences.sport} parlay with ${preferences.legs} legs at ${preferences.riskLevel} risk level.
 
-TOP 10 HIGHEST EV OPTIONS (pre-filtered for positive expected value):
+Available bets (all positive EV):
 ${formatBetsForAI(topBets)}
 
-IMPORTANT: All provided bets have been pre-analyzed for positive EV. Focus on:
-- Market inefficiencies (overvalued favorites, undervalued underdogs)
-- Vig-adjusted probability edges
-- Cross-sportsbook arbitrage opportunities
-- Line shopping advantages
-
-Return JSON:
+Return this exact JSON structure:
 {
   "parlay_legs": [
     {
-      "game": "exact game from data",
-      "sportsbook": "exact sportsbook from data", 
-      "bet_type": "exact market_type from data",
-      "selection": "exact selection from data",
-      "odds": "exact odds from data",
-      "decimal_odds": "exact decimal_odds from data",
-      "reasoning": "EV analysis and edge explanation",
-      "estimated_ev": "expected value percentage"
+      "game": "Away @ Home format",
+      "sportsbook": "exact sportsbook name", 
+      "bet_type": "h2h/spreads/totals",
+      "selection": "team or over/under",
+      "odds": "+150 or -110 format",
+      "decimal_odds": "number like 2.5",
+      "reasoning": "why this has positive EV (1 sentence)"
     }
   ],
-  "total_decimal_odds": "calculated total",
-  "total_american_odds": "converted total",
-  "best_sportsbooks": ["list of sportsbooks used"],
-  "confidence": "positive EV assessment",
-  "parlay_ev": "overall expected value"
+  "total_decimal_odds": "multiply all decimal odds",
+  "total_american_odds": "+450 format",
+  "confidence": "High/Medium/Low based on EV"
 }`
         }
       ],
-      max_tokens: 500, // REDUCED from 800 to 500 for cost efficiency
+      max_tokens: 1000, // Increased to handle complex parlay generation
       temperature: 0.3
     });
 

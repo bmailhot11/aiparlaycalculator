@@ -17,8 +17,26 @@ export default function Success() {
       const code = `PREMIUM_${session_id.slice(-12).toUpperCase()}`;
       setAccessCode(code);
       
-      // Set premium status in localStorage immediately
+      // ✅ COMPREHENSIVE PREMIUM STORAGE: Store all data immediately for instant recognition
       localStorage.setItem('isPremium', 'true');
+      localStorage.setItem('accessCode', code);
+      localStorage.setItem('sessionId', session_id);
+      localStorage.setItem('premiumActivatedAt', new Date().toISOString());
+      
+      // Ensure user identifier exists and link it
+      let userIdentifier = localStorage.getItem('userIdentifier');
+      if (!userIdentifier) {
+        userIdentifier = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('userIdentifier', userIdentifier);
+      }
+      localStorage.setItem('premiumUserIdentifier', userIdentifier);
+      
+      console.log('💾 Premium activated with full storage:', {
+        isPremium: 'true',
+        accessCode: code,
+        sessionId: session_id,
+        userIdentifier: userIdentifier
+      });
       
       // Verify subscription with server
       verifySubscription(session_id);

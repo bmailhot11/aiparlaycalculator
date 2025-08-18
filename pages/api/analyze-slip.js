@@ -69,7 +69,7 @@ Return ONLY this JSON format:
           ]
         }
       ],
-      max_tokens: 400, // Reduced from 500
+      max_tokens: 600, // Balanced for quality extraction
       temperature: 0.1
     });
 
@@ -161,6 +161,30 @@ Return ONLY this JSON format:
   }
 }
 
+// 🚀 NEW: Get sport-specific markets including player spreads (SHARED WITH PARLAY GENERATION)
+function getSportSpecificMarkets(sportKey) {
+  const baseMarkets = 'h2h,spreads,totals';
+  
+  // Add sport-specific player spread markets with validation
+  const sportPlayerMarkets = {
+    'americanfootball_nfl': 'player_pass_yds,player_rush_yds,player_receiving_yds,player_pass_tds,player_rush_tds,player_receiving_tds',
+    'americanfootball_nfl_preseason': 'player_pass_yds,player_rush_yds,player_receiving_yds',
+    'americanfootball_ncaaf': 'player_pass_yds,player_rush_yds,player_receiving_yds',
+    'basketball_nba': 'player_points,player_rebounds,player_assists,player_threes,player_blocks,player_steals',
+    'basketball_nba_preseason': 'player_points,player_rebounds,player_assists',
+    'basketball_ncaab': 'player_points,player_rebounds,player_assists',
+    'icehockey_nhl': 'player_goals,player_assists,player_points,player_shots_on_goal',
+    'icehockey_nhl_preseason': 'player_goals,player_assists,player_points',
+    'baseball_mlb': 'player_hits,player_total_bases,player_rbis,player_runs_scored,player_home_runs'
+  };
+  
+  const playerMarkets = sportPlayerMarkets[sportKey] || '';
+  const allMarkets = playerMarkets ? `${baseMarkets},${playerMarkets}` : baseMarkets;
+  
+  console.log(`🎯 Analyze Slip - ${sportKey} markets: ${allMarkets}`);
+  return allMarkets;
+}
+
 // 🚀 OPTIMIZED: Filter to top 10 sportsbooks for comprehensive analysis
 function filterToTop10Sportsbooks(gameData) {
   const TOP_10_SPORTSBOOKS = [
@@ -229,9 +253,12 @@ async function findGamesForTeamsAndPlayers(teams, players) {
     try {
       console.log(`🔄 Checking ${sportKey} for target teams/players...`);
 
+      // 🚀 ENHANCED: Use same sport-specific market function as parlay generation
+      const markets = getSportSpecificMarkets(sportKey);
+      
       const response = await fetch(
         // Don't filter by date - get all upcoming games
-        `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=h2h,spreads,totals,player_points,player_assists,player_rebounds&oddsFormat=american&dateFormat=iso`,
+        `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=${markets}&oddsFormat=american&dateFormat=iso`,
         { 
           headers: { 'Accept': 'application/json' },
           timeout: 8000
@@ -379,7 +406,7 @@ async function generateTargetedOptimization(extractedData, gameData) {
       messages: [
         {
           role: "system",
-          content: "You are a sports betting analyst. Only reference exact odds from the provided data. Return JSON only."
+          content: "You are a professional sports betting analyst. Analyze the bet slip and provide actionable insights based on the sportsbook data. Return valid JSON only."
         },
         {
           role: "user",
@@ -390,20 +417,20 @@ CURRENT BETS: ${JSON.stringify(extractedData.extracted_bets, null, 2)}
 TOP 5 SPORTSBOOKS DATA (first 10 entries):
 ${JSON.stringify(limitedBets, null, 2)}
 
-Return JSON:
+Return this JSON structure with 1-2 insights per category:
 {
-  "market_inefficiencies": ["Brief pricing error analysis"],
-  "correlation_analysis": ["Brief correlation issues"], 
-  "line_movement_strategy": ["Brief timing advice"],
-  "ev_optimization": ["Brief mathematical improvements"],
-  "bankroll_management": ["Brief position sizing advice"],
-  "alternative_constructions": ["Brief better structures"],
-  "sharp_money_signals": ["Brief professional indicators"],
-  "advanced_insights": ["Brief strategic advice"]
+  "market_inefficiencies": ["Identify mispriced lines (1-2 sentences)"],
+  "correlation_analysis": ["Check for correlated bets that reduce EV"], 
+  "line_movement_strategy": ["When to place bets for best value"],
+  "ev_optimization": ["Mathematical edge improvements"],
+  "bankroll_management": ["Recommended bet sizing"],
+  "alternative_constructions": ["Better parlay structures"],
+  "sharp_money_signals": ["Where professionals are betting"],
+  "advanced_insights": ["Key strategic recommendations"]
 }`
         }
       ],
-      max_tokens: 400, // REDUCED from 600 to 400
+      max_tokens: 800, // Increased for comprehensive analysis
       temperature: 0.2
     });
 
@@ -467,20 +494,68 @@ function findAllSportsbooksForBet(bet, gameData) {
   return allSportsbooks;
 }
 
-// Helper function to match bet type to market
+// 🚀 ENHANCED: Helper function to match bet type to market including ALL player spreads
 function isMatchingBetType(bet, market) {
   const betType = bet.bet_type?.toLowerCase();
   const marketKey = market.key?.toLowerCase();
+  const betSelection = bet.bet_selection?.toLowerCase() || '';
   
+  // Basic market matches
   if (betType === 'moneyline' && marketKey === 'h2h') return true;
   if (betType === 'spread' && marketKey === 'spreads') return true;
   if (betType === 'total' && (marketKey === 'totals' || marketKey === 'over_under')) return true;
   if (betType === 'player_prop' && marketKey.includes('player_')) return true;
   if (betType === 'prop' && marketKey.includes('player_')) return true;
   
-  if (bet.bet_selection?.toLowerCase().includes('points') && marketKey === 'player_points') return true;
-  if (bet.bet_selection?.toLowerCase().includes('rebounds') && marketKey === 'player_rebounds') return true;
-  if (bet.bet_selection?.toLowerCase().includes('assists') && marketKey === 'player_assists') return true;
+  // Enhanced player spread matching for ALL sports
+  const playerSpreadMatches = {
+    // Basketball
+    'points': ['player_points'],
+    'rebounds': ['player_rebounds'], 
+    'assists': ['player_assists'],
+    'threes': ['player_threes'],
+    'blocks': ['player_blocks'],
+    'steals': ['player_steals'],
+    
+    // Football (NFL/NCAAF)
+    'passing yards': ['player_pass_yds'],
+    'rushing yards': ['player_rush_yds'], 
+    'receiving yards': ['player_receiving_yds'],
+    'passing touchdowns': ['player_pass_tds'],
+    'rushing touchdowns': ['player_rush_tds'],
+    'receiving touchdowns': ['player_receiving_tds'],
+    'pass yds': ['player_pass_yds'],
+    'rush yds': ['player_rush_yds'],
+    'rec yds': ['player_receiving_yds'],
+    
+    // Hockey
+    'goals': ['player_goals'],
+    'hockey assists': ['player_assists'],
+    'hockey points': ['player_points'],
+    'shots on goal': ['player_shots_on_goal'],
+    
+    // Baseball
+    'hits': ['player_hits'],
+    'total bases': ['player_total_bases'],
+    'rbis': ['player_rbis'],
+    'runs scored': ['player_runs_scored'],
+    'home runs': ['player_home_runs']
+  };
+  
+  // Check for player spread matches by selection text
+  for (const [keyword, markets] of Object.entries(playerSpreadMatches)) {
+    if (betSelection.includes(keyword) && markets.includes(marketKey)) {
+      return true;
+    }
+  }
+  
+  // Fallback: any player market containing similar keywords
+  if (marketKey.includes('player_')) {
+    const marketStat = marketKey.replace('player_', '');
+    if (betSelection.includes(marketStat) || betSelection.includes(marketStat.slice(0, -1))) {
+      return true;
+    }
+  }
   
   return false;
 }
@@ -514,8 +589,27 @@ function isMatchingSelection(bet, outcome, market) {
     return isOver || isUnder;
   }
   
+  // 🚀 ENHANCED: Player spread line parsing for ALL player markets
   if (market.key.includes('player_')) {
-    return outcome.description?.toLowerCase().includes(betSelection) || betSelection.includes(outcome.description?.toLowerCase());
+    const outcomeDesc = outcome.description?.toLowerCase() || '';
+    const outcomeName = outcome.name?.toLowerCase() || '';
+    
+    // Multiple matching strategies for player spreads
+    const matches = [
+      // Direct description match
+      outcomeDesc.includes(betSelection) || betSelection.includes(outcomeDesc),
+      // Player name extraction
+      outcomeName.includes(betSelection) || betSelection.includes(outcomeName),
+      // Over/under pattern matching
+      (betSelection.includes('over') && (outcomeDesc.includes('over') || outcomeName.includes('over'))),
+      (betSelection.includes('under') && (outcomeDesc.includes('under') || outcomeName.includes('under'))),
+      // Threshold matching (e.g., "25.5" in both)
+      extractNumberFromString(betSelection) === extractNumberFromString(outcomeDesc),
+      // Player last name matching
+      extractPlayerName(betSelection) === extractPlayerName(outcomeDesc)
+    ];
+    
+    return matches.some(match => match === true);
   }
   
   return false;
@@ -694,6 +788,24 @@ function generateFallbackOptimization(extractedData, gameData) {
       "Premium book line shopping can improve EV by 2-5% per bet"
     ]
   };
+}
+
+// 🚀 NEW: Helper functions for player spread matching
+function extractNumberFromString(str) {
+  if (!str) return null;
+  const matches = str.match(/(\d+\.?\d*)/);
+  return matches ? parseFloat(matches[1]) : null;
+}
+
+function extractPlayerName(str) {
+  if (!str) return '';
+  // Extract player name (usually the first part before stats)
+  const words = str.split(' ');
+  // Look for capitalized words (likely player names)
+  const nameWords = words.filter(word => 
+    word.length > 1 && word[0] === word[0].toUpperCase() && !word.includes('Over') && !word.includes('Under')
+  );
+  return nameWords.slice(0, 2).join(' ').toLowerCase(); // First and last name
 }
 
 // SHARED Helper functions
