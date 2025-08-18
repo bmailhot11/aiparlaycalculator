@@ -167,15 +167,15 @@ function getSportSpecificMarkets(sportKey) {
   
   // Add sport-specific player spread markets with validation
   const sportPlayerMarkets = {
-    'americanfootball_nfl': 'player_pass_yds,player_rush_yds,player_receiving_yds,player_pass_tds,player_rush_tds,player_receiving_tds',
-    'americanfootball_nfl_preseason': 'player_pass_yds,player_rush_yds,player_receiving_yds',
-    'americanfootball_ncaaf': 'player_pass_yds,player_rush_yds,player_receiving_yds',
+    'americanfootball_nfl': 'player_pass_yds,player_rush_yds,player_reception_yds,player_pass_tds,player_rush_tds,player_reception_tds',
+    'americanfootball_nfl_preseason': 'player_pass_yds,player_rush_yds,player_reception_yds',
+    'americanfootball_ncaaf': 'player_pass_yds,player_rush_yds,player_reception_yds',
     'basketball_nba': 'player_points,player_rebounds,player_assists,player_threes,player_blocks,player_steals',
     'basketball_nba_preseason': 'player_points,player_rebounds,player_assists',
     'basketball_ncaab': 'player_points,player_rebounds,player_assists',
     'icehockey_nhl': 'player_goals,player_assists,player_points,player_shots_on_goal',
     'icehockey_nhl_preseason': 'player_goals,player_assists,player_points',
-    'baseball_mlb': 'player_hits,player_total_bases,player_rbis,player_runs_scored,player_home_runs'
+    'baseball_mlb': 'batter_hits,batter_total_bases,batter_rbis,batter_runs_scored,batter_home_runs,pitcher_strikeouts'
   };
   
   const playerMarkets = sportPlayerMarkets[sportKey] || '';
@@ -235,8 +235,9 @@ async function findGamesForTeamsAndPlayers(teams, players) {
 
   console.log(`🔍 Searching for games involving: ${searchTargets.join(', ')}`);
 
-  // Current active sports - focus on in-season sports
+  // Current active sports - focus on in-season sports (preseason prioritized for August)
   const sportKeys = [
+    'americanfootball_nfl_preseason',
     'americanfootball_nfl',
     'basketball_nba',
     'icehockey_nhl',
@@ -326,7 +327,7 @@ async function tryBroadSportSearch() {
 
   console.log('🔄 Attempting broad search for any active games...');
 
-  const prioritySports = ['americanfootball_nfl', 'basketball_nba', 'icehockey_nhl'];
+  const prioritySports = ['americanfootball_nfl_preseason', 'americanfootball_nfl', 'basketball_nba', 'icehockey_nhl'];
   
   for (const sportKey of prioritySports) {
     try {
@@ -520,13 +521,13 @@ function isMatchingBetType(bet, market) {
     // Football (NFL/NCAAF)
     'passing yards': ['player_pass_yds'],
     'rushing yards': ['player_rush_yds'], 
-    'receiving yards': ['player_receiving_yds'],
+    'receiving yards': ['player_reception_yds'],
     'passing touchdowns': ['player_pass_tds'],
     'rushing touchdowns': ['player_rush_tds'],
-    'receiving touchdowns': ['player_receiving_tds'],
+    'receiving touchdowns': ['player_reception_tds'],
     'pass yds': ['player_pass_yds'],
     'rush yds': ['player_rush_yds'],
-    'rec yds': ['player_receiving_yds'],
+    'rec yds': ['player_reception_yds'],
     
     // Hockey
     'goals': ['player_goals'],
@@ -535,11 +536,12 @@ function isMatchingBetType(bet, market) {
     'shots on goal': ['player_shots_on_goal'],
     
     // Baseball
-    'hits': ['player_hits'],
-    'total bases': ['player_total_bases'],
-    'rbis': ['player_rbis'],
-    'runs scored': ['player_runs_scored'],
-    'home runs': ['player_home_runs']
+    'hits': ['batter_hits'],
+    'total bases': ['batter_total_bases'],
+    'rbis': ['batter_rbis'],
+    'runs scored': ['batter_runs_scored'],
+    'home runs': ['batter_home_runs'],
+    'strikeouts': ['pitcher_strikeouts']
   };
   
   // Check for player spread matches by selection text

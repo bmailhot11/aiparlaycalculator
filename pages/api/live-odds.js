@@ -50,17 +50,18 @@ async function fetchLiveOddsForDisplay(sport) {
     };
   }
 
-  // Map sports to API keys
+  // Map sports to API keys (consistent with other APIs)
   const sportKeyMap = {
-    'NFL': 'americanfootball_nfl',
-    'NBA': 'basketball_nba',
-    'NHL': 'icehockey_nhl', 
-    'MLB': 'baseball_mlb',
-    'NCAAF': 'americanfootball_ncaaf',
-    'NCAAB': 'basketball_ncaab'
+    'NFL': ['americanfootball_nfl_preseason', 'americanfootball_nfl'],
+    'NBA': ['basketball_nba', 'basketball_nba_preseason'],
+    'NHL': ['icehockey_nhl', 'icehockey_nhl_preseason'],
+    'MLB': ['baseball_mlb'],
+    'NCAAF': ['americanfootball_ncaaf'],
+    'NCAAB': ['basketball_ncaab']
   };
 
-  const sportKey = sportKeyMap[sport] || 'americanfootball_nfl';
+  const sportKeys = sportKeyMap[sport] || ['americanfootball_nfl'];
+  const sportKey = sportKeys[0]; // Use first variant for simplicity
   const apiUrl = `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=us&markets=h2h&oddsFormat=american&dateFormat=iso`;
   
   console.log(`[fetchLiveOdds] Making request to: ${apiUrl.replace(API_KEY, 'HIDDEN_KEY')}`);
