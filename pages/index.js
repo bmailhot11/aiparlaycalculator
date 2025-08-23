@@ -312,7 +312,7 @@ export default function Home() {
             </h1>
           </div>
           <p className="text-[#9CA3AF] text-lg max-w-[720px] mx-auto mb-10">
-            Find positive EV bets, build optimized parlays, and catch arbitrage opportunities in real time — all powered by live odds and AI.
+            Find positive EV bets, build optimized parlays, and catch arbitrage opportunities in real time, all powered by AI
           </p>
           
           {/* Bet Checker Card */}

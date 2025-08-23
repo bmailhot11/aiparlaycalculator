@@ -311,7 +311,7 @@ export default function AIParlayPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-            className="card max-w-[800px] mx-auto"
+            className="card max-w-[800px] mx-auto w-full"
           >
             <div className="space-y-6">
               <div className="flex items-center gap-2 mb-4">
@@ -322,12 +322,12 @@ export default function AIParlayPage() {
               {/* Sports Selection */}
               <div className="space-y-3">
                 <label className="block text-[#9CA3AF] text-sm font-medium">Select Sports</label>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                   {sports.map(sport => (
                     <button
                       key={sport}
                       onClick={() => handleSportToggle(sport)}
-                      className={`py-2 px-3 rounded-lg font-medium transition-all text-sm ${
+                      className={`py-2 px-2 rounded-lg font-medium transition-all text-xs sm:text-sm ${
                         selectedSports.includes(sport)
                           ? 'bg-[#F4C430] text-[#0B0F14]'
                           : 'bg-[#1F2937] text-[#9CA3AF] hover:bg-[#253044]'
@@ -455,7 +455,7 @@ export default function AIParlayPage() {
                   </div>
                   
                   {/* Parlay Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-[#0F172A] rounded-lg">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 p-4 bg-[#0F172A] rounded-lg">
                     <div className="text-center">
                       <div className="text-[#6B7280] text-xs">Total Odds</div>
                       <div className="text-[#F4C430] font-bold text-lg">{generatedParlay.totalOdds}</div>
@@ -477,16 +477,16 @@ export default function AIParlayPage() {
                   {/* Parlay Legs */}
                   <div className="space-y-3 mb-6">
                     {generatedParlay.legs.map((leg, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-[#0F172A] rounded border border-[#1F2937]">
+                      <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-[#0F172A] rounded border border-[#1F2937]">
                         <div className="flex-1">
-                          <div className="text-[#E5E7EB] font-medium">{leg.selection}</div>
-                          <div className="flex items-center gap-2 text-sm text-[#6B7280] mt-1">
+                          <div className="text-[#E5E7EB] font-medium text-sm sm:text-base break-words">{leg.selection}</div>
+                          <div className="flex items-center gap-2 text-xs sm:text-sm text-[#6B7280] mt-1">
                             <span>{leg.book}</span>
                             <span>•</span>
                             <span>{leg.confidence}% confidence</span>
                           </div>
                         </div>
-                        <div className="text-[#F4C430] font-bold">{leg.odds}</div>
+                        <div className="text-[#F4C430] font-bold text-lg mt-2 sm:mt-0 text-right">{leg.odds}</div>
                       </div>
                     ))}
                   </div>
@@ -510,13 +510,14 @@ export default function AIParlayPage() {
                   </div>
                   
                   {/* Action Buttons */}
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <button 
                       onClick={handleDownloadSlip}
                       className="btn btn-outline text-sm flex-1"
                     >
                       <Download className="w-4 h-4 mr-2" />
-                      Download Slip
+                      <span className="hidden sm:inline">Download Slip</span>
+                      <span className="sm:hidden">Download</span>
                     </button>
                     <button 
                       onClick={handleCopySlip}
@@ -530,7 +531,8 @@ export default function AIParlayPage() {
                       ) : (
                         <>
                           <Copy className="w-4 h-4 mr-2" />
-                          Copy to Clipboard
+                          <span className="hidden sm:inline">Copy to Clipboard</span>
+                          <span className="sm:hidden">Copy</span>
                         </>
                       )}
                     </button>
@@ -539,7 +541,8 @@ export default function AIParlayPage() {
                       className="btn btn-primary text-sm flex-1"
                     >
                       <Target className="w-4 h-4 mr-2" />
-                      Find Better Odds
+                      <span className="hidden sm:inline">Find Better Odds</span>
+                      <span className="sm:hidden">Better Odds</span>
                     </button>
                   </div>
                 </motion.div>

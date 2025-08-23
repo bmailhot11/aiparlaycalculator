@@ -197,7 +197,8 @@ function filterToTop10Sportsbooks(gameData) {
     'WynnBET',
     'Unibet',
     'ESPN BET',
-    'Hard Rock Bet'
+    'Hard Rock Bet',
+    'BetOnline.ag'  // Add for MMA/UFC coverage
   ];
 
   const filteredGames = gameData.map(game => {

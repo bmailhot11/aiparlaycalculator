@@ -217,7 +217,7 @@ export default function PositiveEVPage() {
             </p>
           </div>
           
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2">
               {/* EV Finder Card */}
@@ -234,12 +234,12 @@ export default function PositiveEVPage() {
                   </div>
                   
                   {/* Sport Selection */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                     {sports.map(sport => (
                       <button
                         key={sport}
                         onClick={() => setSelectedSport(sport)}
-                        className={`py-2 px-3 rounded-lg font-medium transition-all text-sm ${
+                        className={`py-2 px-2 rounded-lg font-medium transition-all text-xs sm:text-sm ${
                           selectedSport === sport
                             ? 'bg-[#F4C430] text-[#0B0F14]'
                             : 'bg-[#1F2937] text-[#9CA3AF] hover:bg-[#253044]'
@@ -324,10 +324,10 @@ export default function PositiveEVPage() {
                       const isInParlay = userParlay.find(l => l.game === line.game && l.selection === line.selection);
                       
                       return (
-                        <div key={index} className="p-4 bg-[#0B1220] rounded-lg border border-[#1F2937]">
-                          <div className="flex justify-between items-start">
+                        <div key={index} className="p-3 sm:p-4 bg-[#0B1220] rounded-lg border border-[#1F2937]">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
+                              <div className="flex items-center flex-wrap gap-2 mb-2">
                                 <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
                                   +{(line.expected_value * 100).toFixed(1)}% EV
                                 </span>
@@ -335,20 +335,22 @@ export default function PositiveEVPage() {
                                   {line.sportsbook}
                                 </span>
                               </div>
-                              <h4 className="text-[#E5E7EB] font-medium mb-1">{line.game}</h4>
-                              <div className="flex items-center gap-4 mb-2">
-                                <span className="text-green-400 font-medium">{line.selection}</span>
-                                <span className="text-[#F4C430] font-bold">{line.odds}</span>
-                                <span className="text-[#6B7280] text-sm">{line.market_type}</span>
+                              <h4 className="text-[#E5E7EB] font-medium mb-1 text-sm sm:text-base break-words">{line.game}</h4>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
+                                <span className="text-green-400 font-medium text-sm sm:text-base">{line.selection}</span>
+                                <div className="flex items-center gap-4">
+                                  <span className="text-[#F4C430] font-bold">{line.odds}</span>
+                                  <span className="text-[#6B7280] text-xs sm:text-sm">{line.market_type}</span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-4 text-xs text-[#6B7280]">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-[#6B7280]">
                                 <span>Implied: {line.implied_probability}</span>
                                 <span>True: {line.true_probability}</span>
                               </div>
                             </div>
                             <button
                               onClick={() => addToParlay(line)}
-                              className={`ml-4 p-2 rounded-lg transition-all ${
+                              className={`mt-3 sm:mt-0 sm:ml-4 p-2 rounded-lg transition-all self-end sm:self-auto ${
                                 isInParlay
                                   ? 'bg-green-600 text-white'
                                   : 'bg-[#1F2937] text-[#9CA3AF] hover:bg-[#253044]'
