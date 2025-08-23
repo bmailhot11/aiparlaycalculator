@@ -24,7 +24,9 @@ export default function Header() {
   const navLinks = [
     { href: '/positive-ev', label: 'View Positive EV Lines' },
     { href: '/ai-parlay', label: 'AI-Generated Parlay' },
-    { href: '/arbitrage', label: 'Arbitrage Opportunities' }
+    { href: '/arbitrage', label: 'Arbitrage Opportunities' },
+    { href: '/premium/today', label: 'Daily Picks' },
+    { href: '/results', label: 'Results' }
   ];
 
   const isActiveLink = (href) => router.pathname === href;
