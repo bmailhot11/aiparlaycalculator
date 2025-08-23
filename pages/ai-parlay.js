@@ -475,20 +475,93 @@ export default function AIParlayPage() {
                   </div>
                   
                   {/* Parlay Legs */}
-                  <div className="space-y-3 mb-6">
-                    {generatedParlay.legs.map((leg, index) => (
-                      <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-[#0F172A] rounded border border-[#1F2937]">
-                        <div className="flex-1">
-                          <div className="text-[#E5E7EB] font-medium text-sm sm:text-base break-words">{leg.selection}</div>
-                          <div className="flex items-center gap-2 text-xs sm:text-sm text-[#6B7280] mt-1">
-                            <span>{leg.book}</span>
-                            <span>•</span>
-                            <span>{leg.confidence}% confidence</span>
+                  <div className="space-y-4 mb-6">
+                    {generatedParlay.legs.map((leg, index) => {
+                      // Format the game date and time
+                      const formatGameTime = (commenceTime) => {
+                        if (!commenceTime) return 'TBD';
+                        const date = new Date(commenceTime);
+                        const today = new Date();
+                        const tomorrow = new Date(today);
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        
+                        let dateStr;
+                        if (date.toDateString() === today.toDateString()) {
+                          dateStr = 'Today';
+                        } else if (date.toDateString() === tomorrow.toDateString()) {
+                          dateStr = 'Tomorrow';
+                        } else {
+                          dateStr = date.toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            weekday: 'short'
+                          });
+                        }
+                        
+                        const timeStr = date.toLocaleTimeString('en-US', { 
+                          hour: 'numeric', 
+                          minute: '2-digit',
+                          hour12: true 
+                        });
+                        
+                        return `${dateStr} ${timeStr}`;
+                      };
+                      
+                      const getBetTypeDisplay = (betType, point) => {
+                        switch(betType) {
+                          case 'h2h': return 'Moneyline';
+                          case 'spreads': return point ? `Spread (${point > 0 ? '+' : ''}${point})` : 'Spread';
+                          case 'totals': return point ? `Total ${point > 0 ? 'Over' : 'Under'} ${Math.abs(point)}` : 'Total';
+                          default: return betType || 'Standard';
+                        }
+                      };
+                      
+                      return (
+                        <div key={index} className="p-4 bg-[#0F172A] rounded-lg border border-[#1F2937] hover:border-[#253044] transition-colors">
+                          <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
+                            <div className="flex-1">
+                              {/* Game Info */}
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <h4 className="text-[#E5E7EB] font-medium text-sm sm:text-base break-words mb-1">
+                                    {leg.game || `${leg.selection} Match`}
+                                  </h4>
+                                  <div className="text-xs text-[#6B7280] mb-2">
+                                    📅 {formatGameTime(leg.commence_time)}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Bet Selection */}
+                              <div className="bg-[#1F2937] rounded-lg p-3 mb-2">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-green-400 font-medium text-sm sm:text-base">{leg.selection}</span>
+                                  <span className="text-[#F4C430] font-bold text-lg">{leg.odds}</span>
+                                </div>
+                                <div className="text-xs text-[#6B7280]">
+                                  {getBetTypeDisplay(leg.bet_type, leg.point)}
+                                </div>
+                              </div>
+                              
+                              {/* Details */}
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-[#6B7280]">
+                                <div className="flex items-center gap-1">
+                                  🏪 <span>{leg.sportsbook || leg.book}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  📊 <span>{leg.confidence || leg.confidence_rating}% confidence</span>
+                                </div>
+                                {leg.expected_probability && (
+                                  <div className="flex items-center gap-1">
+                                    🎯 <span>{leg.expected_probability}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="text-[#F4C430] font-bold text-lg mt-2 sm:mt-0 text-right">{leg.odds}</div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   
                   {/* AI Reasoning */}
