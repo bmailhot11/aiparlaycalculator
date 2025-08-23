@@ -12,8 +12,7 @@ export default function Footer() {
     Product: [
       { label: 'Positive EV Lines', href: '/positive-ev' },
       { label: 'AI Parlays', href: '/ai-parlay' },
-      { label: 'Arbitrage', href: '/arbitrage' },
-      { label: 'Leaderboard', href: '/leaderboard' }
+      { label: 'Arbitrage', href: '/arbitrage' }
     ],
     Legal: [
       { label: 'Terms of Service', href: '/terms' },
