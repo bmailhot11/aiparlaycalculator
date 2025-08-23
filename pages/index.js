@@ -243,33 +243,11 @@ export default function Home() {
         >
           <div className="flex items-center justify-between w-full max-w-[720px] mx-auto mb-6">
             <h1 className="text-left flex-1">
-              Bet smarter, instantly.
+              Smart Betting, Simplified.
             </h1>
-            {/* User Section */}
-            <div className="flex items-center gap-3">
-              {currentUser ? (
-                <div className="flex items-center gap-2 bg-[#1F2937] rounded-lg px-3 py-2">
-                  <User className="w-4 h-4 text-[#F4C430]" />
-                  <span className="text-[#E5E7EB] text-sm font-medium">{currentUser.username}</span>
-                  <button 
-                    onClick={handleLogout}
-                    className="text-[#6B7280] hover:text-[#9CA3AF] text-xs ml-2"
-                  >
-                    Logout
-                  </button>
-                </div>
-              ) : (
-                <button 
-                  onClick={() => setShowUserModal(true)}
-                  className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded-lg font-medium text-sm hover:bg-[#F4C430]/90 transition-colors"
-                >
-                  Join Community
-                </button>
-              )}
-            </div>
           </div>
           <p className="text-[#9CA3AF] text-lg max-w-[720px] mx-auto mb-10">
-            Upload your slip. Our AI will rate it <span className="text-green-400 font-semibold">CASH</span> or <span className="text-red-400 font-semibold">TRASH</span> based on line movement, team stats, and expected value.
+            Find positive EV bets, build optimized parlays, and catch arbitrage opportunities in real time — all powered by live odds and AI.
           </p>
           
           {/* Bet Checker Card */}
@@ -324,7 +302,7 @@ export default function Home() {
                 ) : (
                   <>
                     <Check className="w-4 h-4 mr-2" />
-                    Check Bet
+                    Start Free
                   </>
                 )}
               </button>
@@ -509,10 +487,10 @@ export default function Home() {
               <div className="relative p-8">
                 <TrendingUp className="w-12 h-12 text-[#F4C430] mb-4" />
                 <h3 className="text-[#E5E7EB] text-xl font-semibold mb-2">
-                  View Positive EV Lines
+                  Positive EV Finder
                 </h3>
                 <p className="text-[#9CA3AF] text-sm mb-4">
-                  Find bets with positive expected value across all major sportsbooks in real-time.
+                  Instantly spot bets where the numbers work in your favor. Updated every minute across major sportsbooks.
                 </p>
                 <Link href="/positive-ev" className="inline-flex items-center text-[#F4C430] text-sm font-medium hover:gap-2 transition-all">
                   Explore now
@@ -531,10 +509,10 @@ export default function Home() {
               <div className="relative p-8">
                 <Brain className="w-12 h-12 text-[#F4C430] mb-4" />
                 <h3 className="text-[#E5E7EB] text-xl font-semibold mb-2">
-                  AI-Generated Parlay
+                  AI Parlay Builder
                 </h3>
                 <p className="text-[#9CA3AF] text-sm mb-4">
-                  Build optimized slips in one click using our AI-powered parlay generator.
+                  Generate optimized parlays in one click. Smarter slips, less guesswork.
                 </p>
                 <Link href="/ai-parlay" className="inline-flex items-center text-[#F4C430] text-sm font-medium hover:gap-2 transition-all">
                   Build parlay
@@ -553,10 +531,10 @@ export default function Home() {
               <div className="relative p-8">
                 <Target className="w-12 h-12 text-[#F4C430] mb-4" />
                 <h3 className="text-[#E5E7EB] text-xl font-semibold mb-2">
-                  Arbitrage Opportunities
+                  Arbitrage Alerts
                 </h3>
                 <p className="text-[#9CA3AF] text-sm mb-4">
-                  Cross-book mismatches in real time to guarantee profit regardless of outcome.
+                  See cross-book mismatches as they happen. Lock in guaranteed profits, no matter the outcome.
                 </p>
                 <Link href="/arbitrage" className="inline-flex items-center text-[#F4C430] text-sm font-medium hover:gap-2 transition-all">
                   Find arbs
@@ -565,6 +543,49 @@ export default function Home() {
               </div>
             </motion.div>
           </div>
+        </div>
+      </section>
+
+      {/* Trust Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-[#E5E7EB] text-3xl md:text-4xl font-bold mb-6">
+              Tools for bettors, not bookies.
+            </h2>
+            <p className="text-[#9CA3AF] text-xl max-w-2xl mx-auto">
+              We don't sell picks or affiliate hype. Just clean, transparent analysis so you can make sharper decisions.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Closing Call to Action */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="bg-gradient-to-r from-[#1F2937]/50 to-[#374151]/30 rounded-3xl p-12 border border-[#374151]"
+          >
+            <h2 className="text-[#E5E7EB] text-3xl md:text-4xl font-bold mb-6">
+              Bet with an edge.
+            </h2>
+            <Link 
+              href="/positive-ev"
+              className="inline-flex items-center bg-[#F4C430] text-[#0B0F14] px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#F4C430]/90 transition-colors"
+            >
+              Explore Betchekr
+              <ChevronRight className="w-5 h-5 ml-2" />
+            </Link>
+          </motion.div>
         </div>
       </section>
       
