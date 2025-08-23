@@ -1,7 +1,6 @@
 // Enhanced parlay generation with precise EV calculations using Pinnacle baseline
 const openai = require('../../lib/openai');
 const eventsCache = require('../../lib/events-cache.js');
-const { findPositiveEVBets, buildOptimalParlay } = require('../../lib/math/positive-ev-finder.js');
 
 async function handler(req, res) {
   console.log('🎯 Generate Parlay with Precise EV Calculations');
@@ -21,10 +20,10 @@ async function handler(req, res) {
   }
 
   try {
-    console.log(`🔍 Fetching ${config.sport} data with Pinnacle baseline...`);
+    console.log(`🔍 Fetching ${config.sport} data with basic markets...`);
     
-    // Step 1: Get sport data including Pinnacle for baseline
-    const sportData = await fetchSportDataWithPinnacle(config.sport);
+    // Step 1: Get sport data with fallback approach  
+    const sportData = await fetchSportDataWithFallback(config.sport);
     
     if (!sportData || sportData.length === 0) {
       return res.status(400).json({
@@ -33,39 +32,25 @@ async function handler(req, res) {
       });
     }
 
-    // Step 2: Find all positive EV bets using Pinnacle baseline
-    const positiveEVOptions = findPositiveEVBets(sportData, {
-      minEV: getMinEVForRiskLevel(config.riskLevel),
-      requireBaseline: true, // Only use bets where we have Pinnacle baseline
-      marketFilter: getMarketFilter(config),
-      bookmakerFilter: getTopSportsbooks()
-    });
+    // Step 2: Extract betting options from available data
+    const bettingOptions = extractBettingOptions(sportData, config);
 
-    console.log(`✅ Found ${positiveEVOptions.length} positive EV betting options`);
+    console.log(`✅ Found ${bettingOptions.length} betting options`);
 
-    if (positiveEVOptions.length === 0) {
+    if (bettingOptions.length === 0) {
       return res.status(400).json({
         success: false,
-        message: `No positive EV opportunities found for ${config.sport}. Markets may be too efficient.`,
-        suggestion: 'Try a different sport or check back when lines move.'
+        message: `No betting opportunities found for ${config.sport}.`,
+        suggestion: 'Try a different sport or check back later.'
       });
     }
 
-    // Step 3: Build optimal parlay or use AI for strategic selection
-    let parlayData;
-    
-    if (positiveEVOptions.length < 20) {
-      // Few options - use mathematical optimization
-      console.log('📊 Using mathematical optimization for parlay selection');
-      parlayData = await buildMathematicalParlay(positiveEVOptions, config);
-    } else {
-      // Many options - use AI for strategic selection
-      console.log('🤖 Using AI for strategic parlay selection from positive EV pool');
-      parlayData = await generateAIOptimizedParlay(positiveEVOptions, config);
-    }
+    // Step 3: Use AI for selection from available options
+    console.log('🤖 Using AI for parlay selection from available options');
+    const parlayData = await generateAIOptimizedParlay(bettingOptions, config);
 
     // Step 4: Calculate final parlay metrics
-    const finalMetrics = calculateParlayMetrics(parlayData);
+    const finalMetrics = calculateBasicParlayMetrics(parlayData);
 
     return res.status(200).json({
       success: true,
@@ -74,10 +59,10 @@ async function handler(req, res) {
         ...finalMetrics,
         sport: config.sport,
         timestamp: new Date().toISOString(),
-        ev_analysis: {
+        analysis: {
           total_options_analyzed: sportData.length,
-          positive_ev_found: positiveEVOptions.length,
-          baseline_source: 'Pinnacle',
+          betting_options_found: bettingOptions.length,
+          method: 'ai_selection',
           confidence: finalMetrics.confidence
         }
       }
@@ -86,16 +71,23 @@ async function handler(req, res) {
   } catch (error) {
     console.error('❌ EV Parlay generation error:', error);
     
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-      error_type: 'ev_parlay_generation_error'
-    });
+    // Fallback to basic generation
+    try {
+      console.log('🔄 Falling back to basic parlay generation...');
+      const fallbackHandler = require('./optimized-generate-parlay.js');
+      return await fallbackHandler(req, res);
+    } catch (fallbackError) {
+      return res.status(500).json({
+        success: false,
+        message: 'Both EV and fallback parlay generation failed',
+        error_type: 'complete_parlay_generation_failure'
+      });
+    }
   }
 }
 
-// Fetch sport data ensuring Pinnacle is included
-async function fetchSportDataWithPinnacle(sport) {
+// Fetch sport data with fallback approach
+async function fetchSportDataWithFallback(sport) {
   try {
     // Get events from cache
     const upcomingEvents = await eventsCache.cacheUpcomingEvents(sport);
@@ -105,21 +97,17 @@ async function fetchSportDataWithPinnacle(sport) {
       return [];
     }
     
-    // Get odds including Pinnacle (required for baseline)
-    // Always include player props in markets string for EV calculations
-    const markets = getSportMarkets(sport, true);
-    console.log(`📊 Fetching markets for ${sport}: ${markets.split(',').length} market types`);
+    // Get odds with fallback to basic markets if player props fail
+    const markets = getSportMarkets(sport, false); // Start with basic markets only
+    console.log(`📊 Fetching markets for ${sport}: ${markets}`);
     
     const oddsData = await eventsCache.getOddsForEvents(
       upcomingEvents, 
       markets, 
-      true // Include player props flag for cache
+      false // No player props for reliability
     );
     
-    // Ensure Pinnacle is included in bookmakers
-    const gamesWithPinnacle = await ensurePinnacleOdds(oddsData, sport);
-    
-    return gamesWithPinnacle;
+    return oddsData;
     
   } catch (error) {
     console.error('Error fetching sport data:', error);
@@ -127,74 +115,40 @@ async function fetchSportDataWithPinnacle(sport) {
   }
 }
 
-// Ensure Pinnacle odds are fetched
-async function ensurePinnacleOdds(gameData, sport) {
-  const API_KEY = process.env.ODDS_API_KEY;
+// Extract betting options from available game data
+function extractBettingOptions(gameData, config) {
+  const bettingOptions = [];
   
-  // Check if we already have Pinnacle
-  const hasPinnacle = gameData.some(game => 
-    game.bookmakers?.some(b => b.title?.toLowerCase().includes('pinnacle'))
-  );
-  
-  if (hasPinnacle) {
-    return gameData;
-  }
-  
-  console.log('📍 Fetching Pinnacle odds for baseline...');
-  
-  // Fetch Pinnacle specifically with all markets including player props
-  const sportKey = getSportKey(sport);
-  const markets = getSportMarkets(sport, true);
-  const url = `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&bookmakers=pinnacle&markets=${markets}&oddsFormat=american`;
-  
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.log('⚠️ Could not fetch Pinnacle odds, using estimation');
-      return gameData;
+  for (const game of gameData) {
+    if (!game.bookmakers) continue;
+    
+    for (const bookmaker of game.bookmakers) {
+      if (!bookmaker.markets) continue;
+      
+      for (const market of bookmaker.markets) {
+        for (const outcome of market.outcomes || []) {
+          bettingOptions.push({
+            game: `${game.away_team} @ ${game.home_team}`,
+            sportsbook: bookmaker.title,
+            bet_type: market.key,
+            selection: outcome.name,
+            point: outcome.point || null,
+            odds: outcome.price,
+            decimal_odds: americanToDecimal(outcome.price),
+            commence_time: game.commence_time
+          });
+        }
+      }
     }
-    
-    const pinnacleData = await response.json();
-    
-    // Merge Pinnacle data with existing game data
-    return mergeBookmakerData(gameData, pinnacleData);
-  } catch (error) {
-    console.log('⚠️ Pinnacle fetch failed, continuing with estimation');
-    return gameData;
   }
-}
-
-// Build parlay using mathematical optimization
-async function buildMathematicalParlay(positiveEVBets, config) {
-  const optimalParlay = buildOptimalParlay(positiveEVBets, {
-    legs: config.legs,
-    requirePlayerProps: config.includePlayerProps,
-    playerPropsRatio: config.includePlayerProps ? 0.5 : 0
-  });
   
-  return {
-    parlay_legs: optimalParlay.legs.map(bet => ({
-      game: bet.game,
-      sportsbook: bet.sportsbook,
-      bet_type: bet.market_type,
-      selection: bet.selection,
-      odds: formatOdds(bet.odds),
-      decimal_odds: bet.decimal_odds,
-      expected_value: bet.expectedValue,
-      true_probability: bet.trueProbability,
-      reasoning: `${(bet.expectedValue * 100).toFixed(1)}% EV with ${(bet.trueProbability * 100).toFixed(1)}% win probability`
-    })),
-    total_decimal_odds: optimalParlay.metrics.combinedOdds,
-    expected_value: optimalParlay.metrics.expectedValue,
-    confidence: optimalParlay.metrics.confidence,
-    method: 'mathematical_optimization'
-  };
+  return bettingOptions;
 }
 
-// Generate AI-optimized parlay from positive EV pool
-async function generateAIOptimizedParlay(positiveEVBets, config) {
-  // Take top 15 highest EV bets for AI selection
-  const topBets = positiveEVBets.slice(0, 15);
+// Generate AI-optimized parlay from betting options
+async function generateAIOptimizedParlay(bettingOptions, config) {
+  // Take top betting options for AI selection (limit to 20 for performance)
+  const topBets = bettingOptions.slice(0, 20);
   
   try {
     const response = await openai.chat.completions.create({
@@ -202,15 +156,15 @@ async function generateAIOptimizedParlay(positiveEVBets, config) {
       messages: [
         {
           role: "system",
-          content: `You are a sports betting expert. Select exactly ${config.legs} legs from these positive EV bets. ${config.includePlayerProps ? 'Include player props.' : ''} Focus on correlation analysis and maximizing expected value while managing risk. Return ONLY valid JSON.`
+          content: `You are a sports betting expert. Select exactly ${config.legs || 3} legs from these betting options. Focus on correlation analysis and managing risk. Return ONLY valid JSON.`
         },
         {
           role: "user",
-          content: `Create optimal ${config.legs}-leg parlay from these positive EV bets:
+          content: `Create optimal ${config.legs || 3}-leg parlay from these betting options:
 
 ${topBets.map((bet, i) => 
   `${i+1}. ${bet.game} - ${bet.selection} @ ${bet.sportsbook}
-   Odds: ${formatOdds(bet.odds)} | EV: ${(bet.expectedValue * 100).toFixed(2)}% | True Prob: ${(bet.trueProbability * 100).toFixed(1)}%`
+   Odds: ${formatOdds(bet.odds)} | Market: ${bet.bet_type}`
 ).join('\n')}
 
 Return JSON:
@@ -228,26 +182,16 @@ Return JSON:
     const aiResponse = JSON.parse(response.choices[0].message.content);
     const selectedBets = aiResponse.selected_indices.map(i => topBets[i]);
     
-    // Build parlay from AI selection
-    const optimalParlay = buildOptimalParlay(selectedBets, {
-      legs: config.legs
-    });
-    
     return {
-      parlay_legs: optimalParlay.legs.map(bet => ({
+      parlay_legs: selectedBets.map(bet => ({
         game: bet.game,
         sportsbook: bet.sportsbook,
-        bet_type: bet.market_type,
+        bet_type: bet.bet_type,
         selection: bet.selection,
         odds: formatOdds(bet.odds),
         decimal_odds: bet.decimal_odds,
-        expected_value: bet.expectedValue,
-        true_probability: bet.trueProbability,
-        reasoning: `${(bet.expectedValue * 100).toFixed(1)}% EV - ${aiResponse.correlation_analysis}`
+        reasoning: aiResponse.correlation_analysis
       })),
-      total_decimal_odds: optimalParlay.metrics.combinedOdds,
-      expected_value: optimalParlay.metrics.expectedValue,
-      confidence: optimalParlay.metrics.confidence,
       ai_insights: {
         correlation: aiResponse.correlation_analysis,
         risk: aiResponse.risk_management
@@ -256,111 +200,60 @@ Return JSON:
     };
     
   } catch (error) {
-    console.log('AI optimization failed, using mathematical approach');
-    return buildMathematicalParlay(positiveEVBets, config);
+    console.log('AI optimization failed, using simple selection');
+    // Fallback to simple selection
+    const selectedBets = topBets.slice(0, config.legs || 3);
+    return {
+      parlay_legs: selectedBets.map(bet => ({
+        game: bet.game,
+        sportsbook: bet.sportsbook,
+        bet_type: bet.bet_type,
+        selection: bet.selection,
+        odds: formatOdds(bet.odds),
+        decimal_odds: bet.decimal_odds,
+        reasoning: 'Simple selection fallback'
+      })),
+      method: 'simple_fallback'
+    };
   }
 }
 
-// Calculate comprehensive parlay metrics
-function calculateParlayMetrics(parlayData) {
+// Calculate basic parlay metrics
+function calculateBasicParlayMetrics(parlayData) {
   const legs = parlayData.parlay_legs;
   
-  // Calculate combined metrics
+  if (!legs || legs.length === 0) {
+    return {
+      total_decimal_odds: 1,
+      total_american_odds: '+0',
+      confidence: 'low'
+    };
+  }
+  
+  // Calculate combined odds
   const combinedOdds = legs.reduce((acc, leg) => acc * leg.decimal_odds, 1);
-  const combinedProb = legs.reduce((acc, leg) => acc * (leg.true_probability || 0.5), 1);
-  const combinedEV = (combinedProb * (combinedOdds - 1)) - (1 - combinedProb);
-  
-  // Determine confidence based on data quality
-  const allHaveBaseline = legs.every(leg => leg.true_probability > 0);
-  const avgEV = legs.reduce((sum, leg) => sum + (leg.expected_value || 0), 0) / legs.length;
-  
-  let confidence = 'medium';
-  if (allHaveBaseline && avgEV > 0.03) confidence = 'high';
-  if (!allHaveBaseline || avgEV < 0.01) confidence = 'low';
   
   return {
     total_decimal_odds: combinedOdds.toFixed(3),
     total_american_odds: decimalToAmerican(combinedOdds),
-    win_probability: (combinedProb * 100).toFixed(2) + '%',
-    expected_value: (combinedEV * 100).toFixed(2) + '%',
-    expected_return_per_dollar: (1 + combinedEV).toFixed(3),
-    confidence,
-    kelly_criterion: calculateKellyCriterion(combinedEV, combinedOdds, combinedProb)
+    confidence: 'medium'
   };
 }
 
 // Helper functions
-function getMinEVForRiskLevel(riskLevel) {
-  switch(riskLevel?.toLowerCase()) {
-    case 'conservative': return 0.03; // 3% minimum EV
-    case 'moderate': return 0.02; // 2% minimum EV
-    case 'aggressive': return 0.01; // 1% minimum EV
-    default: return 0.02;
+function americanToDecimal(american) {
+  if (american >= 0) {
+    return 1 + (american / 100);
+  } else {
+    return 1 + (100 / Math.abs(american));
   }
 }
 
-function getMarketFilter(config) {
-  // Always return null to include all markets (including player props)
-  // The filtering will be done at the parlay building stage
-  return null;
-}
-
-function getTopSportsbooks() {
-  return [
-    'DraftKings',
-    'FanDuel',
-    'BetMGM',
-    'Caesars',
-    'PointsBet',
-    'BetRivers',
-    'Unibet',
-    'BetOnline.ag'
-  ];
-}
-
-function getSportMarkets(sport, includePlayerProps = true) {
+function getSportMarkets(sport, includePlayerProps = false) {
   const soccerSports = ['Soccer', 'MLS', 'UEFA', 'EPL'];
   
-  // Base markets
-  let markets = soccerSports.includes(sport) ? 'h2h,totals' : 'h2h,spreads,totals';
-  
-  // Add player props for supported sports
-  if (includePlayerProps && !soccerSports.includes(sport)) {
-    // Add all player prop markets
-    const playerPropMarkets = [
-      'player_pass_tds',
-      'player_pass_yds', 
-      'player_rush_yds',
-      'player_receptions',
-      'player_reception_yds',
-      'player_anytime_td',
-      'player_points',
-      'player_rebounds',
-      'player_assists',
-      'player_threes',
-      'player_goals',
-      'player_hits',
-      'player_home_runs',
-      'player_rbis',
-      'pitcher_strikeouts'
-    ].join(',');
-    
-    markets = `${markets},${playerPropMarkets}`;
-  }
-  
-  return markets;
-}
-
-function getSportKey(sport) {
-  const mapping = {
-    'NFL': 'americanfootball_nfl',
-    'NBA': 'basketball_nba',
-    'NHL': 'icehockey_nhl',
-    'MLB': 'baseball_mlb',
-    'NCAAF': 'americanfootball_ncaaf',
-    'NCAAB': 'basketball_ncaab'
-  };
-  return mapping[sport] || 'americanfootball_nfl';
+  // Base markets only for reliability
+  return soccerSports.includes(sport) ? 'h2h,totals' : 'h2h,spreads,totals';
 }
 
 function formatOdds(odds) {
@@ -375,37 +268,6 @@ function decimalToAmerican(decimal) {
     return `+${Math.round((decimal - 1) * 100)}`;
   }
   return `${Math.round(-100 / (decimal - 1))}`;
-}
-
-function calculateKellyCriterion(ev, odds, prob) {
-  // Kelly % = (bp - q) / b
-  // where b = decimal odds - 1, p = win probability, q = loss probability
-  const b = odds - 1;
-  const kellyPercent = ((b * prob) - (1 - prob)) / b;
-  
-  // Apply fractional Kelly (25%) for safety
-  const fractionalKelly = Math.max(0, kellyPercent * 0.25);
-  
-  return {
-    full: (kellyPercent * 100).toFixed(2) + '%',
-    fractional: (fractionalKelly * 100).toFixed(2) + '%',
-    recommended: fractionalKelly > 0.1 ? '5-10%' : (fractionalKelly * 100).toFixed(1) + '%'
-  };
-}
-
-function mergeBookmakerData(existingData, pinnacleData) {
-  // Implementation to merge Pinnacle data with existing bookmaker data
-  return existingData.map(game => {
-    const pinnacleGame = pinnacleData.find(p => 
-      p.home_team === game.home_team && p.away_team === game.away_team
-    );
-    
-    if (pinnacleGame && pinnacleGame.bookmakers) {
-      game.bookmakers = [...(game.bookmakers || []), ...pinnacleGame.bookmakers];
-    }
-    
-    return game;
-  });
 }
 
 module.exports = handler;
