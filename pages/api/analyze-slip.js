@@ -1,4 +1,5 @@
 import openai from '../../lib/openai';
+import { generateImprovedSlipImage } from '../../utils/generateImprovedSlipImage';
 
 export default async function handler(req, res) {
   // Environment Variables Check
@@ -117,7 +118,27 @@ Return ONLY this JSON format:
     // Step 3: Generate optimization analysis with the targeted data (TOP 5 SPORTSBOOKS)
     const aiOptimization = await generateTargetedOptimization(extractedData, targetedOddsData || []);
 
-    // Step 4: Build comprehensive response with best sportsbooks
+    // Step 4: Generate improved bets and slip image
+    console.log('🖼️ Step 4: Generating improved slip image...');
+    const improvedBets = await generateImprovedBets(extractedData.extracted_bets, targetedOddsData || []);
+    
+    // Create improved slip image
+    let improvedSlipImage = null;
+    if (improvedBets && improvedBets.length > 0) {
+      try {
+        const explanation = generateExplanationText(improvedBets, aiOptimization);
+        improvedSlipImage = await generateImprovedSlipImage({
+          originalSlip: extractedData,
+          improvedBets: improvedBets,
+          explanation: explanation,
+          analysis: aiOptimization
+        });
+      } catch (imageError) {
+        console.error('Failed to generate improved slip image:', imageError);
+      }
+    }
+
+    // Step 5: Build comprehensive response with best sportsbooks
     const analysis = {
       bet_slip_details: {
         sportsbook: extractedData.sportsbook,
@@ -134,6 +155,8 @@ Return ONLY this JSON format:
       sportsbook_comparison: generateOddsComparison(extractedData.extracted_bets, targetedOddsData || []),
       ai_optimization: aiOptimization,
       optimization_tips: generateSmartTips(extractedData, targetedOddsData || [], aiOptimization),
+      improved_bets: improvedBets,
+      improved_slip_image: improvedSlipImage,
       timestamp: new Date().toISOString(),
       unlimited_access: hasUnlimitedAccess,
       sportsbooks_analyzed: "Major US sportsbooks"
@@ -809,6 +832,116 @@ function extractPlayerName(str) {
     word.length > 1 && word[0] === word[0].toUpperCase() && !word.includes('Over') && !word.includes('Under')
   );
   return nameWords.slice(0, 2).join(' ').toLowerCase(); // First and last name
+}
+
+// Generate improved bets with better odds and EV
+async function generateImprovedBets(originalBets, gameData) {
+  if (!originalBets || originalBets.length === 0) return [];
+  
+  const improvedBets = [];
+  
+  for (const bet of originalBets) {
+    // Find the best available odds for this bet
+    const allSportsbooks = findAllSportsbooksForBet(bet, gameData);
+    
+    if (allSportsbooks && allSportsbooks.length > 0) {
+      // Get the best odds
+      const bestOption = allSportsbooks
+        .map(sportsbook => ({
+          ...sportsbook,
+          originalOdds: parseOdds(bet.odds),
+          bestOdds: parseOdds(sportsbook.odds),
+          improvement: calculateOddsImprovement(parseOdds(bet.odds), parseOdds(sportsbook.odds))
+        }))
+        .sort((a, b) => b.improvement.percentage - a.improvement.percentage)[0];
+      
+      // Use improved odds if significant improvement (>3%), otherwise keep original
+      const useImprovedOdds = bestOption.improvement.percentage > 3;
+      
+      improvedBets.push({
+        league: extractLeagueFromGameData(gameData, bet),
+        matchup: bet.home_team && bet.away_team ? `${bet.away_team} vs ${bet.home_team}` : bet.game || 'Game',
+        market: bet.bet_type || 'Bet',
+        selection: bet.bet_selection || 'Selection',
+        odds: useImprovedOdds ? bestOption.odds : bet.odds,
+        decimal_odds: useImprovedOdds ? americanToDecimal(bestOption.bestOdds).toFixed(2) : americanToDecimal(parseOdds(bet.odds)).toFixed(2),
+        sportsbook: useImprovedOdds ? bestOption.name : (bet.sportsbook || 'Original'),
+        improved: useImprovedOdds,
+        improvement_percentage: bestOption.improvement.percentage,
+        original_odds: bet.odds
+      });
+    } else {
+      // No matching bet found, keep original
+      improvedBets.push({
+        league: 'League',
+        matchup: bet.home_team && bet.away_team ? `${bet.away_team} vs ${bet.home_team}` : bet.game || 'Game',
+        market: bet.bet_type || 'Bet',
+        selection: bet.bet_selection || 'Selection',
+        odds: bet.odds,
+        decimal_odds: americanToDecimal(parseOdds(bet.odds)).toFixed(2),
+        sportsbook: bet.sportsbook || 'Original',
+        improved: false,
+        improvement_percentage: 0,
+        original_odds: bet.odds
+      });
+    }
+  }
+  
+  return improvedBets;
+}
+
+// Generate explanation text for the notes section
+function generateExplanationText(improvedBets, aiOptimization) {
+  const improvedCount = improvedBets.filter(bet => bet.improved).length;
+  
+  if (improvedCount === 0) {
+    return "Your original slip has competitive odds across major sportsbooks. No significant improvements were found at this time.";
+  }
+  
+  let explanation = `We improved ${improvedCount} of your ${improvedBets.length} bets by finding better odds. `;
+  
+  const avgImprovement = improvedBets
+    .filter(bet => bet.improved)
+    .reduce((sum, bet) => sum + bet.improvement_percentage, 0) / improvedCount;
+  
+  explanation += `Average improvement: ${avgImprovement.toFixed(1)}%. `;
+  
+  // Add AI insights if available
+  if (aiOptimization.ev_optimization && aiOptimization.ev_optimization.length > 0) {
+    explanation += aiOptimization.ev_optimization[0];
+  } else if (aiOptimization.market_inefficiencies && aiOptimization.market_inefficiencies.length > 0) {
+    explanation += aiOptimization.market_inefficiencies[0];
+  }
+  
+  return explanation;
+}
+
+// Extract league from game data
+function extractLeagueFromGameData(gameData, bet) {
+  if (!gameData || gameData.length === 0) return 'League';
+  
+  const matchingGame = gameData.find(game => 
+    (bet.home_team && game.home_team?.toLowerCase().includes(bet.home_team.toLowerCase())) ||
+    (bet.away_team && game.away_team?.toLowerCase().includes(bet.away_team.toLowerCase()))
+  );
+  
+  if (matchingGame && matchingGame.sport) {
+    const sportMap = {
+      'americanfootball_nfl': 'NFL',
+      'americanfootball_nfl_preseason': 'NFL',
+      'americanfootball_ncaaf': 'NCAAF',
+      'basketball_nba': 'NBA',
+      'basketball_ncaab': 'NCAAB',
+      'icehockey_nhl': 'NHL',
+      'baseball_mlb': 'MLB',
+      'soccer_epl': 'EPL',
+      'soccer_usa_mls': 'MLS',
+      'mma_mixed_martial_arts': 'MMA'
+    };
+    return sportMap[matchingGame.sport] || 'League';
+  }
+  
+  return 'League';
 }
 
 // SHARED Helper functions

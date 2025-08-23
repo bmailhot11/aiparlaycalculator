@@ -17,6 +17,7 @@ import Footer from '../components/Footer';
 import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
 import { renderSlipImage, downloadImage, copyImageToClipboard } from '../utils/renderSlipImage';
+import { generateImprovedSlipImage, downloadImprovedSlip } from '../utils/generateImprovedSlipImage';
 import { apiFetch } from '../utils/api';
 
 export default function AIParlayPage() {
@@ -210,39 +211,203 @@ export default function AIParlayPage() {
 
   const handleDownloadSlip = async () => {
     if (generatedParlay) {
-      const imageData = await renderSlipImage({
-        slip: {
-          legs: generatedParlay.legs,
-          stake: generatedParlay.recommendedStake,
-          potentialReturn: generatedParlay.potentialPayout,
-          summary: `AI Generated ${generatedParlay.legs.length}-Leg Parlay`,
-          date: new Date().toLocaleDateString()
-        },
-        logoUrl: '/betchekr_owl_logo.png',
-        brand: 'BetChekr'
-      });
-      downloadImage(imageData);
+      try {
+        // Format parlay data for the BetChekr template
+        const improvedBets = generatedParlay.legs.map((leg, index) => ({
+          league: getLeagueFromSportSelection(selectedSports[0]),
+          matchup: leg.game || `${leg.selection} Match`,
+          market: getBetTypeDisplayForTemplate(leg.bet_type, leg.point),
+          selection: leg.selection,
+          odds: leg.odds,
+          decimal_odds: convertAmericanToDecimal(leg.odds).toFixed(2),
+          sportsbook: leg.sportsbook || leg.book || 'Sportsbook',
+          improved: false, // AI parlay legs are optimally selected
+          improvement_percentage: 0,
+          original_odds: leg.odds
+        }));
+
+        const explanation = `AI-Generated ${generatedParlay.legs.length}-Leg Parlay: ${generatedParlay.reasoning}`;
+
+        // Generate BetChekr template image
+        const imageData = await generateImprovedSlipImage({
+          originalSlip: {
+            sportsbook: 'BetChekr AI',
+            total_stake: generatedParlay.stake,
+            potential_payout: generatedParlay.potentialPayout
+          },
+          improvedBets: improvedBets,
+          explanation: explanation,
+          analysis: {
+            expectedValue: generatedParlay.expectedValue,
+            impliedProbability: generatedParlay.impliedProbability
+          }
+        });
+
+        if (imageData) {
+          // Create download link for the improved slip image
+          const link = document.createElement('a');
+          link.href = imageData;
+          link.download = 'betchekr-ai-parlay.png';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          // Fallback to original slip image generation
+          const fallbackImageData = await renderSlipImage({
+            slip: {
+              legs: generatedParlay.legs,
+              stake: generatedParlay.stake,
+              potentialReturn: generatedParlay.potentialPayout,
+              summary: `AI Generated ${generatedParlay.legs.length}-Leg Parlay`,
+              date: new Date().toLocaleDateString()
+            },
+            logoUrl: '/betchekr_owl_logo.png',
+            brand: 'BetChekr'
+          });
+          downloadImage(fallbackImageData);
+        }
+      } catch (error) {
+        console.error('Failed to generate slip image:', error);
+        // Fallback to original slip image generation
+        const fallbackImageData = await renderSlipImage({
+          slip: {
+            legs: generatedParlay.legs,
+            stake: generatedParlay.stake,
+            potentialReturn: generatedParlay.potentialPayout,
+            summary: `AI Generated ${generatedParlay.legs.length}-Leg Parlay`,
+            date: new Date().toLocaleDateString()
+          },
+          logoUrl: '/betchekr_owl_logo.png',
+          brand: 'BetChekr'
+        });
+        downloadImage(fallbackImageData);
+      }
     }
   };
 
   const handleCopySlip = async () => {
     if (generatedParlay) {
-      const imageData = await renderSlipImage({
-        slip: {
-          legs: generatedParlay.legs,
-          stake: generatedParlay.recommendedStake,
-          potentialReturn: generatedParlay.potentialPayout,
-          summary: `AI Generated ${generatedParlay.legs.length}-Leg Parlay`,
-          date: new Date().toLocaleDateString()
-        },
-        logoUrl: '/betchekr_owl_logo.png',
-        brand: 'BetChekr'
-      });
-      const success = await copyImageToClipboard(imageData);
-      if (success) {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+      try {
+        // Format parlay data for the BetChekr template
+        const improvedBets = generatedParlay.legs.map((leg, index) => ({
+          league: getLeagueFromSportSelection(selectedSports[0]),
+          matchup: leg.game || `${leg.selection} Match`,
+          market: getBetTypeDisplayForTemplate(leg.bet_type, leg.point),
+          selection: leg.selection,
+          odds: leg.odds,
+          decimal_odds: convertAmericanToDecimal(leg.odds).toFixed(2),
+          sportsbook: leg.sportsbook || leg.book || 'Sportsbook',
+          improved: false,
+          improvement_percentage: 0,
+          original_odds: leg.odds
+        }));
+
+        const explanation = `AI-Generated ${generatedParlay.legs.length}-Leg Parlay: ${generatedParlay.reasoning}`;
+
+        // Generate BetChekr template image
+        const imageData = await generateImprovedSlipImage({
+          originalSlip: {
+            sportsbook: 'BetChekr AI',
+            total_stake: generatedParlay.stake,
+            potential_payout: generatedParlay.potentialPayout
+          },
+          improvedBets: improvedBets,
+          explanation: explanation,
+          analysis: {
+            expectedValue: generatedParlay.expectedValue,
+            impliedProbability: generatedParlay.impliedProbability
+          }
+        });
+
+        if (imageData) {
+          // Copy BetChekr template image to clipboard
+          const blob = await fetch(imageData).then(r => r.blob());
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              [blob.type]: blob
+            })
+          ]);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } else {
+          // Fallback to original slip image generation
+          const fallbackImageData = await renderSlipImage({
+            slip: {
+              legs: generatedParlay.legs,
+              stake: generatedParlay.stake,
+              potentialReturn: generatedParlay.potentialPayout,
+              summary: `AI Generated ${generatedParlay.legs.length}-Leg Parlay`,
+              date: new Date().toLocaleDateString()
+            },
+            logoUrl: '/betchekr_owl_logo.png',
+            brand: 'BetChekr'
+          });
+          const success = await copyImageToClipboard(fallbackImageData);
+          if (success) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to copy slip image:', error);
+        // Fallback to original slip image generation
+        const fallbackImageData = await renderSlipImage({
+          slip: {
+            legs: generatedParlay.legs,
+            stake: generatedParlay.stake,
+            potentialReturn: generatedParlay.potentialPayout,
+            summary: `AI Generated ${generatedParlay.legs.length}-Leg Parlay`,
+            date: new Date().toLocaleDateString()
+          },
+          logoUrl: '/betchekr_owl_logo.png',
+          brand: 'BetChekr'
+        });
+        const success = await copyImageToClipboard(fallbackImageData);
+        if (success) {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }
       }
+    }
+  };
+
+  // Helper function to convert American odds to decimal
+  const convertAmericanToDecimal = (americanOdds) => {
+    if (!americanOdds) return 2.0;
+    const odds = parseInt(americanOdds.replace('+', ''));
+    if (isNaN(odds)) return 2.0;
+    
+    if (odds > 0) {
+      return (odds / 100) + 1;
+    } else {
+      return (100 / Math.abs(odds)) + 1;
+    }
+  };
+
+  // Helper function to get league name from sport selection
+  const getLeagueFromSportSelection = (sport) => {
+    const sportMap = {
+      'NFL': 'NFL',
+      'NBA': 'NBA', 
+      'NHL': 'NHL',
+      'MLB': 'MLB',
+      'NCAAF': 'NCAAF',
+      'NCAAB': 'NCAAB',
+      'UFC': 'UFC',
+      'MLS': 'MLS',
+      'UEFA': 'UEFA',
+      'Tennis': 'ATP'
+    };
+    return sportMap[sport] || sport || 'League';
+  };
+
+  // Helper function to format bet type display
+  const getBetTypeDisplayForTemplate = (betType, point) => {
+    switch(betType) {
+      case 'h2h': return 'Moneyline';
+      case 'spreads': return point ? `Spread (${point > 0 ? '+' : ''}${point})` : 'Spread';
+      case 'totals': return point ? `Total ${point > 0 ? 'Over' : 'Under'} ${Math.abs(point)}` : 'Total';
+      default: return betType || 'Standard';
     }
   };
 
@@ -536,9 +701,11 @@ export default function AIParlayPage() {
                                   <h4 className="text-[#E5E7EB] font-medium text-sm sm:text-base break-words mb-1">
                                     {leg.game || `${leg.selection} Match`}
                                   </h4>
-                                  <div className="text-xs text-[#6B7280] mb-2">
-                                    📅 {formatGameTime(leg.commence_time)}
-                                  </div>
+                                  {leg.commence_time && formatGameTime(leg.commence_time) !== 'TBD' && (
+                                    <div className="text-xs text-[#6B7280] mb-2">
+                                      {formatGameTime(leg.commence_time)}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                               
@@ -556,14 +723,11 @@ export default function AIParlayPage() {
                               {/* Details */}
                               <div className="flex flex-wrap items-center gap-3 text-xs text-[#6B7280]">
                                 <div className="flex items-center gap-1">
-                                  🏪 <span>{leg.sportsbook || leg.book}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  📊 <span>{leg.confidence || leg.confidence_rating}% confidence</span>
+                                  <span>{leg.sportsbook || leg.book}</span>
                                 </div>
                                 {leg.expected_probability && (
                                   <div className="flex items-center gap-1">
-                                    🎯 <span>{leg.expected_probability}</span>
+                                    <span>{leg.expected_probability}</span>
                                   </div>
                                 )}
                               </div>
@@ -599,7 +763,7 @@ export default function AIParlayPage() {
                       className="btn btn-outline text-sm flex-1"
                     >
                       <Download className="w-4 h-4 mr-2" />
-                      <span className="hidden sm:inline">Download Slip</span>
+                      <span className="hidden sm:inline">Download BetChekr Slip</span>
                       <span className="sm:hidden">Download</span>
                     </button>
                     <button 
@@ -614,8 +778,8 @@ export default function AIParlayPage() {
                       ) : (
                         <>
                           <Copy className="w-4 h-4 mr-2" />
-                          <span className="hidden sm:inline">Copy to Clipboard</span>
-                          <span className="sm:hidden">Copy</span>
+                          <span className="hidden sm:inline">Share BetChekr Slip</span>
+                          <span className="sm:hidden">Share</span>
                         </>
                       )}
                     </button>
