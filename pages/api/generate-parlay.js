@@ -283,6 +283,22 @@ async function fetchSportSpecificOdds(sport) {
     console.log(`📅 [${sport} Parlay] Using all available games regardless of date: ${allGames.length} games`);
   }
 
+  // Special handling for MMA: prioritize games that have bookmaker odds available
+  if (sport === 'MMA' || sport === 'UFC') {
+    const gamesWithOdds = filteredGames.filter(game => game.bookmakers && game.bookmakers.length > 0);
+    const allGamesWithOdds = allGames.filter(game => game.bookmakers && game.bookmakers.length > 0);
+    
+    console.log(`🥊 [MMA Debug] Filtered games with odds: ${gamesWithOdds.length}, All games with odds: ${allGamesWithOdds.length}`);
+    
+    if (gamesWithOdds.length > 0) {
+      filteredGames = gamesWithOdds;
+      console.log(`🥊 [MMA] Using ${gamesWithOdds.length} filtered games that have odds`);
+    } else if (allGamesWithOdds.length > 0) {
+      filteredGames = allGamesWithOdds.slice(0, 20);
+      console.log(`🥊 [MMA] No odds in filtered games, using ${filteredGames.length} from all games with odds`);
+    }
+  }
+
   console.log(`📊 [${sport} Parlay] Final game count: ${filteredGames.length} games`);
   console.log(`📊 [${sport} Parlay] Date filtering details: All games: ${allGames.length}, 7-day: ${gamesNext7Days ? gamesNext7Days.length : 'N/A'}, Final: ${filteredGames.length}`);
   return filteredGames;
@@ -290,21 +306,23 @@ async function fetchSportSpecificOdds(sport) {
 
 // 🚀 OPTIMIZED: Filter to only top 5 sportsbooks for better performance
 function filterToTop5Sportsbooks(gameData) {
-  // Define the 5 most reliable sportsbooks with best odds
-  const TOP_5_SPORTSBOOKS = [
+  // Define the most reliable sportsbooks with best odds
+  const TOP_SPORTSBOOKS = [
     'DraftKings',
     'FanDuel', 
     'BetMGM',
     'Caesars',
-    'PointsBet'
+    'PointsBet',
+    'BetOnline.ag',  // MMA coverage
+    'BetRivers'      // Additional coverage
   ];
 
   const filteredGames = gameData.map(game => {
     if (!game.bookmakers) return game;
     
-    // Keep only top 5 sportsbooks
+    // Keep only top sportsbooks
     const filteredBookmakers = game.bookmakers.filter(bookmaker => 
-      TOP_5_SPORTSBOOKS.includes(bookmaker.title)
+      TOP_SPORTSBOOKS.includes(bookmaker.title)
     );
     
     return {
@@ -313,7 +331,7 @@ function filterToTop5Sportsbooks(gameData) {
     };
   }).filter(game => game.bookmakers && game.bookmakers.length > 0);
 
-  console.log(`🎯 Filtered to top 5 sportsbooks: ${TOP_5_SPORTSBOOKS.join(', ')}`);
+  console.log(`🎯 Filtered to top sportsbooks: ${TOP_SPORTSBOOKS.join(', ')}`);
   return filteredGames;
 }
 
@@ -322,10 +340,17 @@ function extractAvailableBets(gameData) {
   // First filter to top 5 sportsbooks
   const filteredGames = filterToTop5Sportsbooks(gameData);
   
+  console.log(`🔍 [Debug] Games after sportsbook filtering: ${filteredGames.length}`);
+  
   const availableBets = [];
   
   for (const game of filteredGames) {
-    if (!game.bookmakers) continue;
+    if (!game.bookmakers) {
+      console.log(`🔍 [Debug] Game has no bookmakers: ${game.home_team} vs ${game.away_team}`);
+      continue;
+    }
+    
+    console.log(`🔍 [Debug] Game: ${game.home_team} vs ${game.away_team} - ${game.bookmakers.length} bookmakers`);
     
     for (const bookmaker of game.bookmakers) {
       if (!bookmaker.markets) continue;

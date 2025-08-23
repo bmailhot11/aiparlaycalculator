@@ -151,7 +151,7 @@ export default function AIParlayPage() {
     setIsGenerating(true);
     
     try {
-      const response = await apiFetch('/api/optimized-generate-parlay', {
+      const response = await apiFetch('/api/generate-parlay', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
