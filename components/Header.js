@@ -34,7 +34,12 @@ export default function Header() {
       <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-full">
           {/* Logo */}
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center space-x-2">
+            <img 
+              src="/betchekr_owl_logo.png" 
+              alt="BetChekr Logo" 
+              className="w-10 h-10 object-contain"
+            />
             <span className="text-[#E5E7EB] text-xl font-bold tracking-[-0.01em]" style={{ fontWeight: 700 }}>
               betchekr
             </span>

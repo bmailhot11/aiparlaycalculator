@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect } from 'react';
+import Head from 'next/head';
 import '../styles/globals.css';
 
 // Premium Context
@@ -175,9 +176,17 @@ function MyApp({ Component, pageProps }) {
   };
 
   return (
-    <PremiumContext.Provider value={premiumContextValue}>
-      <Component {...pageProps} />
-    </PremiumContext.Provider>
+    <>
+      <Head>
+        <title>BetChekr - Smart Betting Analysis</title>
+        <link rel="icon" href="/betchekr_owl_logo.ico" />
+        <link rel="apple-touch-icon" href="/betchekr_owl_logo.png" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </Head>
+      <PremiumContext.Provider value={premiumContextValue}>
+        <Component {...pageProps} />
+      </PremiumContext.Provider>
+    </>
   );
 }
 
