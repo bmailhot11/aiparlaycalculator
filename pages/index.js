@@ -26,6 +26,7 @@ import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
 import { renderSlipImage, downloadImage, copyImageToClipboard } from '../utils/renderSlipImage';
 import { apiFetch } from '../utils/api';
+import AIPerformanceDashboard from '../components/AIPerformanceDashboard';
 
 export default function Home() {
   const { isPremium } = useContext(PremiumContext);
@@ -206,6 +207,20 @@ export default function Home() {
           improvedSlipImage: result.analysis.improved_slip_image,
           improvedBets: result.analysis.improved_bets
         });
+
+        // Track the slip analysis if improvements were made
+        if (hasImprovements && result.analysis.improved_bets) {
+          await trackAIBet({
+            user_id: currentUser?.id,
+            bet_type: 'improved_slip',
+            source_type: 'analyzed',
+            original_data: result.analysis.bet_slip_details,
+            recommended_legs: result.analysis.improved_bets,
+            ai_reasoning: result.analysis.optimization_tips?.join(' ') || 'Slip analysis found better odds',
+            improvement_percentage: avgImprovement,
+            user_action: 'generated'
+          });
+        }
       } else {
         throw new Error(result.message || 'Failed to analyze bet slip');
       }
@@ -253,6 +268,28 @@ export default function Home() {
     localStorage.removeItem('betchekr_user');
   };
 
+  // Function to track AI bet generation and user actions
+  const trackAIBet = async (betData) => {
+    try {
+      const response = await apiFetch('/api/ai-bets/track', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(betData),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ AI bet tracked:', result.ai_bet_id);
+        return result.ai_bet_id;
+      }
+    } catch (error) {
+      console.error('Failed to track AI bet:', error);
+    }
+    return null;
+  };
+
   const handleDownloadSlip = async () => {
     if (analysisResult) {
       // Use improved slip image if available, otherwise fall back to regular slip image
@@ -264,6 +301,18 @@ export default function Home() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
+        // Track download action
+        if (analysisResult.improvedBets?.some(bet => bet.improved)) {
+          await trackAIBet({
+            user_id: currentUser?.id,
+            bet_type: 'improved_slip',
+            source_type: 'analyzed',
+            recommended_legs: analysisResult.improvedBets,
+            ai_reasoning: 'User downloaded improved slip',
+            user_action: 'downloaded'
+          });
+        }
       } else {
         // Fall back to original slip image generation
         const imageData = await renderSlipImage({
@@ -674,6 +723,33 @@ export default function Home() {
               </div>
             </motion.div>
           </div>
+        </div>
+      </section>
+
+      {/* AI Performance Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-[#E5E7EB] text-3xl md:text-4xl font-bold mb-6">
+              AI Performance Track Record
+            </h2>
+            <p className="text-[#9CA3AF] text-xl max-w-2xl mx-auto">
+              See how our AI recommendations perform. Transparent results build confidence in our tools.
+            </p>
+          </motion.div>
+
+          <AIPerformanceDashboard 
+            period={30}
+            user_id={currentUser?.id}
+            showUserStats={false}
+            compact={false}
+          />
         </div>
       </section>
 

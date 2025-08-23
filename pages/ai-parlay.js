@@ -19,6 +19,7 @@ import { PremiumContext } from './_app';
 import { renderSlipImage, downloadImage, copyImageToClipboard } from '../utils/renderSlipImage';
 import { generateImprovedSlipImage, downloadImprovedSlip } from '../utils/generateImprovedSlipImage';
 import { apiFetch } from '../utils/api';
+import AIPerformanceDashboard from '../components/AIPerformanceDashboard';
 
 export default function AIParlayPage() {
   const { isPremium } = useContext(PremiumContext);
@@ -193,6 +194,24 @@ export default function AIParlayPage() {
           reasoning: data.parlay.risk_assessment || data.parlay.edge_analysis || 'AI-generated parlay optimized for value across premium sportsbooks.'
         };
         setGeneratedParlay(mappedParlay);
+        
+        // Track the AI-generated parlay
+        await trackAIBet({
+          user_id: currentUser?.id,
+          bet_type: 'ai_parlay',
+          source_type: 'generated',
+          original_data: {
+            preferences: {
+              sport: selectedSports[0],
+              riskLevel,
+              legs: parseInt(parlaySize)
+            }
+          },
+          recommended_legs: data.parlay.parlay_legs || data.parlay.legs || [],
+          ai_reasoning: data.parlay.risk_assessment || data.parlay.edge_analysis || 'AI-generated parlay optimized for value',
+          expected_value: data.parlay.expected_value,
+          user_action: 'generated'
+        });
       } else {
         console.error('API Error:', data);
         alert(`Failed to generate parlay: ${data.message || 'Unknown error'}`);
@@ -251,6 +270,16 @@ export default function AIParlayPage() {
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
+
+          // Track download action
+          await trackAIBet({
+            user_id: currentUser?.id,
+            bet_type: 'ai_parlay',
+            source_type: 'generated',
+            recommended_legs: improvedBets,
+            ai_reasoning: explanation,
+            user_action: 'downloaded'
+          });
         } else {
           // Fallback to original slip image generation
           const fallbackImageData = await renderSlipImage({
@@ -329,6 +358,16 @@ export default function AIParlayPage() {
           ]);
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
+
+          // Track share action
+          await trackAIBet({
+            user_id: currentUser?.id,
+            bet_type: 'ai_parlay',
+            source_type: 'generated',
+            recommended_legs: improvedBets,
+            ai_reasoning: explanation,
+            user_action: 'shared'
+          });
         } else {
           // Fallback to original slip image generation
           const fallbackImageData = await renderSlipImage({
@@ -409,6 +448,28 @@ export default function AIParlayPage() {
       case 'totals': return point ? `Total ${point > 0 ? 'Over' : 'Under'} ${Math.abs(point)}` : 'Total';
       default: return betType || 'Standard';
     }
+  };
+
+  // Function to track AI bet generation and user actions
+  const trackAIBet = async (betData) => {
+    try {
+      const response = await apiFetch('/api/ai-bets/track', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(betData),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ AI bet tracked:', result.ai_bet_id);
+        return result.ai_bet_id;
+      }
+    } catch (error) {
+      console.error('Failed to track AI bet:', error);
+    }
+    return null;
   };
 
   const handleFindBetterOdds = async (parlay) => {
@@ -797,6 +858,32 @@ export default function AIParlayPage() {
             </div>
           </motion.div>
         </motion.div>
+      </section>
+
+      {/* AI Performance Dashboard */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-[#E5E7EB] mb-4">
+              AI Performance Track Record
+            </h2>
+            <p className="text-[#9CA3AF] text-lg max-w-2xl mx-auto">
+              See how our AI-generated parlays perform in real-time. Transparent results build confidence.
+            </p>
+          </motion.div>
+
+          <AIPerformanceDashboard 
+            period={30}
+            user_id={currentUser?.id}
+            showUserStats={!!currentUser}
+          />
+        </div>
       </section>
       
       <Footer />
