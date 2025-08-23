@@ -1,8 +1,8 @@
 // pages/api/optimized-generate-parlay.js
 // Optimized parlay generation with 60-80% cost reduction
 
-import optimizedEVFetcher from '../../lib/optimized-ev-fetcher.js';
-import openai from '../../lib/openai.js';
+const optimizedEVFetcher = require('../../lib/optimized-ev-fetcher.js');
+const openai = require('../../lib/openai.js');
 
 export default async function handler(req, res) {
   console.log('🚀 [OptimizedParlay] Starting optimized parlay generation');

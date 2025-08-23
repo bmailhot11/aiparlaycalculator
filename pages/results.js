@@ -61,7 +61,7 @@ export default function ResultsPage() {
   const fetchDailyPicks = async () => {
     setPicksLoading(true);
     try {
-      const response = await fetch('/api/daily-picks/today');
+      const response = await fetch('/api/daily-picks/today-static');
       const data = await response.json();
       
       if (data.success) {

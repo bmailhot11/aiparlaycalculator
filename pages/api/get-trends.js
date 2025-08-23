@@ -1,7 +1,7 @@
 // pages/api/get-trends.js
 // API endpoint to access historical data and trend analysis
 
-import eventsCache from '../../lib/events-cache.js';
+const eventsCache = require('../../lib/events-cache.js');
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

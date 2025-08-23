@@ -1,5 +1,5 @@
-import openai from '../../lib/openai';
-import eventsCache from '../../lib/events-cache.js';
+const openai = require('../../lib/openai');
+const eventsCache = require('../../lib/events-cache.js');
 
 export default async function handler(req, res) {
   // Environment Variables Check
