@@ -15,154 +15,114 @@ export async function generateImprovedSlipImage({ originalSlip, improvedBets, ex
   canvas.width = width;
   canvas.height = height;
   
-  // Background (light gray like template)
-  ctx.fillStyle = '#f5f5f5';
-  ctx.fillRect(0, 0, width, height);
+  try {
+    // Load the BetChekr template as base
+    const templateImg = new Image();
+    templateImg.crossOrigin = 'anonymous';
+    
+    const templateLoaded = new Promise((resolve, reject) => {
+      templateImg.onload = resolve;
+      templateImg.onerror = reject;
+      templateImg.src = '/betchekr_betslip_template_with_provided_logo.jpg';
+    });
+    
+    await templateLoaded;
+    
+    // Draw the template as background
+    ctx.drawImage(templateImg, 0, 0, width, height);
+    
+  } catch (error) {
+    console.log('⚠️ Template not loaded, using plain background');
+    // Fallback to plain background
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(0, 0, width, height);
+  }
   
-  // Header section - BetChekr branding
-  const headerHeight = 80;
+  // Template overlay content - position data on template
+  // Since we're using a template, we need to position text appropriately
+  // Based on typical template layout, bet info starts around y=150
+  
+  // Bet ID and Date (positioned over template fields)
   ctx.fillStyle = '#000000';
-  roundRect(ctx, 20, 20, width - 40, headerHeight, 15);
-  ctx.fill();
+  ctx.font = 'bold 14px Arial, sans-serif';
+  ctx.fillText(generateBetId(), 100, 170);
+  ctx.fillText(new Date().toLocaleDateString(), 100, 195);
   
-  // BetChekr logo and text
-  ctx.fillStyle = '#F4C430';
-  ctx.font = 'bold 32px Inter, Arial, sans-serif';
-  ctx.fillText('🦉 BETCHEKR', 40, 65);
-  
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '18px Inter, Arial, sans-serif';
-  ctx.fillText('Bet Slip', 40, 85);
-  
-  // Bet info section
-  const infoY = 130;
-  ctx.fillStyle = '#ffffff';
-  roundRect(ctx, 20, infoY, width - 40, 100, 10);
-  ctx.fill();
-  ctx.strokeStyle = '#e5e5e5';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  
-  // Left side - Bet ID and Date
-  ctx.fillStyle = '#666666';
-  ctx.font = '14px Inter, Arial, sans-serif';
-  ctx.fillText('Bet ID', 40, infoY + 25);
+  // Stake and Potential Payout (right side)
+  const rightX = width - 180;
   ctx.fillStyle = '#000000';
-  ctx.font = 'bold 16px Inter, Arial, sans-serif';
-  ctx.fillText(generateBetId(), 40, infoY + 45);
+  ctx.font = 'bold 14px Arial, sans-serif';
+  ctx.fillText(originalSlip.total_stake || '$100', rightX, 170);
   
-  ctx.fillStyle = '#666666';
-  ctx.font = '14px Inter, Arial, sans-serif';
-  ctx.fillText('Placed', 40, infoY + 70);
-  ctx.fillStyle = '#000000';
-  ctx.font = 'bold 16px Inter, Arial, sans-serif';
-  ctx.fillText(new Date().toLocaleDateString(), 40, infoY + 90);
-  
-  // Right side - Stake and Payout
-  const rightX = width - 200;
-  ctx.fillStyle = '#666666';
-  ctx.font = '14px Inter, Arial, sans-serif';
-  ctx.fillText('Stake', rightX, infoY + 25);
-  ctx.fillStyle = '#000000';
-  ctx.font = 'bold 16px Inter, Arial, sans-serif';
-  ctx.fillText(originalSlip.total_stake || '$10', rightX, infoY + 45);
-  
-  ctx.fillStyle = '#666666';
-  ctx.font = '14px Inter, Arial, sans-serif';
-  ctx.fillText('Potential Payout', rightX, infoY + 70);
+  // Calculate and display improved payout
+  const improvedPayout = calculateImprovedPayout(improvedBets, originalSlip.total_stake || '$100');
   ctx.fillStyle = '#22C55E';
-  ctx.font = 'bold 16px Inter, Arial, sans-serif';
+  ctx.font = 'bold 14px Arial, sans-serif';
+  ctx.fillText(improvedPayout, rightX, 195);
   
-  // Calculate improved payout
-  const improvedPayout = calculateImprovedPayout(improvedBets, originalSlip.total_stake || '$10');
-  ctx.fillText(improvedPayout, rightX, infoY + 90);
-  
-  // Bet legs section
+  // Bet legs section - positioned to align with template
   let currentY = 260;
-  improvedBets.forEach((bet, index) => {
-    const legHeight = 120;
+  const maxLegs = Math.min(improvedBets.length, 4); // Limit legs to fit template
+  
+  improvedBets.slice(0, maxLegs).forEach((bet, index) => {
+    const legHeight = 100; // Reduced height to fit template better
     
-    // Leg background
-    ctx.fillStyle = '#ffffff';
-    roundRect(ctx, 20, currentY, width - 40, legHeight, 10);
-    ctx.fill();
-    ctx.strokeStyle = '#e5e5e5';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    
-    // Leg number (yellow circle)
-    ctx.fillStyle = '#F4C430';
-    ctx.beginPath();
-    ctx.arc(60, currentY + 30, 20, 0, 2 * Math.PI);
-    ctx.fill();
-    
+    // Game/Matchup (main text)
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 18px Inter, Arial, sans-serif';
-    ctx.fillText((index + 1).toString(), 55, currentY + 36);
-    
-    // League
-    ctx.fillStyle = '#666666';
-    ctx.font = '14px Inter, Arial, sans-serif';
-    ctx.fillText(`{${bet.league || 'NFL'}}`, 100, currentY + 25);
-    
-    // Matchup
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold 20px Inter, Arial, sans-serif';
-    ctx.fillText(bet.matchup || bet.game, 100, currentY + 50);
+    ctx.font = 'bold 16px Arial, sans-serif';
+    const gameText = bet.matchup || bet.game || `Game ${index + 1}`;
+    ctx.fillText(gameText, 50, currentY + 25);
     
     // Market and Selection
-    ctx.fillStyle = '#000000';
-    ctx.font = '16px Inter, Arial, sans-serif';
-    ctx.fillText(`${bet.market} • ${bet.selection}`, 100, currentY + 75);
+    ctx.fillStyle = '#333333';
+    ctx.font = '14px Arial, sans-serif';
+    const betText = `${bet.market || 'Bet'}: ${bet.selection || 'TBD'}`;
+    ctx.fillText(betText, 50, currentY + 45);
     
-    // Odds (right side)
+    // Sportsbook
+    ctx.fillStyle = '#666666';
+    ctx.font = '12px Arial, sans-serif';
+    ctx.fillText(bet.sportsbook || 'Best Line', 50, currentY + 65);
+    
+    // Odds (right aligned)
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 20px Inter, Arial, sans-serif';
-    const oddsText = `${bet.odds} (${bet.decimal_odds})`;
+    ctx.font = 'bold 16px Arial, sans-serif';
+    const oddsText = bet.odds || '+100';
     const oddsWidth = ctx.measureText(oddsText).width;
-    ctx.fillText(oddsText, width - oddsWidth - 40, currentY + 50);
+    ctx.fillText(oddsText, width - oddsWidth - 50, currentY + 35);
     
-    // Status badge
-    const status = bet.improved ? 'IMPROVED' : 'ORIGINAL';
-    const statusColor = bet.improved ? '#22C55E' : '#9CA3AF';
-    
-    ctx.fillStyle = statusColor;
-    roundRect(ctx, width - 120, currentY + 75, 80, 25, 12);
-    ctx.fill();
-    
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 12px Inter, Arial, sans-serif';
-    const statusWidth = ctx.measureText(status).width;
-    ctx.fillText(status, width - 120 + (80 - statusWidth) / 2, currentY + 92);
-    
-    currentY += legHeight + 15;
+    currentY += legHeight;
   });
   
-  // Notes section
-  const notesY = currentY + 20;
-  ctx.fillStyle = '#ffffff';
-  roundRect(ctx, 20, notesY, width - 40, 150, 10);
-  ctx.fill();
-  ctx.strokeStyle = '#e5e5e5';
-  ctx.lineWidth = 1;
-  ctx.stroke();
+  // Notes section - minimal explanation positioned in template notes area
+  const notesY = Math.max(currentY + 30, 750); // Position in lower area of template
   
-  ctx.fillStyle = '#666666';
-  ctx.font = '14px Inter, Arial, sans-serif';
-  ctx.fillText('Notes', 40, notesY + 25);
+  // Add minimal bet explanation
+  ctx.fillStyle = '#333333';
+  ctx.font = '12px Arial, sans-serif';
   
-  // Wrap explanation text
-  ctx.fillStyle = '#000000';
-  ctx.font = '14px Inter, Arial, sans-serif';
-  const wrappedText = wrapText(ctx, explanation, width - 80, 16);
-  wrappedText.forEach((line, index) => {
-    ctx.fillText(line, 40, notesY + 50 + (index * 18));
+  const shortExplanation = createMinimalExplanation(improvedBets, explanation);
+  const wrappedText = wrapText(ctx, shortExplanation, width - 100, 14);
+  wrappedText.slice(0, 4).forEach((line, index) => { // Limit to 4 lines max
+    ctx.fillText(line, 50, notesY + (index * 16));
   });
   
   return canvas.toDataURL('image/png', 0.96);
 }
 
 // Helper functions
+function createMinimalExplanation(bets, fullExplanation) {
+  const legCount = bets.length;
+  const avgEV = bets.reduce((sum, bet) => sum + (bet.expected_value || 0), 0) / legCount;
+  const hasEV = avgEV > 0;
+  
+  if (hasEV) {
+    return `${legCount}-leg parlay with ${(avgEV * 100).toFixed(1)}% avg edge. Mathematical analysis shows positive expected value.`;
+  } else {
+    return `${legCount}-leg parlay with diversified market selection. Recommended bet sizing: 2-3% of bankroll.`;
+  }
+}
+
 function roundRect(ctx, x, y, width, height, radius) {
   ctx.beginPath();
   ctx.moveTo(x + radius, y);

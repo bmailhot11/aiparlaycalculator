@@ -3,6 +3,7 @@
 
 const optimizedEVFetcher = require('../../lib/optimized-ev-fetcher.js');
 const openai = require('../../lib/openai.js');
+const eventsCache = require('../../lib/events-cache.js');
 
 export default async function handler(req, res) {
   console.log('🚀 [OptimizedParlay] Starting optimized parlay generation');
@@ -28,18 +29,43 @@ export default async function handler(req, res) {
     console.log(`🎯 [OptimizedParlay] Fetching EV+ candidates for ${config.sport}`);
     const evResult = await optimizedEVFetcher.fetchOptimalEVLines(config.sport, config);
     
-    if (!evResult.success || evResult.lines.length === 0) {
+    let availableLines = [];
+    let hasPositiveEV = false;
+    
+    if (evResult.success && evResult.lines.length > 0) {
+      availableLines = evResult.lines;
+      hasPositiveEV = true;
+      console.log(`✅ [OptimizedParlay] Found ${evResult.lines.length} positive EV lines`);
+    } else {
+      // Safeguard: Still generate parlay from available data without EV requirement
+      console.log(`⚠️ [OptimizedParlay] No positive EV found, using standard betting options`);
+      try {
+        const standardData = await eventsCache.cacheUpcomingEvents(config.sport);
+        if (standardData && standardData.length > 0) {
+          const markets = getSportMarkets(config.sport);
+          const oddsData = await eventsCache.getOddsForEvents(standardData, markets, false);
+          availableLines = extractStandardBettingLines(oddsData, config.sport);
+        }
+      } catch (fallbackError) {
+        console.error('Fallback data fetch failed:', fallbackError);
+        return res.status(400).json({
+          success: false,
+          message: `No betting opportunities available for ${config.sport}. This sport may be out of season.`,
+          performance: evResult.performance
+        });
+      }
+    }
+    
+    if (availableLines.length === 0) {
       return res.status(400).json({
         success: false,
-        message: `No positive EV opportunities found for ${config.sport}. This sport may be out of season or have no current value bets.`,
+        message: `No betting opportunities available for ${config.sport}. This sport may be out of season.`,
         performance: evResult.performance
       });
     }
 
-    console.log(`✅ [OptimizedParlay] Found ${evResult.lines.length} positive EV lines`);
-
     // Step 2: Generate optimized parlay with minimal token usage
-    const parlayData = await generateOptimizedParlay(config, evResult.lines);
+    const parlayData = await generateOptimizedParlay(config, availableLines, hasPositiveEV);
 
     const endTime = Date.now();
     const totalDuration = endTime - startTime;
@@ -71,28 +97,30 @@ export default async function handler(req, res) {
 }
 
 // OPTIMIZATION: Minimal token usage for parlay generation
-async function generateOptimizedParlay(preferences, positiveEVLines) {
-  console.log(`🧮 [OptimizedParlay] Generating parlay from ${positiveEVLines.length} EV+ lines`);
+async function generateOptimizedParlay(preferences, availableLines, hasPositiveEV = false) {
+  console.log(`🧮 [OptimizedParlay] Generating parlay from ${availableLines.length} ${hasPositiveEV ? 'EV+' : 'standard'} lines`);
   
-  // Filter by risk level and select best EV options
-  const riskFilteredLines = filterByRiskLevel(positiveEVLines, preferences.riskLevel, preferences.legs, preferences.includePlayerProps);
+  // Filter by risk level and select best options
+  const riskFilteredLines = hasPositiveEV ? 
+    filterByRiskLevel(availableLines, preferences.riskLevel, preferences.legs, preferences.includePlayerProps) :
+    filterStandardLines(availableLines, preferences.legs, preferences.includePlayerProps);
   console.log(`🎯 [OptimizedParlay] Risk-filtered to ${riskFilteredLines.length} lines`);
   
   if (riskFilteredLines.length < preferences.legs) {
     console.log(`⚠️ [OptimizedParlay] Not enough ${preferences.riskLevel} risk lines, trying fallback strategies`);
     
-    // Fallback Strategy 1: Try with fewer legs if we have some positive EV lines
-    if (positiveEVLines.length >= 2) {
-      console.log(`🔄 [OptimizedParlay] Fallback: Reducing to ${positiveEVLines.length}-leg parlay`);
-      const adjustedPreferences = { ...preferences, legs: Math.min(positiveEVLines.length, 3) };
-      return await generateWithFallback(adjustedPreferences, positiveEVLines, 'reduced_legs');
+    // Fallback Strategy 1: Try with fewer legs if we have some lines
+    if (availableLines.length >= 2) {
+      console.log(`🔄 [OptimizedParlay] Fallback: Reducing to ${availableLines.length}-leg parlay`);
+      const adjustedPreferences = { ...preferences, legs: Math.min(availableLines.length, 3) };
+      return await generateWithFallback(adjustedPreferences, availableLines, 'reduced_legs', hasPositiveEV);
     }
     
-    // Fallback Strategy 2: Use all available positive EV lines regardless of risk level
-    if (positiveEVLines.length > 0) {
-      console.log(`🔄 [OptimizedParlay] Fallback: Using all ${positiveEVLines.length} positive EV lines`);
-      const adjustedPreferences = { ...preferences, legs: positiveEVLines.length, riskLevel: 'mixed' };
-      return await generateWithFallback(adjustedPreferences, positiveEVLines, 'mixed_risk');
+    // Fallback Strategy 2: Use all available lines regardless of risk level
+    if (availableLines.length > 0) {
+      console.log(`🔄 [OptimizedParlay] Fallback: Using all ${availableLines.length} available lines`);
+      const adjustedPreferences = { ...preferences, legs: availableLines.length, riskLevel: 'mixed' };
+      return await generateWithFallback(adjustedPreferences, availableLines, 'mixed_risk', hasPositiveEV);
     }
     
     throw new Error(`No positive EV opportunities available for ${preferences.sport}. This sport may be out of season or have limited betting markets.`);
@@ -473,13 +501,13 @@ function decimalToAmerican(decimal) {
 }
 
 // Fallback parlay generation when insufficient data for requested parameters
-async function generateWithFallback(preferences, lines, fallbackReason) {
+async function generateWithFallback(preferences, lines, fallbackReason, hasPositiveEV = false) {
   console.log(`🔄 [OptimizedParlay] Generating fallback parlay: ${fallbackReason}`);
   
-  // Use all available positive EV lines
-  const topLines = lines
-    .sort((a, b) => b.expected_value - a.expected_value)
-    .slice(0, preferences.legs);
+  // Sort lines appropriately based on whether we have EV data
+  const topLines = hasPositiveEV 
+    ? lines.sort((a, b) => b.expected_value - a.expected_value).slice(0, preferences.legs)
+    : lines.slice(0, preferences.legs); // For standard lines, just take first available
 
   try {
     const parlayResponse = await openai.chat.completions.create({
@@ -562,4 +590,85 @@ function convertAIResponseToStandardFormat(aiParlay, availableLines, preferences
     ai_enhanced: true,
     fallback_applied: fallbackReason
   };
+}
+
+// Helper functions for sport market configuration and line extraction
+
+// Get sport markets (remove non-North American sports)
+function getSportMarkets(sport) {
+  // Only North American major sports
+  const supportedSports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB'];
+  
+  if (!supportedSports.includes(sport)) {
+    throw new Error(`Unsupported sport: ${sport}. Only North American major sports are supported.`);
+  }
+  
+  return 'h2h,spreads,totals';
+}
+
+// Extract standard betting lines from odds data
+function extractStandardBettingLines(oddsData, sport) {
+  const lines = [];
+  
+  for (const game of oddsData) {
+    if (!game.bookmakers) continue;
+    
+    for (const bookmaker of game.bookmakers) {
+      if (!bookmaker.markets) continue;
+      
+      for (const market of bookmaker.markets) {
+        for (const outcome of market.outcomes || []) {
+          lines.push({
+            game: `${game.away_team} @ ${game.home_team}`,
+            sportsbook: bookmaker.title,
+            market_type: market.key,
+            selection: outcome.name,
+            odds: outcome.price,
+            decimal_odds: americanToDecimal(outcome.price),
+            expected_value: 0, // Standard lines don't have EV calculation
+            sport: sport,
+            commence_time: game.commence_time
+          });
+        }
+      }
+    }
+  }
+  
+  return lines;
+}
+
+// Filter standard lines for non-EV parlays
+function filterStandardLines(lines, targetLegs, includePlayerProps = false) {
+  // Simple diversification - different games and market types
+  const diversifiedLines = [];
+  const usedGames = new Set();
+  const usedMarketTypes = new Set();
+  
+  for (const line of lines) {
+    // Skip if already used this game (for diversification)
+    if (usedGames.has(line.game)) continue;
+    
+    // Prefer different market types for variety
+    if (usedMarketTypes.has(line.market_type) && diversifiedLines.length < targetLegs) {
+      continue;
+    }
+    
+    diversifiedLines.push(line);
+    usedGames.add(line.game);
+    usedMarketTypes.add(line.market_type);
+    
+    if (diversifiedLines.length >= targetLegs) break;
+  }
+  
+  return diversifiedLines;
+}
+
+// Convert American odds to decimal
+function americanToDecimal(american) {
+  const odds = typeof american === 'string' ? parseInt(american.replace('+', '')) : american;
+  if (odds > 0) {
+    return 1 + (odds / 100);
+  } else {
+    return 1 + (100 / Math.abs(odds));
+  }
 }

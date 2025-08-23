@@ -55,7 +55,7 @@ export default function AIParlayPage() {
     '/api/placeholder/200/150'
   ];
 
-  const sports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'UFC', 'MLS', 'UEFA', 'Tennis'];
+  const sports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB'];
 
   useEffect(() => {
     // Load user and check usage
@@ -437,10 +437,6 @@ export default function AIParlayPage() {
       'MLB': 'MLB',
       'NCAAF': 'NCAAF',
       'NCAAB': 'NCAAB',
-      'UFC': 'UFC',
-      'MLS': 'MLS',
-      'UEFA': 'UEFA',
-      'Tennis': 'ATP'
     };
     return sportMap[sport] || sport || 'League';
   };
