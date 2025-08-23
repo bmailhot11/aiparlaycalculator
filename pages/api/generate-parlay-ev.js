@@ -330,37 +330,19 @@ function getSportMarkets(sport, includePlayerProps = true) {
     const playerPropMarkets = [
       'player_pass_tds',
       'player_pass_yds', 
-      'player_pass_completions',
-      'player_pass_attempts',
-      'player_pass_interceptions',
       'player_rush_yds',
-      'player_rush_attempts',
-      'player_rush_tds',
       'player_receptions',
       'player_reception_yds',
-      'player_reception_tds',
-      'player_kicking_points',
-      'player_field_goals',
-      'player_tackles_assists',
-      'player_1st_td',
       'player_anytime_td',
       'player_points',
       'player_rebounds',
       'player_assists',
       'player_threes',
-      'player_blocks',
-      'player_steals',
-      'player_turnovers',
-      'player_pts_rebs_asts',
-      'player_shots',
       'player_goals',
       'player_hits',
       'player_home_runs',
-      'player_total_bases',
       'player_rbis',
-      'player_runs',
-      'player_hits_runs_rbis',
-      'player_strikeouts'
+      'pitcher_strikeouts'
     ].join(',');
     
     markets = `${markets},${playerPropMarkets}`;
