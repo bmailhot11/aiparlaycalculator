@@ -81,7 +81,7 @@ export default function Pricing() {
                 <div className="text-center">
                   <div className="text-red-400 text-xl font-bold mb-4">Other Betting Tools</div>
                   <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6">
-                    <div className="text-3xl font-bold text-red-400 mb-2">$200-500</div>
+                    <div className="text-3xl font-bold text-red-400 mb-2">$80-300</div>
                     <div className="text-sm text-gray-400 mb-4">per month</div>
                     <ul className="text-sm text-gray-300 space-y-2 text-left">
                       <li>• Complex tier systems</li>
@@ -219,7 +219,7 @@ export default function Pricing() {
                       At $9.99/month, our tool pays for itself with just one optimized bet.
                     </p>
                     <p>
-                      While competitors charge $200-500+ for similar analysis, we keep costs low by focusing on 
+                      While competitors charge $80-300+ for similar analysis, we keep costs low by focusing on 
                       what matters: mathematical accuracy and user value, not premium pricing.
                     </p>
                     <p>
@@ -234,24 +234,24 @@ export default function Pricing() {
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-300">Professional EV analysis</span>
-                      <span className="text-green-400">$200+ elsewhere</span>
+                      <span className="text-green-400">$80+ elsewhere</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-300">Real-time odds feeds</span>
-                      <span className="text-green-400">$50+ elsewhere</span>
+                      <span className="text-green-400">$40+ elsewhere</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-300">AI-powered insights</span>
-                      <span className="text-green-400">$100+ elsewhere</span>
+                      <span className="text-green-400">$60+ elsewhere</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-300">Unlimited usage</span>
-                      <span className="text-green-400">$50+ elsewhere</span>
+                      <span className="text-green-400">$30+ elsewhere</span>
                     </div>
                     <div className="border-t border-gray-600 pt-3 mt-3">
                       <div className="flex justify-between font-bold">
                         <span className="text-white">Total Value</span>
-                        <span className="text-red-400 line-through">$400+</span>
+                        <span className="text-red-400 line-through">$210+</span>
                       </div>
                       <div className="flex justify-between font-bold text-lg">
                         <span className="text-blue-400">Our Price</span>
@@ -283,7 +283,7 @@ export default function Pricing() {
                   answer: "None. $9.99/month gets you unlimited access to all features. No per-analysis charges, no premium tiers."
                 },
                 {
-                  question: "How does this compare to $200+ tools?",
+                  question: "How does this compare to $80-300+ tools?",
                   answer: "We provide the same mathematical rigor and real-time data as expensive tools, just without the premium markup. Same accuracy, better price."
                 },
                 {

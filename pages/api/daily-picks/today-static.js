@@ -35,7 +35,7 @@ export default async function handler(req, res) {
         awayTeam: 'Colorado Rockies',
         selection: 'Over 8.5',
         bestOdds: '-110',
-        bestSportsbook: 'FanDuel',
+        bestSportsbook: 'DraftKings',
         marketType: 'Total',
         edgePercentage: 3.1
       }, {
@@ -43,8 +43,8 @@ export default async function handler(req, res) {
         homeTeam: 'Arizona Diamondbacks',
         awayTeam: 'San Diego Padres',
         selection: 'San Diego Padres',
-        bestOdds: '-125',
-        bestSportsbook: 'BetMGM',
+        bestOdds: '-130',
+        bestSportsbook: 'DraftKings',
         marketType: 'Moneyline',
         edgePercentage: 2.8
       }],
@@ -68,8 +68,8 @@ export default async function handler(req, res) {
         homeTeam: 'Arizona Diamondbacks',
         awayTeam: 'San Diego Padres',
         selection: 'San Diego Padres',
-        bestOdds: '-125',
-        bestSportsbook: 'BetMGM',
+        bestOdds: '-130',
+        bestSportsbook: 'FanDuel',
         marketType: 'Moneyline',
         edgePercentage: 2.8
       }, {
@@ -78,7 +78,7 @@ export default async function handler(req, res) {
         awayTeam: 'Texas Rangers',
         selection: 'Under 9.0',
         bestOdds: '-105',
-        bestSportsbook: 'Caesars',
+        bestSportsbook: 'FanDuel',
         marketType: 'Total',
         edgePercentage: 2.4
       }, {
@@ -86,8 +86,8 @@ export default async function handler(req, res) {
         homeTeam: 'Los Angeles Angels',
         awayTeam: 'Houston Astros',
         selection: 'Houston Astros',
-        bestOdds: '-140',
-        bestSportsbook: 'DraftKings',
+        bestOdds: '-135',
+        bestSportsbook: 'FanDuel',
         marketType: 'Moneyline',
         edgePercentage: 1.9
       }],
