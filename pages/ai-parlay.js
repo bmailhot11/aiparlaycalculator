@@ -873,8 +873,11 @@ export default function AIParlayPage() {
             <h2 className="text-3xl md:text-4xl font-bold text-[#E5E7EB] mb-4">
               AI Performance Track Record
             </h2>
-            <p className="text-[#9CA3AF] text-lg max-w-2xl mx-auto">
+            <p className="text-[#9CA3AF] text-lg max-w-2xl mx-auto mb-4">
               See how our AI-generated parlays perform in real-time. Transparent results build confidence.
+            </p>
+            <p className="text-[#6B7280] text-sm">
+              AI bet tracking began August 23, 2025
             </p>
           </motion.div>
 

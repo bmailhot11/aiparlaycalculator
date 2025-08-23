@@ -739,8 +739,11 @@ export default function Home() {
             <h2 className="text-[#E5E7EB] text-3xl md:text-4xl font-bold mb-6">
               AI Performance Track Record
             </h2>
-            <p className="text-[#9CA3AF] text-xl max-w-2xl mx-auto">
+            <p className="text-[#9CA3AF] text-xl max-w-2xl mx-auto mb-4">
               See how our AI recommendations perform. Transparent results build confidence in our tools.
+            </p>
+            <p className="text-[#6B7280] text-sm">
+              AI bet tracking began August 23, 2025
             </p>
           </motion.div>
 

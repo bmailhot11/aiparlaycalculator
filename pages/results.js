@@ -66,8 +66,11 @@ export default function ResultsPage() {
               <BarChart3 className="w-10 h-10 text-[#F4C430]" />
               <h1 className="text-4xl font-bold text-[#E5E7EB]">Track Record</h1>
             </div>
-            <p className="text-[#9CA3AF] text-lg max-w-2xl mx-auto">
+            <p className="text-[#9CA3AF] text-lg max-w-2xl mx-auto mb-4">
               Transparent performance tracking with complete methodology disclosure
+            </p>
+            <p className="text-[#6B7280] text-sm">
+              Results tracking began August 23, 2025
             </p>
           </motion.div>
 
