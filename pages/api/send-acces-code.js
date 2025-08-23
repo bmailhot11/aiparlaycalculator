@@ -90,7 +90,7 @@ export default async function handler(req, res) {
         
         <div style="text-align: center;">
           <p style="color: #6b7280; font-size: 14px; margin: 0;">
-            Need help? Contact us at <a href="mailto:support@aiparlaycalculator.com" style="color: #10b981;">support@aiparlaycalculator.com</a>
+            Need help? Contact us at <a href="mailto:support@betchekr.com" style="color: #10b981;">support@betchekr.com</a>
           </p>
           <p style="color: #9ca3af; font-size: 12px; margin: 10px 0 0 0;">
             This code should not be shared with others.
@@ -100,7 +100,7 @@ export default async function handler(req, res) {
     `;
 
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'noreply@aiparlaycalculator.com',
+      from: process.env.EMAIL_FROM || 'noreply@betchekr.com',
       to: email,
       subject: subject,
       html: htmlContent,

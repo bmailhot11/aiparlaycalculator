@@ -265,7 +265,7 @@ async function sendAccessCodeEmail(email) {
     console.log('🔐 Sending access code to:', email);
     
     // Use your actual domain directly
-    const baseUrl = 'https://aiparlaycalculator.com';
+    const baseUrl = 'https://www.betchekr.com';
     
     const response = await fetch(`${baseUrl}/api/send-access-code`, {
       method: 'POST',

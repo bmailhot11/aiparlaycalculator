@@ -238,7 +238,7 @@ export default function Privacy() {
                   If you have any questions about this Privacy Policy or our data practices, please contact us:
                 </p>
                 <div className="space-y-2 text-gray-300">
-                  <p><strong>Email:</strong> privacy@aiparlaycalculator.com</p>
+                  <p><strong>Email:</strong> privacy@betchekr.com</p>
                   <p><strong>Subject:</strong> Privacy Policy Inquiry</p>
                   <p><strong>Response Time:</strong> We aim to respond within 48 hours</p>
                 </div>

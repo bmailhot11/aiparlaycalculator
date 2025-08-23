@@ -1,12 +1,35 @@
 import { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'next/router';
+import { motion } from 'framer-motion';
 import Head from 'next/head';
 import { TrendingUp, RefreshCw, Filter, Calculator, Shield, Target, Zap, Crown, AlertTriangle, Check, Plus, X, Home } from 'lucide-react';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
 import { PremiumContext } from './_app';
 
 export default function EVLines() {
   const router = useRouter();
   const { isPremium } = useContext(PremiumContext);
+  
+  // Hero background images (sports-related)
+  const backgroundImages = [
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150',
+    '/api/placeholder/200/150'
+  ];
   
   const [selectedSport, setSelectedSport] = useState('NFL');
   const [evLines, setEvLines] = useState([]);
@@ -256,19 +279,19 @@ export default function EVLines() {
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://aiparlaycalculator.com/ev-lines" />
+        <meta property="og:url" content="https://www.betchekr.com/ev-lines" />
         <meta property="og:title" content="Find Positive EV Betting Lines - AiParlayCalculator" />
         <meta property="og:description" content="Discover mathematically profitable betting opportunities with positive expected value analysis across all major sports." />
         <meta property="og:image" content="/og-image.png" />
         
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://aiparlaycalculator.com/ev-lines" />
+        <meta property="twitter:url" content="https://www.betchekr.com/ev-lines" />
         <meta property="twitter:title" content="Positive EV Lines - Smart Betting Analysis" />
         <meta property="twitter:description" content="Find value bets with mathematical edge. Real-time positive EV line detection." />
         
         {/* Canonical */}
-        <link rel="canonical" href="https://aiparlaycalculator.com/ev-lines" />
+        <link rel="canonical" href="https://www.betchekr.com/ev-lines" />
       </Head>
       
       <div className="min-h-screen bg-gray-900">

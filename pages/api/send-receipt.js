@@ -91,7 +91,7 @@ export default async function handler(req, res) {
         </div>
 
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://aiparlaycalculator.com" style="background: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+          <a href="https://www.betchekr.com" style="background: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
             Start Using Premium Features
           </a>
         </div>
@@ -100,7 +100,7 @@ export default async function handler(req, res) {
         
         <div style="text-align: center;">
           <p style="color: #6b7280; font-size: 14px; margin: 0;">
-            Questions? Contact us at <a href="mailto:support@aiparlaycalculator.com" style="color: #10b981;">support@aiparlaycalculator.com</a>
+            Questions? Contact us at <a href="mailto:support@betchekr.com" style="color: #10b981;">support@betchekr.com</a>
           </p>
           <p style="color: #9ca3af; font-size: 12px; margin: 10px 0 0 0;">
             Thank you for choosing BetrParlay Premium!
@@ -110,7 +110,7 @@ export default async function handler(req, res) {
     `;
 
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'noreply@aiparlaycalculator.com',
+      from: process.env.EMAIL_FROM || 'noreply@betchekr.com',
       to: email,
       subject: '🎉 BetrParlay Premium Activated - Welcome!',
       html: htmlContent,
