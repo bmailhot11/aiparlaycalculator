@@ -28,19 +28,19 @@ export default function AIParlayGuide() {
   const faqData = [
     {
       question: "What is AI sports betting?",
-      answer: "AI sports betting uses algorithms to analyze games, odds, and markets. Tools like Betchekr make it easy to spot value and manage risk by processing vast amounts of data in real-time."
+      answer: "AI sports betting uses algorithms to analyze games, odds, and markets. Tools like BetChekr make it easy to spot value and manage risk by processing vast amounts of data in real-time."
     },
     {
       question: "Can AI predict sports betting results?",
-      answer: "Not perfectly. But Betchekr's AI shows when odds don't line up with reality, giving you an edge by identifying positive expected value opportunities."
+      answer: "Not perfectly. But BetChekr's AI shows when odds don't line up with reality, giving you an edge by identifying positive expected value opportunities."
     },
     {
       question: "How do you use AI for sports betting?",
-      answer: "Use it for line shopping, positive EV bets, bankroll checks, and parlay math. Betchekr combines all of these in one tool for comprehensive betting analysis."
+      answer: "Use it for line shopping, positive EV bets, bankroll checks, and parlay math. BetChekr combines all of these in one tool for comprehensive betting analysis."
     },
     {
       question: "What's the best AI for parlays?",
-      answer: "Betchekr. It calculates win probabilities, checks boosts, runs EV math, and simulates bankroll swings automatically."
+      answer: "BetChekr. It calculates win probabilities, checks boosts, runs EV math, and simulates bankroll swings automatically."
     }
   ];
 

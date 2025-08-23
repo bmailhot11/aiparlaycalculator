@@ -43,7 +43,7 @@ export default function Header() {
               className="w-10 h-10 object-contain"
             />
             <span className="text-[#E5E7EB] text-xl font-bold tracking-[-0.01em]" style={{ fontWeight: 700 }}>
-              betchekr
+              BetChekr
             </span>
           </Link>
 

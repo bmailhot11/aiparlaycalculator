@@ -209,7 +209,7 @@ export default function AIParlayPage() {
           date: new Date().toLocaleDateString()
         },
         logoUrl: '/betchekr_owl_logo.png',
-        brand: 'betchekr'
+        brand: 'BetChekr'
       });
       downloadImage(imageData);
     }
@@ -226,7 +226,7 @@ export default function AIParlayPage() {
           date: new Date().toLocaleDateString()
         },
         logoUrl: '/betchekr_owl_logo.png',
-        brand: 'betchekr'
+        brand: 'BetChekr'
       });
       const success = await copyImageToClipboard(imageData);
       if (success) {

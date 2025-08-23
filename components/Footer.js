@@ -31,7 +31,7 @@ export default function Footer() {
           <div className="space-y-4">
             <Link href="/" className="inline-block">
               <span className="text-[#E5E7EB] text-lg font-bold tracking-[-0.01em]" style={{ fontWeight: 700 }}>
-                betchekr
+                BetChekr
               </span>
             </Link>
             <p className="text-[#6B7280] text-sm leading-relaxed">
@@ -65,7 +65,7 @@ export default function Footer() {
         <div className="mt-12 pt-8 border-t border-[#1F2937]">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
             <p className="text-[#6B7280] text-xs">
-              © {currentYear} betchekr. All rights reserved.
+              © {currentYear} BetChekr. All rights reserved.
             </p>
             <div className="flex items-center space-x-6">
               <Link href="/terms" className="text-[#6B7280] hover:text-[#F4C430] text-xs transition-colors">

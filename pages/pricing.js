@@ -52,7 +52,7 @@ export default function Pricing() {
   return (
     <>
       <Head>
-        <title>Pricing - betchekr</title>
+        <title>Pricing - BetChekr</title>
         <meta name="description" content="Simple, affordable pricing at $9.99/month. Professional-grade betting analysis without the premium price tag. No tiers, no limits, just smart betting tools." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/betchekr_owl_logo.ico" />
@@ -94,7 +94,7 @@ export default function Pricing() {
                 </div>
 
                 <div className="text-center">
-                  <div className="text-blue-400 text-xl font-bold mb-4">betchekr</div>
+                  <div className="text-blue-400 text-xl font-bold mb-4">BetChekr</div>
                   <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/50 rounded-lg p-6 relative">
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                       <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-bold">BEST VALUE</span>

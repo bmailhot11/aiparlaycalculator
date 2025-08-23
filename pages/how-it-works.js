@@ -9,7 +9,7 @@ export default function HowItWorks() {
   return (
     <>
       <Head>
-        <title>How It Works - betchekr</title>
+        <title>How It Works - BetChekr</title>
         <meta name="description" content="Learn how our AI-powered parlay calculator helps you make mathematically responsible betting decisions with advanced expected value analysis." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/betchekr_owl_logo.ico" />
