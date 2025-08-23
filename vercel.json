@@ -5,9 +5,29 @@
   "installCommand": "npm install",
   "devCommand": "npm run dev",
   "regions": ["iad1"],
+  "crons": [
+    {
+      "path": "/api/daily-picks/warm-cache",
+      "schedule": "55 15 * * *"
+    },
+    {
+      "path": "/api/daily-picks/publish",
+      "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/daily-picks/grade-bets",
+      "schedule": "0 4-11 * * *"
+    }
+  ],
   "functions": {
     "pages/api/**/*.js": {
       "maxDuration": 30
+    },
+    "pages/api/daily-picks/publish.js": {
+      "maxDuration": 300
+    },
+    "pages/api/daily-picks/grade-bets.js": {
+      "maxDuration": 300
     }
   },
   "headers": [
