@@ -9,7 +9,7 @@ export default function Terms() {
         <title>Terms of Service - BetGenius</title>
         <meta name="description" content="BetGenius Terms of Service - Terms and conditions for using our AI-powered sports betting analysis platform." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/betchekr_owl_logo.ico" />
       </Head>
 
       <div className="min-h-screen bg-gray-900 text-white">

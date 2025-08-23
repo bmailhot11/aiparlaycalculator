@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
 
 export default function ArbitragePage() {
@@ -18,6 +19,7 @@ export default function ArbitragePage() {
   const [arbitrageData, setArbitrageData] = useState([]);
   const [selectedSports, setSelectedSports] = useState(['NFL']);
   const [minProfit, setMinProfit] = useState('1');
+  const [showPaywall, setShowPaywall] = useState(false);
 
   // Hero background images (sports-related)
   const backgroundImages = [
@@ -145,6 +147,12 @@ export default function ArbitragePage() {
   };
 
   const handleFindArbitrages = async () => {
+    // Show paywall for free users
+    if (!isPremium) {
+      setShowPaywall(true);
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -188,6 +196,13 @@ export default function ArbitragePage() {
   return (
     <div className="min-h-screen bg-[#0B0F14]">
       <Header />
+      
+      {/* Paywall Overlay */}
+      {showPaywall && (
+        <Paywall 
+          feature="arbitrage finder" 
+        />
+      )}
       
       {/* Hero Section with Background Collage */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">

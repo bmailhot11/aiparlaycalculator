@@ -79,7 +79,23 @@ async function generateOptimizedParlay(preferences, positiveEVLines) {
   console.log(`🎯 [OptimizedParlay] Risk-filtered to ${riskFilteredLines.length} lines`);
   
   if (riskFilteredLines.length < preferences.legs) {
-    throw new Error(`Not enough ${preferences.riskLevel} risk level positive EV bets available (need ${preferences.legs}, found ${riskFilteredLines.length})`);
+    console.log(`⚠️ [OptimizedParlay] Not enough ${preferences.riskLevel} risk lines, trying fallback strategies`);
+    
+    // Fallback Strategy 1: Try with fewer legs if we have some positive EV lines
+    if (positiveEVLines.length >= 2) {
+      console.log(`🔄 [OptimizedParlay] Fallback: Reducing to ${positiveEVLines.length}-leg parlay`);
+      const adjustedPreferences = { ...preferences, legs: Math.min(positiveEVLines.length, 3) };
+      return await generateWithFallback(adjustedPreferences, positiveEVLines, 'reduced_legs');
+    }
+    
+    // Fallback Strategy 2: Use all available positive EV lines regardless of risk level
+    if (positiveEVLines.length > 0) {
+      console.log(`🔄 [OptimizedParlay] Fallback: Using all ${positiveEVLines.length} positive EV lines`);
+      const adjustedPreferences = { ...preferences, legs: positiveEVLines.length, riskLevel: 'mixed' };
+      return await generateWithFallback(adjustedPreferences, positiveEVLines, 'mixed_risk');
+    }
+    
+    throw new Error(`No positive EV opportunities available for ${preferences.sport}. This sport may be out of season or have limited betting markets.`);
   }
 
   // Take only the best EV options to reduce token usage
@@ -357,4 +373,96 @@ function decimalToAmerican(decimal) {
   } else {
     return Math.round(-100 / (decimal - 1));
   }
+}
+
+// Fallback parlay generation when insufficient data for requested parameters
+async function generateWithFallback(preferences, lines, fallbackReason) {
+  console.log(`🔄 [OptimizedParlay] Generating fallback parlay: ${fallbackReason}`);
+  
+  // Use all available positive EV lines
+  const topLines = lines
+    .sort((a, b) => b.expected_value - a.expected_value)
+    .slice(0, preferences.legs);
+
+  try {
+    const parlayResponse = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `Generate an optimal parlay from available positive EV bets. Prioritize highest EV values. Return only JSON.`
+        },
+        {
+          role: "user",
+          content: `Create ${preferences.legs}-leg parlay from these positive EV bets:
+
+${formatCompactEVLines(topLines)}
+
+JSON format:
+{"legs":[{"game":"","sbook":"","type":"","pick":"","odds":"","ev":""}],"total_odds":"","confidence":"","ev_total":""}`
+        }
+      ],
+      max_tokens: 300,
+      temperature: 0.1
+    });
+
+    const aiResponse = parlayResponse.choices[0].message.content;
+    console.log(`🔄 [OptimizedParlay] AI parsing fallback parlay`);
+    
+    let parsedParlay;
+    try {
+      const cleanResponse = aiResponse.replace(/```json\n?|\n?```/g, '').trim();
+      parsedParlay = JSON.parse(cleanResponse);
+    } catch (parseError) {
+      console.log(`🔄 [OptimizedParlay] AI parsing failed, using mathematical fallback`);
+      return generateMathematicalParlay(topLines, preferences, fallbackReason);
+    }
+
+    if (!parsedParlay.legs || parsedParlay.legs.length === 0) {
+      console.log('🔄 [OptimizedParlay] Empty AI response, using mathematical fallback');
+      return generateMathematicalParlay(topLines, preferences, fallbackReason);
+    }
+
+    // Convert to expected format
+    return convertAIResponseToStandardFormat(parsedParlay, topLines, preferences, fallbackReason);
+
+  } catch (error) {
+    console.log(`🔄 [OptimizedParlay] AI failed, using mathematical fallback: ${error.message}`);
+    return generateMathematicalParlay(topLines, preferences, fallbackReason);
+  }
+}
+
+// Convert AI response to standard parlay format
+function convertAIResponseToStandardFormat(aiParlay, availableLines, preferences, fallbackReason) {
+  const legs = aiParlay.legs.map(leg => {
+    const matchingLine = availableLines.find(line => 
+      line.game.includes(leg.game) || leg.game.includes(line.game)
+    );
+    
+    return {
+      game: leg.game || matchingLine?.game || 'Game TBD',
+      sportsbook: leg.sbook || matchingLine?.sportsbook || 'TBD',
+      bet_type: leg.type || matchingLine?.market_type || 'h2h',
+      selection: leg.pick || matchingLine?.selection || 'TBD',
+      odds: leg.odds || matchingLine?.odds || '+100',
+      decimal_odds: matchingLine?.decimal_odds || 2.0,
+      expected_value: matchingLine?.expected_value || 0,
+      reasoning: `Fallback selection (${fallbackReason}): +${((matchingLine?.expected_value || 0) * 100).toFixed(1)}% EV`
+    };
+  });
+
+  const totalDecimalOdds = legs.reduce((product, leg) => product * leg.decimal_odds, 1);
+  const avgEV = legs.reduce((sum, leg) => sum + leg.expected_value, 0) / legs.length;
+
+  return {
+    parlay_legs: legs,
+    total_decimal_odds: totalDecimalOdds.toFixed(2),
+    total_odds: formatOdds(decimalToAmerican(totalDecimalOdds)),
+    confidence: Math.min(85, Math.max(60, 75 - (legs.length * 5))),
+    expected_value: avgEV,
+    risk_assessment: `${legs.length}-leg positive EV parlay (${fallbackReason}). Limited betting markets available - using best available opportunities.`,
+    methodology: `fallback_${fallbackReason}`,
+    ai_enhanced: true,
+    fallback_applied: fallbackReason
+  };
 }

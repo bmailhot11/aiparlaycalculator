@@ -1,7 +1,7 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Menu, X, Crown, User } from 'lucide-react';
+import { Menu, X, Crown, User, Check } from 'lucide-react';
 import { PremiumContext } from '../pages/_app';
 
 export default function Header() {
@@ -9,9 +9,17 @@ export default function Header() {
   const { isPremium } = useContext(PremiumContext);
   const router = useRouter();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState(null);
   
-  // Mock user state - replace with actual auth logic
-  const isLoggedIn = false;
+  useEffect(() => {
+    // Check if user is logged in (has premium subscription)
+    const savedEmail = localStorage.getItem('betchekr_user_email');
+    if (savedEmail) {
+      setIsLoggedIn(true);
+      setUserEmail(savedEmail);
+    }
+  }, [isPremium]);
   
   const navLinks = [
     { href: '/positive-ev', label: 'View Positive EV Lines' },
@@ -55,13 +63,21 @@ export default function Header() {
           {/* Right Section */}
           <div className="flex items-center space-x-4">
             {/* Premium Button */}
-            <Link 
-              href="/premium"
-              className="hidden sm:inline-flex items-center px-5 py-2.5 bg-[#F4C430] text-[#0B0F14] font-semibold text-sm rounded-lg hover:bg-[#e6b829] transition-colors shadow-[0_6px_16px_rgba(244,196,48,0.35)] focus:outline-none focus:ring-2 focus:ring-[#F4C430] focus:ring-offset-2"
-            >
-              <Crown className="w-4 h-4 mr-2" />
-              Premium
-            </Link>
+            {!isPremium && (
+              <Link 
+                href="/pricing"
+                className="hidden sm:inline-flex items-center px-5 py-2.5 bg-[#F4C430] text-[#0B0F14] font-semibold text-sm rounded-lg hover:bg-[#e6b829] transition-colors shadow-[0_6px_16px_rgba(244,196,48,0.35)] focus:outline-none focus:ring-2 focus:ring-[#F4C430] focus:ring-offset-2"
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Go Premium
+              </Link>
+            )}
+            {isPremium && (
+              <div className="hidden sm:inline-flex items-center px-5 py-2.5 bg-green-600 text-white font-semibold text-sm rounded-lg">
+                <Check className="w-4 h-4 mr-2" />
+                Premium
+              </div>
+            )}
 
             {/* User Menu / Sign In */}
             {isLoggedIn ? (
@@ -89,9 +105,9 @@ export default function Header() {
                 )}
               </div>
             ) : (
-              <button className="hidden sm:block text-sm font-medium text-[#9CA3AF] hover:text-[#F4C430] transition-colors">
+              <Link href="/pricing" className="hidden sm:block text-sm font-medium text-[#9CA3AF] hover:text-[#F4C430] transition-colors">
                 Sign in
-              </button>
+              </Link>
             )}
 
             {/* Mobile Menu Button */}
@@ -128,18 +144,25 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            <Link
-              href="/premium"
-              className="flex items-center justify-center px-4 py-3 bg-[#F4C430] text-[#0B0F14] font-semibold text-sm rounded-lg hover:bg-[#e6b829] transition-colors mt-4"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Crown className="w-4 h-4 mr-2" />
-              Premium
-            </Link>
+            {!isPremium ? (
+              <Link
+                href="/pricing"
+                className="flex items-center justify-center px-4 py-3 bg-[#F4C430] text-[#0B0F14] font-semibold text-sm rounded-lg hover:bg-[#e6b829] transition-colors mt-4"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Go Premium
+              </Link>
+            ) : (
+              <div className="flex items-center justify-center px-4 py-3 bg-green-600 text-white font-semibold text-sm rounded-lg mt-4">
+                <Check className="w-4 h-4 mr-2" />
+                Premium
+              </div>
+            )}
             {!isLoggedIn && (
-              <button className="block w-full text-center px-4 py-3 text-sm font-medium text-[#9CA3AF] hover:text-[#F4C430] transition-colors">
+              <Link href="/pricing" className="block w-full text-center px-4 py-3 text-sm font-medium text-[#9CA3AF] hover:text-[#F4C430] transition-colors">
                 Sign in
-              </button>
+              </Link>
             )}
           </nav>
         </div>

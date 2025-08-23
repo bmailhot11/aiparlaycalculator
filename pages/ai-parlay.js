@@ -1,4 +1,4 @@
-import { useState, useContext, useRef } from 'react';
+import { useState, useContext, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Brain,
@@ -11,8 +11,10 @@ import {
   TrendingUp,
   Zap
 } from 'lucide-react';
+import Link from 'next/link';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
 import { renderSlipImage, downloadImage, copyImageToClipboard } from '../utils/renderSlipImage';
 
@@ -25,6 +27,9 @@ export default function AIParlayPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedParlay, setGeneratedParlay] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [usageData, setUsageData] = useState({ generations: 0 });
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Hero background images (sports-related)
   const backgroundImages = [
@@ -47,6 +52,36 @@ export default function AIParlayPage() {
   ];
 
   const sports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'UFC', 'MLS', 'UEFA', 'Tennis'];
+
+  useEffect(() => {
+    // Load user and check usage
+    const savedUser = localStorage.getItem('betchekr_user');
+    if (savedUser) {
+      try {
+        setCurrentUser(JSON.parse(savedUser));
+      } catch (error) {
+        console.error('Error loading user:', error);
+      }
+    }
+    
+    if (!isPremium) {
+      checkUsage();
+    }
+  }, [isPremium]);
+
+  const checkUsage = async () => {
+    try {
+      const userIdentifier = currentUser?.id || `anon_${Date.now()}`;
+      const response = await fetch(`/api/check-usage?userIdentifier=${userIdentifier}`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        setUsageData(data.usage);
+      }
+    } catch (error) {
+      console.error('Error checking usage:', error);
+    }
+  };
 
   const sampleParlay = {
     id: 'parlay_001',
@@ -76,6 +111,40 @@ export default function AIParlayPage() {
     if (selectedSports.length === 0) {
       alert('Please select at least one sport');
       return;
+    }
+
+    // Check usage limits for free users
+    if (!isPremium) {
+      if (usageData.generations >= 1) {
+        setShowPaywall(true);
+        return;
+      }
+      
+      // Track usage before processing
+      try {
+        const userIdentifier = currentUser?.id || `anon_${Date.now()}`;
+        const trackResponse = await fetch('/api/track-usage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'generation',
+            userIdentifier: userIdentifier
+          }),
+        });
+        
+        if (!trackResponse.ok) {
+          const error = await trackResponse.json();
+          if (trackResponse.status === 429) {
+            setShowPaywall(true);
+            return;
+          }
+        } else {
+          const trackData = await trackResponse.json();
+          setUsageData(trackData.usage);
+        }
+      } catch (error) {
+        console.error('Error tracking usage:', error);
+      }
     }
 
     setIsGenerating(true);
@@ -114,15 +183,15 @@ export default function AIParlayPage() {
         setGeneratedParlay(mappedParlay);
       } else {
         console.error('API Error:', data);
-        alert(`Parlay generation failed: ${data.message || 'Unknown error'}. Showing sample parlay instead.`);
-        // Fallback to sample data for demo
-        setGeneratedParlay(sampleParlay);
+        alert(`Failed to generate parlay: ${data.message || 'Unknown error'}`);
+        // Don't use sample data - show real error
+        setGeneratedParlay(null);
       }
     } catch (error) {
       console.error('Error generating parlay:', error);
-      alert(`Network error: ${error.message}. Showing sample parlay instead.`);
-      // Fallback to sample data
-      setGeneratedParlay(sampleParlay);
+      alert(`Network error: Unable to connect to server`);
+      // Don't use sample data - show real error
+      setGeneratedParlay(null);
     } finally {
       setIsGenerating(false);
     }
@@ -138,7 +207,7 @@ export default function AIParlayPage() {
           summary: `AI Generated ${generatedParlay.legs.length}-Leg Parlay`,
           date: new Date().toLocaleDateString()
         },
-        logoUrl: '/favicon.ico',
+        logoUrl: '/betchekr_owl_logo.png',
         brand: 'betchekr'
       });
       downloadImage(imageData);
@@ -155,7 +224,7 @@ export default function AIParlayPage() {
           summary: `AI Generated ${generatedParlay.legs.length}-Leg Parlay`,
           date: new Date().toLocaleDateString()
         },
-        logoUrl: '/favicon.ico',
+        logoUrl: '/betchekr_owl_logo.png',
         brand: 'betchekr'
       });
       const success = await copyImageToClipboard(imageData);
@@ -195,6 +264,14 @@ export default function AIParlayPage() {
   return (
     <div className="min-h-screen bg-[#0B0F14]">
       <Header />
+      
+      {/* Paywall Overlay */}
+      {showPaywall && (
+        <Paywall 
+          feature="AI parlay generation" 
+          usageLimit="1 parlay per day"
+        />
+      )}
       
       {/* Hero Section with Background Collage */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
@@ -333,17 +410,31 @@ export default function AIParlayPage() {
                   ) : (
                     <>
                       <Brain className="w-4 h-4 mr-2" />
-                      Generate AI Parlay
+                      {isPremium ? 'Generate AI Parlay' : `Generate Parlay (${Math.max(0, 1 - usageData.generations)} remaining today)`}
                     </>
                   )}
                 </button>
               </div>
               
+              {/* Usage indicator for free users */}
+              {!isPremium && (
+                <div className="text-center mt-2">
+                  <p className="text-[#6B7280] text-xs">
+                    Free: {Math.max(0, 1 - usageData.generations)} parlay remaining today | 
+                    <Link href="/pricing" className="text-[#F4C430] hover:underline ml-1">
+                      Upgrade for unlimited
+                    </Link>
+                  </p>
+                </div>
+              )}
+              
               {/* Premium Note */}
-              <p className="text-[#6B7280] text-xs text-center">
-                <AlertCircle className="w-3 h-3 inline mr-1" />
-                Advanced AI features and unlimited generations require Premium.
-              </p>
+              {isPremium && (
+                <p className="text-[#6B7280] text-xs text-center">
+                  <AlertCircle className="w-3 h-3 inline mr-1" />
+                  Premium active - unlimited generations and advanced features.
+                </p>
+              )}
               
               {/* Generated Parlay Results */}
               {generatedParlay && (

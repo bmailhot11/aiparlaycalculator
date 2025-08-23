@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
 
 export default function PositiveEVPage() {
@@ -23,6 +24,7 @@ export default function PositiveEVPage() {
   const [userParlay, setUserParlay] = useState([]);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [error, setError] = useState(null);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   // Hero background images (sports-related)
   const backgroundImages = [
@@ -72,6 +74,12 @@ export default function PositiveEVPage() {
   ];
 
   const handleFindEVLines = async () => {
+    // Show paywall for free users
+    if (!isPremium) {
+      setShowPaywall(true);
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
     
@@ -97,15 +105,14 @@ export default function PositiveEVPage() {
       } else {
         console.error('EV API Error:', data);
         setError(data.message || 'Failed to fetch EV lines');
-        // Fallback to sample data for demo
-        setEvLines(sampleEVData);
-        setLastRefresh(new Date());
+        // Don't use sample data - show real error
+        setEvLines([]);
       }
     } catch (error) {
       console.error('Error fetching EV lines:', error);
-      // Fallback to sample data
-      setEvLines(sampleEVData);
-      setLastRefresh(new Date());
+      setError('Network error: Unable to connect to server');
+      // Don't use sample data - show real error
+      setEvLines([]);
     } finally {
       setIsLoading(false);
     }
@@ -167,6 +174,13 @@ export default function PositiveEVPage() {
   return (
     <div className="min-h-screen bg-[#0B0F14]">
       <Header />
+      
+      {/* Paywall Overlay */}
+      {showPaywall && (
+        <Paywall 
+          feature="positive EV line finder" 
+        />
+      )}
       
       {/* Hero Section with Background Collage */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">

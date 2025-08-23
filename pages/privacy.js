@@ -9,7 +9,7 @@ export default function Privacy() {
         <title>Privacy Policy - AiParlayCalculator</title>
         <meta name="description" content="AiParlayCalculator Privacy Policy - How we collect, use, and protect your personal information." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/betchekr_owl_logo.ico" />
       </Head>
 
       <div className="min-h-screen bg-gray-900 text-white">

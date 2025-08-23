@@ -1,18 +1,61 @@
 import { useState } from 'react';
+import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Head from 'next/head';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_live_51Rvn7PKm6nZD0l54X57miyvp3a4iMn6PJX5PMh76JDLtz1iK12GZPHresfMHfBgpoLKRaJuPXcHamU2wxmu0K9jM00AYYr47RF');
 
 export default function Pricing() {
   const [billingCycle, setBillingCycle] = useState('monthly');
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  
+  const handleCheckout = async () => {
+    setIsLoading(true);
+    try {
+      // Create checkout session
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId: 'monthly', // or use actual price ID from Stripe
+        }),
+      });
+
+      const { sessionId, url } = await response.json();
+      
+      if (url) {
+        // Redirect to Stripe checkout
+        window.location.href = url;
+      } else {
+        // Fallback to client-side redirect
+        const stripe = await stripePromise;
+        const { error } = await stripe.redirectToCheckout({ sessionId });
+        
+        if (error) {
+          console.error('Stripe redirect error:', error);
+          alert('Failed to redirect to checkout. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to start checkout. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <>
       <Head>
-        <title>Pricing - AI Parlay Calculator</title>
+        <title>Pricing - betchekr</title>
         <meta name="description" content="Simple, affordable pricing at $9.99/month. Professional-grade betting analysis without the premium price tag. No tiers, no limits, just smart betting tools." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/betchekr_owl_logo.ico" />
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
@@ -51,7 +94,7 @@ export default function Pricing() {
                 </div>
 
                 <div className="text-center">
-                  <div className="text-blue-400 text-xl font-bold mb-4">AI Parlay Calculator</div>
+                  <div className="text-blue-400 text-xl font-bold mb-4">betchekr</div>
                   <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/50 rounded-lg p-6 relative">
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                       <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-bold">BEST VALUE</span>
@@ -147,8 +190,12 @@ export default function Pricing() {
                   </div>
                 </div>
 
-                <button className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xl font-bold py-4 rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all duration-300 mb-4">
-                  Get Started - $9.99/month
+                <button 
+                  onClick={handleCheckout}
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xl font-bold py-4 rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all duration-300 mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Loading...' : 'Get Started - $9.99/month'}
                 </button>
                 
                 <p className="text-gray-400 text-sm">

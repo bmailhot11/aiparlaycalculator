@@ -6,10 +6,10 @@ export default function Terms() {
   return (
     <>
       <Head>
-        <title>Terms of Service - AI Parlay Calculator</title>
-        <meta name="description" content="Terms of Service for AI Parlay Calculator - responsible gambling tools and mathematical analysis." />
+        <title>Terms of Service - betchekr</title>
+        <meta name="description" content="Terms of Service for betchekr - responsible gambling tools and mathematical analysis." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/betchekr_owl_logo.ico" />
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
@@ -33,7 +33,7 @@ export default function Terms() {
               <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-6 mb-8">
                 <h2 className="text-xl font-bold text-yellow-400 mb-4">⚠️ Important: Responsible Gambling Notice</h2>
                 <p className="text-gray-300 leading-relaxed">
-                  AI Parlay Calculator is a mathematical analysis tool designed to promote responsible gambling through education and data-driven insights. 
+                  betchekr is a mathematical analysis tool designed to promote responsible gambling through education and data-driven insights. 
                   Gambling involves risk, and no tool can guarantee profits. Please bet responsibly and within your means.
                 </p>
               </div>
@@ -41,13 +41,13 @@ export default function Terms() {
               <div className="prose prose-invert max-w-none">
                 <h2 className="text-2xl font-bold text-white mb-6">1. Acceptance of Terms</h2>
                 <p className="text-gray-300 mb-6">
-                  By accessing and using AI Parlay Calculator ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. 
+                  By accessing and using betchekr ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. 
                   If you do not agree to abide by the above, please do not use this service.
                 </p>
 
                 <h2 className="text-2xl font-bold text-white mb-6">2. Description of Service</h2>
                 <p className="text-gray-300 mb-4">
-                  AI Parlay Calculator provides:
+                  betchekr provides:
                 </p>
                 <ul className="text-gray-300 mb-6 space-y-2">
                   <li>• Mathematical analysis of sports betting opportunities</li>
@@ -88,7 +88,7 @@ export default function Terms() {
 
                 <h2 className="text-2xl font-bold text-white mb-6">6. Intellectual Property</h2>
                 <p className="text-gray-300 mb-6">
-                  The service and its original content, features, and functionality are and will remain the exclusive property of AI Parlay Calculator. 
+                  The service and its original content, features, and functionality are and will remain the exclusive property of betchekr. 
                   The service is protected by copyright, trademark, and other laws.
                 </p>
 
@@ -124,7 +124,7 @@ export default function Terms() {
 
                 <h2 className="text-2xl font-bold text-white mb-6">10. Limitation of Liability</h2>
                 <p className="text-gray-300 mb-6">
-                  In no event shall AI Parlay Calculator, nor its directors, employees, partners, agents, suppliers, or affiliates, 
+                  In no event shall betchekr, nor its directors, employees, partners, agents, suppliers, or affiliates, 
                   be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, 
                   loss of profits, data, use, goodwill, or other intangible losses, resulting from your use of the service.
                 </p>
@@ -154,7 +154,7 @@ export default function Terms() {
                 <div className="bg-gray-700/50 rounded-lg p-6 mt-12">
                   <h3 className="text-lg font-bold text-blue-400 mb-4">Remember: Bet Responsibly</h3>
                   <p className="text-gray-300 leading-relaxed">
-                    AI Parlay Calculator is designed to help you make more informed betting decisions through mathematical analysis. 
+                    betchekr is designed to help you make more informed betting decisions through mathematical analysis. 
                     However, sports betting should always be approached as entertainment, not as an investment strategy. 
                     Never bet more than you can afford to lose, and always prioritize your financial well-being over any potential winnings.
                   </p>

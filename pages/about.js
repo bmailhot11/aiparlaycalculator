@@ -6,10 +6,10 @@ export default function About() {
   return (
     <>
       <Head>
-        <title>About - AI Parlay Calculator</title>
+        <title>About - betchekr</title>
         <meta name="description" content="Learn about our mission to make sports betting mathematically responsible through AI-powered analysis, without the high costs of traditional betting tools." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/betchekr_owl_logo.ico" />
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
@@ -19,7 +19,7 @@ export default function About() {
           {/* Hero Section */}
           <div className="text-center mb-16">
             <h1 className="text-5xl font-bold text-white mb-6">
-              About <span className="text-blue-400">AI Parlay Calculator</span>
+              About <span className="text-blue-400">betchekr</span>
             </h1>
             <p className="text-xl text-gray-300 max-w-4xl mx-auto leading-relaxed">
               We believe that mathematical analysis and responsible gambling tools shouldn't cost hundreds of dollars. 
@@ -33,7 +33,6 @@ export default function About() {
               <h2 className="text-3xl font-bold text-white mb-8 text-center">Our Mission</h2>
               
               <div className="text-center mb-8">
-                <div className="text-6xl mb-4">🎯</div>
                 <h3 className="text-2xl font-bold text-blue-400 mb-4">Mathematical Responsibility</h3>
                 <p className="text-gray-300 text-lg leading-relaxed">
                   We use advanced AI and mathematical models to help you make informed, responsible betting decisions. 
@@ -43,7 +42,6 @@ export default function About() {
 
               <div className="grid md:grid-cols-2 gap-12 mt-12">
                 <div className="text-center">
-                  <div className="text-4xl mb-4">🤖</div>
                   <h4 className="text-xl font-bold text-white mb-3">AI-Powered Analysis</h4>
                   <p className="text-gray-400">
                     Our sophisticated AI system processes millions of data points to identify market inefficiencies, 
@@ -51,7 +49,6 @@ export default function About() {
                   </p>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl mb-4">💡</div>
                   <h4 className="text-xl font-bold text-white mb-3">Education First</h4>
                   <p className="text-gray-400">
                     We don't just give you picks - we teach you the mathematics behind smart betting. 
@@ -68,7 +65,6 @@ export default function About() {
             
             <div className="grid md:grid-cols-3 gap-8">
               <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-2xl p-8 border border-blue-500/30">
-                <div className="text-3xl mb-4">💸</div>
                 <h3 className="text-xl font-bold text-white mb-4">Affordable Access</h3>
                 <p className="text-gray-300">
                   Professional betting tools cost $200-500+ per month. We believe mathematical analysis should be accessible to everyone, 
@@ -77,7 +73,6 @@ export default function About() {
               </div>
 
               <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-2xl p-8 border border-purple-500/30">
-                <div className="text-3xl mb-4">🔍</div>
                 <h3 className="text-xl font-bold text-white mb-4">Transparent Mathematics</h3>
                 <p className="text-gray-300">
                   No black box algorithms or hidden methodologies. We show you exactly how we calculate expected value, 
@@ -86,7 +81,6 @@ export default function About() {
               </div>
 
               <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-2xl p-8 border border-green-500/30">
-                <div className="text-3xl mb-4">⚖️</div>
                 <h3 className="text-xl font-bold text-white mb-4">Responsible Gambling</h3>
                 <p className="text-gray-300">
                   We actively promote responsible gambling through bankroll management advice, Kelly Criterion sizing, 
@@ -123,7 +117,7 @@ export default function About() {
                       <div className="w-6 h-6 bg-green-500 rounded-full flex-shrink-0 mt-1"></div>
                       <div>
                         <h4 className="text-white font-semibold">Real-Time Data</h4>
-                        <p className="text-gray-300 text-sm">Live odds from 10+ sportsbooks updated every 5 minutes</p>
+                        <p className="text-gray-300 text-sm">Live odds from 10+ sportsbooks updated every minute</p>
                       </div>
                     </div>
                   </div>
@@ -156,7 +150,7 @@ export default function About() {
                   With the right tools, analysis, and discipline, informed bettors can find genuine edges in inefficient markets. 
                   Our job is to give you those tools without charging a fortune for them."
                 </blockquote>
-                <div className="text-blue-400 font-semibold">- AI Parlay Calculator Team</div>
+                <div className="text-blue-400 font-semibold">- betchekr Team</div>
               </div>
             </div>
           </div>
@@ -176,7 +170,7 @@ export default function About() {
                   <div className="text-gray-300">OCR Accuracy</div>
                 </div>
                 <div>
-                  <div className="text-4xl font-bold text-green-400 mb-2">5min</div>
+                  <div className="text-4xl font-bold text-green-400 mb-2">1min</div>
                   <div className="text-gray-300">Data Update Frequency</div>
                 </div>
                 <div>

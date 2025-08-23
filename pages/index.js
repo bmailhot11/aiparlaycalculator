@@ -22,6 +22,7 @@ import {
 import Link from 'next/link';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
 import { renderSlipImage, downloadImage, copyImageToClipboard } from '../utils/renderSlipImage';
 
@@ -35,9 +36,11 @@ export default function Home() {
   const [currentUser, setCurrentUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
+  const [usageData, setUsageData] = useState({ uploads: 0, generations: 0 });
+  const [showPaywall, setShowPaywall] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Load user from localStorage on mount
+  // Load user from localStorage and check usage on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('betchekr_user');
     if (savedUser) {
@@ -48,7 +51,26 @@ export default function Home() {
         localStorage.removeItem('betchekr_user');
       }
     }
-  }, []);
+    
+    // Check current usage if not premium
+    if (!isPremium) {
+      checkUsage();
+    }
+  }, [isPremium]);
+
+  const checkUsage = async () => {
+    try {
+      const userIdentifier = currentUser?.id || `anon_${Date.now()}`;
+      const response = await fetch(`/api/check-usage?userIdentifier=${userIdentifier}`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        setUsageData(data.usage);
+      }
+    } catch (error) {
+      console.error('Error checking usage:', error);
+    }
+  };
 
   // Hero background images (sports-related)
   const backgroundImages = [
@@ -107,6 +129,40 @@ export default function Home() {
     if (!uploadedFile) {
       alert('Please upload a bet slip image first');
       return;
+    }
+
+    // Check usage limits for free users
+    if (!isPremium) {
+      if (usageData.uploads >= 1) {
+        setShowPaywall(true);
+        return;
+      }
+      
+      // Track usage before processing
+      try {
+        const userIdentifier = currentUser?.id || `anon_${Date.now()}`;
+        const trackResponse = await fetch('/api/track-usage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'upload',
+            userIdentifier: userIdentifier
+          }),
+        });
+        
+        if (!trackResponse.ok) {
+          const error = await trackResponse.json();
+          if (trackResponse.status === 429) {
+            setShowPaywall(true);
+            return;
+          }
+        } else {
+          const trackData = await trackResponse.json();
+          setUsageData(trackData.usage);
+        }
+      } catch (error) {
+        console.error('Error tracking usage:', error);
+      }
     }
 
     setIsAnalyzing(true);
@@ -191,7 +247,7 @@ export default function Home() {
     if (analysisResult) {
       const imageData = await renderSlipImage({
         slip: analysisResult,
-        logoUrl: '/favicon.ico',
+        logoUrl: '/betchekr_owl_logo.png',
         brand: 'betchekr'
       });
       downloadImage(imageData);
@@ -202,7 +258,7 @@ export default function Home() {
     if (analysisResult) {
       const imageData = await renderSlipImage({
         slip: analysisResult,
-        logoUrl: '/favicon.ico',
+        logoUrl: '/betchekr_owl_logo.png',
         brand: 'betchekr'
       });
       const success = await copyImageToClipboard(imageData);
@@ -216,6 +272,14 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0F14]">
       <Header />
+      
+      {/* Paywall Overlay */}
+      {showPaywall && (
+        <Paywall 
+          feature="bet slip analysis" 
+          usageLimit="1 bet slip per day"
+        />
+      )}
       
       {/* Hero Section with Background Collage */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
@@ -302,10 +366,22 @@ export default function Home() {
                 ) : (
                   <>
                     <Check className="w-4 h-4 mr-2" />
-                    Start Free
+                    {isPremium ? 'Analyze Bet Slip' : `Analyze (${Math.max(0, 1 - usageData.uploads)} remaining today)`}
                   </>
                 )}
               </button>
+              
+              {/* Usage indicator for free users */}
+              {!isPremium && (
+                <div className="text-center mt-2">
+                  <p className="text-[#6B7280] text-xs">
+                    Free: {Math.max(0, 1 - usageData.uploads)} analysis remaining today | 
+                    <Link href="/pricing" className="text-[#F4C430] hover:underline ml-1">
+                      Upgrade for unlimited
+                    </Link>
+                  </p>
+                </div>
+              )}
               
               
               {/* Trash/Cash Analysis Result */}
@@ -582,7 +658,7 @@ export default function Home() {
               href="/positive-ev"
               className="inline-flex items-center bg-[#F4C430] text-[#0B0F14] px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#F4C430]/90 transition-colors"
             >
-              Explore Betchekr
+              Explore BetChekr
               <ChevronRight className="w-5 h-5 ml-2" />
             </Link>
           </motion.div>
