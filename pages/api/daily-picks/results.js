@@ -45,70 +45,62 @@ export default async function handler(req, res) {
  */
 async function fetchCurrentKPIs(periodDays = 30) {
   try {
-    // Get latest KPI record for overall stats
-    const { data: latestKPI } = await supabase
-      .from('reco_daily_kpis')
-      .select('*')
-      .order('kpi_date', { ascending: false })
-      .limit(1)
-      .single();
-
-    // Calculate period-specific metrics
+    // Calculate period start date
     const periodStart = new Date();
     periodStart.setDate(periodStart.getDate() - periodDays);
     const periodStartStr = periodStart.toISOString().split('T')[0];
 
-    const { data: periodKPIs } = await supabase
-      .from('reco_daily_kpis')
+    // Get performance data from your new schema views
+    const { data: periodPerformance } = await supabase
+      .from('v_daily_performance')
       .select('*')
-      .gte('kpi_date', periodStartStr)
-      .order('kpi_date', { ascending: true });
+      .gte('date', periodStartStr)
+      .order('date', { ascending: true });
 
-    // Calculate period metrics
-    let periodPnL = 0;
-    let periodBetsWon = 0;
-    let periodBetsLost = 0;
-    let periodCLVBeats = 0;
-    let periodTotalBets = 0;
+    // Get cumulative bankroll data
+    const { data: bankrollData } = await supabase
+      .from('v_cumulative_bankroll')
+      .select('*')
+      .order('date', { ascending: false })
+      .limit(1)
+      .single();
 
-    if (periodKPIs && periodKPIs.length > 0) {
-      const firstKPI = periodKPIs[0];
-      const lastKPI = periodKPIs[periodKPIs.length - 1];
+    // Calculate totals from performance data
+    let totalBets = 0;
+    let totalWins = 0;
+    let totalStaked = 0;
+    let totalProfit = 0;
 
-      periodPnL = lastKPI.cumulative_pnl - (firstKPI.cumulative_pnl - firstKPI.total_daily_pnl);
-      periodBetsWon = lastKPI.total_bets_won - firstKPI.total_bets_won;
-      periodBetsLost = lastKPI.total_bets_lost - firstKPI.total_bets_lost;
-      periodTotalBets = periodBetsWon + periodBetsLost;
-
-      // Calculate CLV for period (simplified)
-      periodCLVBeats = Math.round((lastKPI.clv_beat_percentage / 100) * periodTotalBets);
+    if (periodPerformance && periodPerformance.length > 0) {
+      periodPerformance.forEach(day => {
+        totalBets += day.bets_settled || 0;
+        totalWins += Math.round((day.win_rate_pct || 0) / 100 * (day.bets_settled || 0));
+        totalStaked += day.total_staked || 0;
+        totalProfit += day.net_profit || 0;
+      });
     }
 
-    const periodROI = periodTotalBets > 0 ? (periodPnL / (periodTotalBets * 100)) * 100 : 0;
-    const periodHitRate = periodTotalBets > 0 ? (periodBetsWon / periodTotalBets) * 100 : 0;
-    const periodCLVRate = periodTotalBets > 0 ? (periodCLVBeats / periodTotalBets) * 100 : 0;
+    const winRate = totalBets > 0 ? (totalWins / totalBets) * 100 : 0;
+    const roi = totalStaked > 0 ? (totalProfit / totalStaked) * 100 : 0;
 
     return {
       all_time: {
-        total_bets: latestKPI?.total_bets_placed || 0,
-        win_rate: latestKPI?.hit_rate_percentage || 0,
-        roi: latestKPI?.total_roi_percentage || 0,
-        cumulative_pnl: latestKPI?.cumulative_pnl || 0,
-        clv_beat_rate: latestKPI?.clv_beat_percentage || 0,
-        total_wins: latestKPI?.total_bets_won || 0,
-        total_losses: latestKPI?.total_bets_lost || 0,
-        total_pushes: latestKPI?.total_bets_pushed || 0,
-        no_bet_days: latestKPI?.no_bet_days_count || 0
+        total_bets: totalBets,
+        win_rate: winRate,
+        roi: roi,
+        cumulative_pnl: bankrollData?.cumulative_pnl || 0,
+        total_wins: totalWins,
+        total_losses: totalBets - totalWins,
+        total_pushes: 0
       },
       period: {
         days: periodDays,
-        total_bets: periodTotalBets,
-        win_rate: periodHitRate,
-        roi: periodROI,
-        pnl: periodPnL,
-        clv_beat_rate: periodCLVRate,
-        wins: periodBetsWon,
-        losses: periodBetsLost
+        total_bets: totalBets,
+        win_rate: winRate,
+        roi: roi,
+        pnl: totalProfit,
+        wins: totalWins,
+        losses: totalBets - totalWins
       }
     };
 
@@ -125,19 +117,11 @@ async function fetchDailyResults(page = 1, limit = 50) {
   try {
     const offset = (page - 1) * limit;
 
+    // Get daily performance data from your new schema
     const { data: dailyResults, error, count } = await supabase
-      .from('reco_daily_kpis')
-      .select(`
-        kpi_date,
-        single_pnl,
-        parlay_2_pnl,
-        parlay_4_pnl,
-        total_daily_pnl,
-        total_bets_placed,
-        total_bets_won,
-        total_bets_lost
-      `, { count: 'exact' })
-      .order('kpi_date', { ascending: false })
+      .from('v_daily_performance')
+      .select('*', { count: 'exact' })
+      .order('date', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (error) throw error;
@@ -145,9 +129,51 @@ async function fetchDailyResults(page = 1, limit = 50) {
     // Also get daily recommendations to see which days were "no bet"
     const { data: dailyRecos } = await supabase
       .from('daily_recos')
-      .select('reco_date, no_bet_reason, single_bet_id, parlay_2_id, parlay_4_id')
+      .select('reco_date, notes, status')
       .order('reco_date', { ascending: false })
       .limit(limit);
+
+    // Get bet type breakdown for each day
+    const { data: betBreakdown } = await supabase
+      .from('reco_bets')
+      .select(`
+        created_day_local,
+        parlay_legs,
+        result,
+        stake,
+        COALESCE(
+          CASE result
+            WHEN 'win' THEN COALESCE(payout, stake * odds_decimal) - stake
+            WHEN 'loss' THEN -stake
+            WHEN 'push' THEN 0
+            WHEN 'void' THEN 0
+            ELSE 0
+          END, 0
+        ) as profit
+      `)
+      .order('created_day_local', { ascending: false })
+      .limit(limit * 10); // Get more to account for multiple bets per day
+
+    // Group bet breakdown by day and parlay type
+    const betMap = new Map();
+    (betBreakdown || []).forEach(bet => {
+      const date = bet.created_day_local;
+      if (!betMap.has(date)) {
+        betMap.set(date, { single_pnl: 0, parlay_2_pnl: 0, parlay_4_pnl: 0, bets_placed: { single: false, parlay2: false, parlay4: false } });
+      }
+      
+      const dayData = betMap.get(date);
+      if (bet.parlay_legs === 1) {
+        dayData.single_pnl += bet.profit;
+        dayData.bets_placed.single = true;
+      } else if (bet.parlay_legs === 2) {
+        dayData.parlay_2_pnl += bet.profit;
+        dayData.bets_placed.parlay2 = true;
+      } else if (bet.parlay_legs === 4) {
+        dayData.parlay_4_pnl += bet.profit;
+        dayData.bets_placed.parlay4 = true;
+      }
+    });
 
     // Merge the data
     const recoMap = new Map();
@@ -155,22 +181,19 @@ async function fetchDailyResults(page = 1, limit = 50) {
       recoMap.set(reco.reco_date, reco);
     });
 
-    const enrichedResults = (dailyResults || []).map(kpi => {
-      const reco = recoMap.get(kpi.kpi_date);
+    const enrichedResults = (dailyResults || []).map(day => {
+      const reco = recoMap.get(day.date);
+      const bets = betMap.get(day.date) || { single_pnl: 0, parlay_2_pnl: 0, parlay_4_pnl: 0, bets_placed: { single: false, parlay2: false, parlay4: false } };
       
       return {
-        date: kpi.kpi_date,
-        single_pnl: kpi.single_pnl || 0,
-        parlay_2_pnl: kpi.parlay_2_pnl || 0,
-        parlay_4_pnl: kpi.parlay_4_pnl || 0,
-        total_pnl: kpi.total_daily_pnl || 0,
-        is_no_bet: !!reco?.no_bet_reason,
-        no_bet_reason: reco?.no_bet_reason || null,
-        bets_placed: {
-          single: !!reco?.single_bet_id,
-          parlay2: !!reco?.parlay_2_id,
-          parlay4: !!reco?.parlay_4_id
-        }
+        date: day.date,
+        single_pnl: bets.single_pnl,
+        parlay_2_pnl: bets.parlay_2_pnl,
+        parlay_4_pnl: bets.parlay_4_pnl,
+        total_pnl: day.net_profit || 0,
+        is_no_bet: day.bets_settled === 0,
+        no_bet_reason: day.bets_settled === 0 ? 'No qualifying edges found' : null,
+        bets_placed: bets.bets_placed
       };
     });
 
@@ -199,28 +222,37 @@ async function fetchBankrollProgression(days = 30) {
     startDate.setDate(startDate.getDate() - days);
     const startDateStr = startDate.toISOString().split('T')[0];
 
-    const { data: kpis } = await supabase
-      .from('reco_daily_kpis')
-      .select('kpi_date, cumulative_pnl, total_daily_pnl')
-      .gte('kpi_date', startDateStr)
-      .order('kpi_date', { ascending: true });
+    // Use your new cumulative bankroll view
+    const { data: bankrollData } = await supabase
+      .from('v_cumulative_bankroll')
+      .select('*')
+      .gte('date', startDateStr)
+      .order('date', { ascending: true });
 
-    if (!kpis || kpis.length === 0) {
+    if (!bankrollData || bankrollData.length === 0) {
       return [];
     }
 
-    // Calculate running bankroll (starting from base bankroll)
-    const baseBankroll = 10000; // $10,000 base bankroll assumption
-    let runningBankroll = baseBankroll;
+    // Calculate running bankroll with different base amounts per bet type
+    const baseBankrollSingle = 1000;
+    const baseBankrollParlay2 = 1000;
+    const baseBankrollParlay4 = 1000;
 
-    return kpis.map(kpi => {
-      runningBankroll += kpi.total_daily_pnl || 0;
+    // Get daily performance breakdown
+    const { data: dailyPerf } = await supabase
+      .from('v_daily_performance')
+      .select('*')
+      .gte('date', startDateStr)
+      .order('date', { ascending: true });
+
+    return bankrollData.map((day, index) => {
+      const dailyData = dailyPerf?.find(d => d.date === day.date) || {};
       
       return {
-        date: kpi.kpi_date,
-        bankroll: runningBankroll,
-        daily_change: kpi.total_daily_pnl || 0,
-        cumulative_pnl: kpi.cumulative_pnl || 0
+        date: day.date,
+        bankroll: baseBankrollSingle + (day.cumulative_pnl || 0), // Using single bankroll as main
+        daily_change: dailyData.net_profit || 0,
+        cumulative_pnl: day.cumulative_pnl || 0
       };
     });
 

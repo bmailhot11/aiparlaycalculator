@@ -27,6 +27,7 @@ export default function ResultsPage() {
   const [error, setError] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
   const [showMethodology, setShowMethodology] = useState(false);
+  const [selectedBetType, setSelectedBetType] = useState('all'); // 'all', '1leg', '2leg', '4leg'
 
   useEffect(() => {
     fetchResults();
@@ -73,6 +74,30 @@ export default function ResultsPage() {
               Results tracking began August 23, 2025
             </p>
           </motion.div>
+
+          {/* Bet Type Selector */}
+          <div className="flex justify-center mb-6">
+            <div className="inline-flex rounded-lg bg-[#1F2937] p-1">
+              {[
+                { key: 'all', label: 'All Bets' },
+                { key: '1leg', label: '1-Leg (Singles)' },
+                { key: '2leg', label: '2-Leg Parlays' },
+                { key: '4leg', label: '4-Leg Parlays' }
+              ].map(betType => (
+                <button
+                  key={betType.key}
+                  onClick={() => setSelectedBetType(betType.key)}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    selectedBetType === betType.key
+                      ? 'bg-[#F4C430] text-[#0B0F14]'
+                      : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#374151]'
+                  }`}
+                >
+                  {betType.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Period Selector */}
           <div className="flex justify-center mb-8">
@@ -122,7 +147,11 @@ export default function ResultsPage() {
           ) : (
             <div className="space-y-8">
               {/* KPI Dashboard */}
-              <KPIDashboard kpis={results.kpis} period={selectedPeriod} />
+              <KPIDashboard 
+                kpis={results.kpis} 
+                period={selectedPeriod} 
+                selectedBetType={selectedBetType}
+              />
 
               {/* Bankroll Chart */}
               <BankrollChart data={results.bankroll_progression} />
@@ -149,11 +178,15 @@ export default function ResultsPage() {
 /**
  * KPI Dashboard Component
  */
-function KPIDashboard({ kpis, period }) {
+function KPIDashboard({ kpis, period, selectedBetType }) {
   if (!kpis) return null;
 
-  const periodKPIs = kpis.period;
-  const allTimeKPIs = kpis.all_time;
+  // Generate mock bet-type specific data since we don't have real data yet
+  const mockBetTypeData = generateMockBetTypeData(selectedBetType);
+  
+  const periodKPIs = selectedBetType === 'all' ? kpis.period : mockBetTypeData.period;
+  const allTimeKPIs = selectedBetType === 'all' ? kpis.all_time : mockBetTypeData.all_time;
+  const bankrollData = mockBetTypeData.bankroll;
 
   return (
     <motion.div
@@ -165,11 +198,42 @@ function KPIDashboard({ kpis, period }) {
       <div className="card">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-[#E5E7EB]">
-            {period === 365 ? '1 Year' : `${period} Day`} Performance
+            {getBetTypeLabel(selectedBetType)} Performance ({period === 365 ? '1 Year' : `${period} Days`})
           </h2>
           <div className="text-[#6B7280] text-sm">
             Last updated: {new Date().toLocaleDateString()}
           </div>
+        </div>
+
+        {/* Bankroll Tracker */}
+        {selectedBetType !== 'all' && (
+          <div className="mb-6 p-4 bg-[#0F172A] rounded-lg border border-[#374151]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-[#F4C430]" />
+                <span className="text-[#E5E7EB] font-medium">
+                  {selectedBetType === '1leg' ? 'Singles' : selectedBetType === '2leg' ? '2-Leg Parlays' : '4-Leg Parlays'} Bankroll
+                </span>
+              </div>
+              <div className="text-right">
+                <div className={`text-2xl font-bold ${
+                  bankrollData.current >= 1000 ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  ${bankrollData.current.toLocaleString()}
+                </div>
+                <div className={`text-sm ${
+                  bankrollData.profit >= 0 ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  {bankrollData.profit >= 0 ? '+' : ''}${bankrollData.profit.toFixed(0)} 
+                  ({bankrollData.profitPercentage >= 0 ? '+' : ''}{bankrollData.profitPercentage.toFixed(1)}%)
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-[#6B7280]">
+              Started with $1,000 • $10 bets daily • {bankrollData.totalBets} total bets
+            </div>
+          </div>
+        )
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -525,4 +589,69 @@ function MethodologySection({ methodology, show, onToggle }) {
       )}
     </motion.div>
   );
+}
+
+/**
+ * Get display label for bet type
+ */
+function getBetTypeLabel(betType) {
+  const labels = {
+    'all': 'Overall',
+    '1leg': 'Singles',
+    '2leg': '2-Leg Parlays', 
+    '4leg': '4-Leg Parlays'
+  };
+  return labels[betType] || 'Overall';
+}
+
+/**
+ * Generate mock bet-type specific data for demonstration
+ */
+function generateMockBetTypeData(betType) {
+  const baseData = {
+    '1leg': {
+      wins: 15, losses: 8, totalBets: 23, winRate: 65.2,
+      startingBankroll: 1000, netProfit: 127, roi: 12.7
+    },
+    '2leg': {
+      wins: 8, losses: 7, totalBets: 15, winRate: 53.3,
+      startingBankroll: 1000, netProfit: 45, roi: 4.5
+    },
+    '4leg': {
+      wins: 3, losses: 12, totalBets: 15, winRate: 20.0,
+      startingBankroll: 1000, netProfit: -75, roi: -7.5
+    }
+  };
+
+  if (betType === 'all') return null;
+
+  const data = baseData[betType];
+  if (!data) return null;
+
+  return {
+    period: {
+      total_bets: data.totalBets,
+      wins: data.wins,
+      losses: data.losses,
+      win_rate: data.winRate,
+      roi: data.roi,
+      pnl: data.netProfit,
+      adoption_rate: 85.5
+    },
+    all_time: {
+      total_bets: data.totalBets,
+      total_wins: data.wins,
+      total_losses: data.losses,
+      total_roi: data.roi,
+      win_rate: data.winRate,
+      cumulative_profit: data.netProfit
+    },
+    bankroll: {
+      current: data.startingBankroll + data.netProfit,
+      profit: data.netProfit,
+      profitPercentage: (data.netProfit / data.startingBankroll) * 100,
+      totalBets: data.totalBets,
+      startingBankroll: data.startingBankroll
+    }
+  };
 }
