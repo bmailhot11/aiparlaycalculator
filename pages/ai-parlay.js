@@ -93,7 +93,6 @@ export default function AIParlayPage() {
     ],
     totalOdds: '+650',
     impliedProbability: '13.3%',
-    aiConfidence: 81,
     expectedValue: '+4.2%',
     recommendedStake: '$25',
     potentialPayout: '$187.50',
@@ -169,17 +168,28 @@ export default function AIParlayPage() {
       const data = await response.json();
       
       if (response.ok && data.success) {
-        // Map the API response to our expected format
+        // Calculate real payout based on $10 stake
+        const stake = 10;
+        const totalDecimalOdds = parseFloat(data.parlay.total_decimal_odds) || 2.0;
+        const potentialPayout = (stake * totalDecimalOdds).toFixed(2);
+        const profit = (potentialPayout - stake).toFixed(2);
+        
+        // Calculate implied probability from decimal odds
+        const impliedProb = ((1 / totalDecimalOdds) * 100).toFixed(1);
+        
+        // Map the API response to our expected format with real data
         const mappedParlay = {
           id: 'parlay_' + Date.now(),
           legs: data.parlay.parlay_legs || data.parlay.legs || [],
-          totalOdds: data.parlay.total_odds || data.parlay.total_american_odds || '+500',
-          impliedProbability: data.parlay.implied_probability || '16.7%',
-          aiConfidence: 85,
-          expectedValue: '+' + ((data.parlay.expected_value || 0.05) * 100).toFixed(1) + '%',
-          recommendedStake: '$25',
-          potentialPayout: '$150',
-          reasoning: data.parlay.risk_assessment || 'AI-generated parlay with positive expected value across multiple markets.'
+          totalOdds: data.parlay.total_american_odds || '+500',
+          impliedProbability: impliedProb + '%',
+          expectedValue: data.parlay.expected_value ? 
+            (data.parlay.expected_value >= 0 ? '+' : '') + (data.parlay.expected_value * 100).toFixed(1) + '%' : 
+            'N/A',
+          potentialPayout: '$' + potentialPayout,
+          profit: '$' + profit,
+          stake: '$10',
+          reasoning: data.parlay.risk_assessment || data.parlay.edge_analysis || 'AI-generated parlay optimized for value across premium sportsbooks.'
         };
         setGeneratedParlay(mappedParlay);
       } else {
@@ -449,7 +459,7 @@ export default function AIParlayPage() {
                     <div className="flex items-center gap-2">
                       <Zap className="w-4 h-4 text-[#F4C430]" />
                       <span className="text-[#F4C430] text-sm font-medium">
-                        {generatedParlay.aiConfidence}% AI Confidence
+                        {generatedParlay.legs.length} Selections
                       </span>
                     </div>
                   </div>
@@ -469,8 +479,8 @@ export default function AIParlayPage() {
                       <div className="text-green-400 font-medium">{generatedParlay.expectedValue}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-[#6B7280] text-xs">Recommended Stake</div>
-                      <div className="text-[#E5E7EB] font-medium">{generatedParlay.recommendedStake}</div>
+                      <div className="text-[#6B7280] text-xs">$10 Bet Pays</div>
+                      <div className="text-green-400 font-medium">{generatedParlay.potentialPayout}</div>
                     </div>
                   </div>
                   
@@ -577,9 +587,9 @@ export default function AIParlayPage() {
                   
                   {/* Potential Payout */}
                   <div className="text-center p-4 bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-lg mb-4">
-                    <div className="text-[#6B7280] text-sm">Potential Payout</div>
+                    <div className="text-[#6B7280] text-sm">Total Payout</div>
                     <div className="text-green-400 font-bold text-2xl">{generatedParlay.potentialPayout}</div>
-                    <div className="text-[#9CA3AF] text-sm">on {generatedParlay.recommendedStake} stake</div>
+                    <div className="text-[#9CA3AF] text-sm">on $10 bet (${generatedParlay.profit} profit)</div>
                   </div>
                   
                   {/* Action Buttons */}
