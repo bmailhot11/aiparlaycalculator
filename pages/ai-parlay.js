@@ -17,6 +17,7 @@ import Footer from '../components/Footer';
 import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
 import { renderSlipImage, downloadImage, copyImageToClipboard } from '../utils/renderSlipImage';
+import { apiFetch } from '../utils/api';
 
 export default function AIParlayPage() {
   const { isPremium } = useContext(PremiumContext);
@@ -72,7 +73,7 @@ export default function AIParlayPage() {
   const checkUsage = async () => {
     try {
       const userIdentifier = currentUser?.id || `anon_${Date.now()}`;
-      const response = await fetch(`/api/check-usage?userIdentifier=${userIdentifier}`);
+      const response = await apiFetch(`/api/check-usage?userIdentifier=${userIdentifier}`);
       const data = await response.json();
       
       if (response.ok) {
@@ -150,7 +151,7 @@ export default function AIParlayPage() {
     setIsGenerating(true);
     
     try {
-      const response = await fetch('/api/optimized-generate-parlay', {
+      const response = await apiFetch('/api/optimized-generate-parlay', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

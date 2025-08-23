@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { apiFetch } from '../utils/api';
 import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
 
@@ -84,7 +85,7 @@ export default function PositiveEVPage() {
     setError(null);
     
     try {
-      const response = await fetch('/api/get-ev-lines', {
+      const response = await apiFetch('/api/get-ev-lines', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -142,7 +142,7 @@ export default function Home() {
       // Track usage before processing
       try {
         const userIdentifier = currentUser?.id || `anon_${Date.now()}`;
-        const trackResponse = await fetch('/api/track-usage', {
+        const trackResponse = await apiFetch('/api/track-usage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -176,7 +176,7 @@ export default function Home() {
       formData.append('username', currentUser?.username || '');
 
       // Call the existing analyze-slip API that uses OCR
-      const response = await fetch('/api/analyze-slip', {
+      const response = await apiFetch('/api/analyze-slip', {
         method: 'POST',
         body: formData,
       });
@@ -213,7 +213,7 @@ export default function Home() {
     }
 
     try {
-      const response = await fetch('/api/auth/create-user', {
+      const response = await apiFetch('/api/auth/create-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

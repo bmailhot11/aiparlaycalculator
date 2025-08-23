@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { apiFetch } from '../utils/api';
 import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
 
@@ -156,7 +157,7 @@ export default function ArbitragePage() {
     setIsLoading(true);
     
     try {
-      const response = await fetch('/api/live-odds', {
+      const response = await apiFetch('/api/live-odds', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
