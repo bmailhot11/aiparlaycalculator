@@ -23,6 +23,11 @@ export default async function handler(req, res) {
   // Support both old and new formats
   const config = preferences || { sport, riskLevel, legs: 3 };
   
+  // Ensure includePlayerProps is properly handled
+  if (config.includePlayerProps === undefined && preferences?.includePlayerProps !== undefined) {
+    config.includePlayerProps = preferences.includePlayerProps;
+  }
+  
   if (!config.sport) {
     return res.status(400).json({ 
       success: false, 
@@ -408,8 +413,41 @@ async function generateParlayWithRealOdds(preferences, sportData) {
   console.log(`📊 Found ${availableBets.length} total betting options across top 5 sportsbooks`);
 
   // Filter bets based on risk level
-  const filteredBets = filterBetsByRiskLevel(availableBets, preferences.riskLevel);
+  let filteredBets = filterBetsByRiskLevel(availableBets, preferences.riskLevel);
   console.log(`🎯 Filtered to ${filteredBets.length} bets matching ${preferences.riskLevel} risk level`);
+  
+  // Apply player props filtering if requested
+  if (preferences.includePlayerProps && preferences.legs > 1) {
+    const playerPropBets = filteredBets.filter(bet => bet.market_type && bet.market_type.startsWith('player_'));
+    const mainMarketBets = filteredBets.filter(bet => !bet.market_type || !bet.market_type.startsWith('player_'));
+    
+    const requiredPlayerProps = Math.ceil(preferences.legs * 0.5); // At least 50%
+    
+    console.log(`🎯 [PlayerProps] Need ${requiredPlayerProps}/${preferences.legs} player props. Available: ${playerPropBets.length} player props, ${mainMarketBets.length} main markets`);
+    
+    if (playerPropBets.length >= requiredPlayerProps) {
+      // We have enough player props, balance the selection
+      const selectedPlayerProps = playerPropBets.slice(0, requiredPlayerProps);
+      const remainingSlots = Math.max(0, preferences.legs - requiredPlayerProps);
+      const selectedMainMarkets = mainMarketBets.slice(0, remainingSlots);
+      
+      // Combine the selections, maintaining the highest EV ones
+      filteredBets = [...selectedPlayerProps, ...selectedMainMarkets]
+        .sort((a, b) => (b.expectedValue || 0) - (a.expectedValue || 0));
+        
+      console.log(`✅ [PlayerProps] Balanced selection: ${selectedPlayerProps.length} player props + ${selectedMainMarkets.length} main markets`);
+    } else if (playerPropBets.length > 0) {
+      // Not enough player props, use all available player props and fill with main markets
+      console.log(`⚠️ [PlayerProps] Only ${playerPropBets.length} player props available, using all + main markets`);
+      const remainingSlots = Math.max(0, preferences.legs - playerPropBets.length);
+      const selectedMainMarkets = mainMarketBets.slice(0, remainingSlots);
+      
+      filteredBets = [...playerPropBets, ...selectedMainMarkets]
+        .sort((a, b) => (b.expectedValue || 0) - (a.expectedValue || 0));
+    } else {
+      console.log(`⚠️ [PlayerProps] No player props available, using main markets only`);
+    }
+  }
   
   if (filteredBets.length < preferences.legs) {
     throw new Error(`Not enough betting options for ${preferences.legs} legs at ${preferences.riskLevel} risk level`);
@@ -425,7 +463,7 @@ async function generateParlayWithRealOdds(preferences, sportData) {
       messages: [
         {
           role: "system",
-          content: `You are an expert sports betting analyst with deep knowledge of market inefficiencies, line movement patterns, and advanced betting strategies. Select exactly ${preferences.legs} legs with positive expected value from the provided options. CRITICAL: Do not select the same bet (game + selection + market type) from multiple sportsbooks - choose ONLY ONE sportsbook per unique bet. Ensure all legs are DIFFERENT bets from DIFFERENT games when possible. Use EXACT odds and sportsbook names. Provide sophisticated betting intelligence in your reasoning. Return ONLY valid JSON, no explanations.`
+          content: `You are an expert sports betting analyst with deep knowledge of market inefficiencies, line movement patterns, and advanced betting strategies. Select exactly ${preferences.legs} legs with positive expected value from the provided options. ${preferences.includePlayerProps ? `IMPORTANT: Include at least ${Math.ceil(preferences.legs * 0.5)} player props (market_type starting with "player_"). ` : ''}CRITICAL: Do not select the same bet (game + selection + market type) from multiple sportsbooks - choose ONLY ONE sportsbook per unique bet. Ensure all legs are DIFFERENT bets from DIFFERENT games when possible. Use EXACT odds and sportsbook names. Provide sophisticated betting intelligence in your reasoning. Return ONLY valid JSON, no explanations.`
         },
         {
           role: "user",
@@ -875,12 +913,44 @@ function generateValidatedFallbackParlay(availableBets, preferences) {
   const selectedBets = [];
   const usedGames = new Set();
   
-  // Try to select from different games first
-  for (const bet of optimizedBets) {
-    if (selectedBets.length >= legs) break;
-    if (!usedGames.has(bet.game_id)) {
-      selectedBets.push(bet);
-      usedGames.add(bet.game_id);
+  // Handle player props preference in fallback
+  if (preferences.includePlayerProps && legs > 1) {
+    const playerPropBets = optimizedBets.filter(bet => bet.market_type && bet.market_type.startsWith('player_'));
+    const mainMarketBets = optimizedBets.filter(bet => !bet.market_type || !bet.market_type.startsWith('player_'));
+    
+    const requiredPlayerProps = Math.ceil(legs * 0.5);
+    
+    console.log(`🎯 [Fallback PlayerProps] Need ${requiredPlayerProps}/${legs} player props. Available: ${playerPropBets.length} player props`);
+    
+    // First, add player props (up to required amount)
+    let playerPropsAdded = 0;
+    for (const bet of playerPropBets) {
+      if (selectedBets.length >= legs || playerPropsAdded >= requiredPlayerProps) break;
+      if (!usedGames.has(bet.game_id)) {
+        selectedBets.push(bet);
+        usedGames.add(bet.game_id);
+        playerPropsAdded++;
+      }
+    }
+    
+    // Then fill remaining slots with main markets
+    for (const bet of mainMarketBets) {
+      if (selectedBets.length >= legs) break;
+      if (!usedGames.has(bet.game_id)) {
+        selectedBets.push(bet);
+        usedGames.add(bet.game_id);
+      }
+    }
+    
+    console.log(`✅ [Fallback PlayerProps] Selected ${playerPropsAdded} player props + ${selectedBets.length - playerPropsAdded} main markets`);
+  } else {
+    // Regular selection without player props preference
+    for (const bet of optimizedBets) {
+      if (selectedBets.length >= legs) break;
+      if (!usedGames.has(bet.game_id)) {
+        selectedBets.push(bet);
+        usedGames.add(bet.game_id);
+      }
     }
   }
   

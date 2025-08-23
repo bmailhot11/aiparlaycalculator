@@ -16,10 +16,14 @@ import {
   XCircle,
   Minus,
   Eye,
-  HelpCircle
+  HelpCircle,
+  Download,
+  Star,
+  Clock
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { generateImprovedSlipImage, downloadImprovedSlip } from '../utils/generateImprovedSlipImage';
 
 export default function ResultsPage() {
   const [results, setResults] = useState(null);
@@ -28,9 +32,12 @@ export default function ResultsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState(30);
   const [showMethodology, setShowMethodology] = useState(false);
   const [selectedBetType, setSelectedBetType] = useState('all'); // 'all', '1leg', '2leg', '4leg'
+  const [dailyPicks, setDailyPicks] = useState(null);
+  const [picksLoading, setPicksLoading] = useState(true);
 
   useEffect(() => {
     fetchResults();
+    fetchDailyPicks();
   }, [selectedPeriod]);
 
   const fetchResults = async () => {
@@ -48,6 +55,22 @@ export default function ResultsPage() {
       setError('Network error loading results');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDailyPicks = async () => {
+    setPicksLoading(true);
+    try {
+      const response = await fetch('/api/daily-picks/today');
+      const data = await response.json();
+      
+      if (data.success) {
+        setDailyPicks(data);
+      }
+    } catch (err) {
+      console.error('Error loading daily picks:', err);
+    } finally {
+      setPicksLoading(false);
     }
   };
 
@@ -120,6 +143,9 @@ export default function ResultsPage() {
         </div>
       </section>
 
+      {/* Today's Daily Picks Section */}
+      <DailyPicksSection picks={dailyPicks} loading={picksLoading} />
+
       {/* Main Content */}
       <section className="pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -132,16 +158,14 @@ export default function ResultsPage() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="card max-w-2xl mx-auto text-center"
+              className="card max-w-md mx-auto text-center"
             >
-              <XCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
-              <h3 className="text-xl font-semibold text-[#E5E7EB] mb-2">Error Loading Results</h3>
-              <p className="text-[#9CA3AF] mb-6">{error}</p>
+              <p className="text-[#9CA3AF] text-sm mb-3">Unable to load results at this time</p>
               <button 
                 onClick={fetchResults}
-                className="btn btn-outline"
+                className="btn btn-outline btn-sm"
               >
-                Try Again
+                Retry
               </button>
             </motion.div>
           ) : (
@@ -181,12 +205,8 @@ export default function ResultsPage() {
 function KPIDashboard({ kpis, period, selectedBetType }) {
   if (!kpis) return null;
 
-  // Generate mock bet-type specific data since we don't have real data yet
-  const mockBetTypeData = generateMockBetTypeData(selectedBetType);
-  
-  const periodKPIs = selectedBetType === 'all' ? kpis.period : mockBetTypeData.period;
-  const allTimeKPIs = selectedBetType === 'all' ? kpis.all_time : mockBetTypeData.all_time;
-  const bankrollData = mockBetTypeData.bankroll;
+  const periodKPIs = kpis.period;
+  const allTimeKPIs = kpis.all_time;
 
   return (
     <motion.div
@@ -203,37 +223,6 @@ function KPIDashboard({ kpis, period, selectedBetType }) {
           <div className="text-[#6B7280] text-sm">
             Last updated: {new Date().toLocaleDateString()}
           </div>
-        </div>
-
-        {/* Bankroll Tracker */}
-        {selectedBetType !== 'all' && (
-          <div className="mb-6 p-4 bg-[#0F172A] rounded-lg border border-[#374151]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-[#F4C430]" />
-                <span className="text-[#E5E7EB] font-medium">
-                  {selectedBetType === '1leg' ? 'Singles' : selectedBetType === '2leg' ? '2-Leg Parlays' : '4-Leg Parlays'} Bankroll
-                </span>
-              </div>
-              <div className="text-right">
-                <div className={`text-2xl font-bold ${
-                  bankrollData.current >= 1000 ? 'text-green-400' : 'text-red-400'
-                }`}>
-                  ${bankrollData.current.toLocaleString()}
-                </div>
-                <div className={`text-sm ${
-                  bankrollData.profit >= 0 ? 'text-green-400' : 'text-red-400'
-                }`}>
-                  {bankrollData.profit >= 0 ? '+' : ''}${bankrollData.profit.toFixed(0)} 
-                  ({bankrollData.profitPercentage >= 0 ? '+' : ''}{bankrollData.profitPercentage.toFixed(1)}%)
-                </div>
-              </div>
-            </div>
-            <div className="mt-3 text-xs text-[#6B7280]">
-              Started with $1,000 • $10 bets daily • {bankrollData.totalBets} total bets
-            </div>
-          </div>
-        )
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -252,11 +241,11 @@ function KPIDashboard({ kpis, period, selectedBetType }) {
             positive={periodKPIs.win_rate >= 50}
           />
           <KPICard
-            title="CLV Beat Rate"
-            value={`${periodKPIs.clv_beat_rate.toFixed(1)}%`}
-            subtitle="Beat closing lines"
-            icon={Trophy}
-            positive={periodKPIs.clv_beat_rate >= 50}
+            title="Total Bets"
+            value={periodKPIs.total_bets.toString()}
+            subtitle="Bets placed"
+            icon={Target}
+            positive={periodKPIs.total_bets > 0}
           />
           <KPICard
             title="Net P&L"
@@ -272,10 +261,10 @@ function KPIDashboard({ kpis, period, selectedBetType }) {
       <div className="card">
         <h2 className="text-xl font-bold text-[#E5E7EB] mb-6">All-Time Performance</h2>
         
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div className="text-center">
             <div className="text-2xl font-bold text-[#F4C430] mb-1">
-              {allTimeKPIs.total_roi >= 0 ? '+' : ''}{allTimeKPIs.total_roi.toFixed(1)}%
+              {allTimeKPIs.roi >= 0 ? '+' : ''}{allTimeKPIs.roi.toFixed(1)}%
             </div>
             <div className="text-[#6B7280] text-sm">Total ROI</div>
           </div>
@@ -292,16 +281,10 @@ function KPIDashboard({ kpis, period, selectedBetType }) {
             <div className="text-[#6B7280] text-sm">Win Rate</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-400 mb-1">
-              {allTimeKPIs.clv_beat_rate.toFixed(1)}%
+            <div className="text-2xl font-bold text-[#F4C430] mb-1">
+              {allTimeKPIs.cumulative_pnl >= 0 ? '+' : ''}${allTimeKPIs.cumulative_pnl.toFixed(0)}
             </div>
-            <div className="text-[#6B7280] text-sm">CLV Beat</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-400 mb-1">
-              {allTimeKPIs.no_bet_days}
-            </div>
-            <div className="text-[#6B7280] text-sm">No Bet Days</div>
+            <div className="text-[#6B7280] text-sm">Total P&L</div>
           </div>
         </div>
 
@@ -592,6 +575,232 @@ function MethodologySection({ methodology, show, onToggle }) {
 }
 
 /**
+ * Convert American odds to decimal
+ */
+function convertAmericanToDecimal(americanOdds) {
+  const odds = typeof americanOdds === 'string' ? 
+    parseInt(americanOdds.replace('+', '')) : americanOdds;
+  
+  if (odds >= 0) {
+    return (1 + odds / 100).toFixed(2);
+  } else {
+    return (1 + 100 / Math.abs(odds)).toFixed(2);
+  }
+}
+
+/**
+ * Daily Picks Section Component
+ */
+function DailyPicksSection({ picks, loading }) {
+  const handleDownloadSlip = async (bet, betType) => {
+    try {
+      // Format the bet data for the improved slip generator
+      const improvedBets = bet.legs.map((leg, index) => ({
+        league: leg.sport || 'Sports',
+        matchup: `${leg.awayTeam} @ ${leg.homeTeam}`,
+        market: leg.marketType || 'Moneyline',
+        selection: leg.selection,
+        odds: leg.bestOdds,
+        decimal_odds: convertAmericanToDecimal(leg.bestOdds),
+        sportsbook: leg.bestSportsbook || 'Best Line',
+        improved: true,
+        improvement_percentage: leg.edgePercentage || 0,
+        original_odds: leg.bestOdds
+      }));
+
+      const slipData = {
+        originalSlip: {
+          sportsbook: 'BetChekr AI Daily Picks',
+          total_stake: 100,
+          potential_payout: bet.estimatedPayout || 200
+        },
+        improvedBets: improvedBets,
+        explanation: `${betType === 'single' ? 'Single Bet' : betType === 'parlay2' ? '2-Leg Parlay' : '4-Leg Parlay'} - ${bet.edgePercentage?.toFixed(1)}% Edge`,
+        analysis: {
+          expectedValue: bet.edgePercentage || 0,
+          impliedProbability: bet.impliedProbability || 50
+        }
+      };
+
+      // Generate the image
+      const imageData = await generateImprovedSlipImage(slipData);
+      
+      if (imageData) {
+        // Download the image
+        downloadImprovedSlip(imageData, `${betType}-pick-${new Date().toISOString().split('T')[0]}.png`);
+      } else {
+        console.error('Failed to generate slip image');
+      }
+    } catch (error) {
+      console.error('Error downloading slip:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <section className="py-8 bg-[#111827]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-[#F4C430] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-[#9CA3AF]">Loading today's picks...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!picks) {
+    return (
+      <section className="py-8 bg-[#111827]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="card text-center">
+            <Clock className="w-12 h-12 mx-auto mb-4 text-[#6B7280]" />
+            <h3 className="text-xl font-semibold text-[#E5E7EB] mb-2">Daily Picks Coming Soon</h3>
+            <p className="text-[#9CA3AF]">Check back at 11 AM CT for today's recommendations</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (picks.noBetReason) {
+    return (
+      <section className="py-8 bg-[#111827]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="card text-center">
+            <Eye className="w-12 h-12 mx-auto mb-4 text-[#6B7280]" />
+            <h3 className="text-xl font-semibold text-[#E5E7EB] mb-2">No Bets Today</h3>
+            <p className="text-[#9CA3AF]">{picks.noBetReason}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const availablePicks = [
+    { key: 'single', label: 'Single Bet', pick: picks.single },
+    { key: 'parlay2', label: '2-Leg Parlay', pick: picks.parlay2 },
+    { key: 'parlay4', label: '4-Leg Parlay', pick: picks.parlay4 }
+  ].filter(item => item.pick);
+
+  return (
+    <section className="py-8 bg-[#111827]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Star className="w-8 h-8 text-[#F4C430]" />
+            <h2 className="text-3xl font-bold text-[#E5E7EB]">Today's Picks</h2>
+          </div>
+          <p className="text-[#9CA3AF]">
+            {new Date().toLocaleDateString('en-US', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {availablePicks.map(({ key, label, pick }) => (
+            <motion.div
+              key={key}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="card"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-[#E5E7EB]">{label}</h3>
+                <span className={`text-sm px-2 py-1 rounded ${
+                  pick.edgePercentage >= 5 ? 'bg-green-500/20 text-green-400' :
+                  pick.edgePercentage >= 3 ? 'bg-yellow-500/20 text-yellow-400' :
+                  'bg-blue-500/20 text-blue-400'
+                }`}>
+                  {pick.edgePercentage.toFixed(1)}% Edge
+                </span>
+              </div>
+
+              <div className="space-y-3 mb-4">
+                {pick.legs.map((leg, index) => (
+                  <div key={index} className="bg-[#1F2937] rounded-lg p-3">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-medium text-[#E5E7EB]">{leg.selection}</div>
+                        <div className="text-sm text-[#9CA3AF]">
+                          {leg.homeTeam} vs {leg.awayTeam}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-[#F4C430]">{leg.bestOdds}</div>
+                        <div className="text-xs text-[#6B7280]">{leg.bestSportsbook}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between items-center mb-4 p-3 bg-[#0B0F14] rounded-lg">
+                <div>
+                  <div className="text-sm text-[#9CA3AF]">Combined Odds</div>
+                  <div className="font-bold text-[#E5E7EB]">{pick.combinedOdds}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-[#9CA3AF]">Potential Return</div>
+                  <div className="font-bold text-green-400">+${pick.estimatedPayout.toFixed(0)}</div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => handleDownloadSlip(pick, key)}
+                className="w-full btn btn-primary flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download Slip
+              </button>
+            </motion.div>
+          ))}
+        </div>
+
+        {availablePicks.length === 0 && (
+          <div className="card text-center">
+            <Eye className="w-12 h-12 mx-auto mb-4 text-[#6B7280]" />
+            <p className="text-[#9CA3AF]">No qualifying picks found for today</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Helper functions for bet slip generation
+ */
+function getLeagueFromSport(sport) {
+  const sportMappings = {
+    'americanfootball_nfl': 'NFL',
+    'basketball_nba': 'NBA',
+    'baseball_mlb': 'MLB',
+    'hockey_nhl': 'NHL',
+    'soccer_epl': 'Premier League',
+    'soccer_uefa_champions_league': 'Champions League'
+  };
+  return sportMappings[sport] || sport.toUpperCase();
+}
+
+function getBetTypeDisplayForTemplate(betType) {
+  const displayNames = {
+    'single': 'Single',
+    'parlay2': '2-Leg Parlay',
+    'parlay4': '4-Leg Parlay'
+  };
+  return displayNames[betType] || betType;
+}
+
+/**
  * Get display label for bet type
  */
 function getBetTypeLabel(betType) {
@@ -602,56 +811,4 @@ function getBetTypeLabel(betType) {
     '4leg': '4-Leg Parlays'
   };
   return labels[betType] || 'Overall';
-}
-
-/**
- * Generate mock bet-type specific data for demonstration
- */
-function generateMockBetTypeData(betType) {
-  const baseData = {
-    '1leg': {
-      wins: 15, losses: 8, totalBets: 23, winRate: 65.2,
-      startingBankroll: 1000, netProfit: 127, roi: 12.7
-    },
-    '2leg': {
-      wins: 8, losses: 7, totalBets: 15, winRate: 53.3,
-      startingBankroll: 1000, netProfit: 45, roi: 4.5
-    },
-    '4leg': {
-      wins: 3, losses: 12, totalBets: 15, winRate: 20.0,
-      startingBankroll: 1000, netProfit: -75, roi: -7.5
-    }
-  };
-
-  if (betType === 'all') return null;
-
-  const data = baseData[betType];
-  if (!data) return null;
-
-  return {
-    period: {
-      total_bets: data.totalBets,
-      wins: data.wins,
-      losses: data.losses,
-      win_rate: data.winRate,
-      roi: data.roi,
-      pnl: data.netProfit,
-      adoption_rate: 85.5
-    },
-    all_time: {
-      total_bets: data.totalBets,
-      total_wins: data.wins,
-      total_losses: data.losses,
-      total_roi: data.roi,
-      win_rate: data.winRate,
-      cumulative_profit: data.netProfit
-    },
-    bankroll: {
-      current: data.startingBankroll + data.netProfit,
-      profit: data.netProfit,
-      profitPercentage: (data.netProfit / data.startingBankroll) * 100,
-      totalBets: data.totalBets,
-      startingBankroll: data.startingBankroll
-    }
-  };
 }

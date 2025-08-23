@@ -8,16 +8,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userId, isPremium } = await authenticateUser(req);
-    
-    // Non-premium users get limited data
-    if (!isPremium) {
-      return res.status(403).json({
-        success: false,
-        error: 'Premium subscription required',
-        message: 'Upgrade to Premium to access daily picks'
-      });
-    }
+    // Public access for transparency - no authentication required
 
     const today = new Date().toISOString().split('T')[0];
     
@@ -110,26 +101,32 @@ export default async function handler(req, res) {
       .filter(bet => bet)
       .map(bet => enrichBetData(bet));
 
-    // Track user's view
-    await trackUserView(userId, today);
+    // Public access - no user tracking
 
-    return res.status(200).json({
+    const response = {
       success: true,
       date: today,
       published_at: dailyReco.published_at,
-      status: dailyReco.status,
-      no_bet_reason: dailyReco.no_bet_reason,
-      bets: {
-        single: dailyReco.single_bet ? enrichBetData(dailyReco.single_bet) : null,
-        parlay2: dailyReco.parlay_2 ? enrichBetData(dailyReco.parlay_2) : null,
-        parlay4: dailyReco.parlay_4 ? enrichBetData(dailyReco.parlay_4) : null
-      },
-      metadata: {
-        ...dailyReco.metadata,
-        earliest_game_time: getEarliestGameTime(bets),
-        countdown_to_first_game: getCountdownToFirstGame(bets)
-      }
-    });
+      status: dailyReco.status
+    };
+
+    // If there are no bets, return the no bet reason
+    if (dailyReco.no_bet_reason) {
+      response.noBetReason = dailyReco.no_bet_reason;
+      return res.status(200).json(response);
+    }
+
+    // Return picks in the format expected by the frontend
+    response.single = dailyReco.single_bet ? enrichBetDataForPublic(dailyReco.single_bet) : null;
+    response.parlay2 = dailyReco.parlay_2 ? enrichBetDataForPublic(dailyReco.parlay_2) : null;
+    response.parlay4 = dailyReco.parlay_4 ? enrichBetDataForPublic(dailyReco.parlay_4) : null;
+    response.metadata = {
+      ...dailyReco.metadata,
+      earliest_game_time: getEarliestGameTime(bets),
+      countdown_to_first_game: getCountdownToFirstGame(bets)
+    };
+
+    return res.status(200).json(response);
 
   } catch (error) {
     console.error('Error fetching today\'s picks:', error);
@@ -198,6 +195,53 @@ function enrichBetData(bet) {
     earliest_start: legs.length > 0 ? 
       Math.min(...legs.map(leg => new Date(leg.commence_time).getTime())) : null
   };
+}
+
+/**
+ * Enrich bet data for public consumption (format expected by frontend)
+ */
+function enrichBetDataForPublic(bet) {
+  if (!bet) return null;
+
+  const legs = bet.reco_bet_legs || [];
+  
+  return {
+    type: bet.bet_type,
+    legs: legs.map(leg => ({
+      gameId: leg.metadata?.game_id || `${leg.home_team}-${leg.away_team}`,
+      sport: leg.sport,
+      homeTeam: leg.home_team,
+      awayTeam: leg.away_team,
+      commenceTime: leg.commence_time,
+      marketType: leg.market_type,
+      selection: leg.selection,
+      selectionKey: leg.selection.toLowerCase().replace(/\s+/g, '_'),
+      bestSportsbook: leg.best_sportsbook,
+      bestOdds: formatOdds(leg.best_odds),
+      decimalOdds: americanToDecimal(leg.best_odds),
+      edgePercentage: leg.edge_percentage,
+      impliedProbability: 1 / americanToDecimal(leg.best_odds),
+      confidence: leg.metadata?.confidence || 'medium'
+    })),
+    combinedOdds: formatOdds(bet.combined_odds),
+    decimalOdds: bet.decimal_odds,
+    edgePercentage: bet.edge_percentage,
+    estimatedPayout: bet.estimated_payout,
+    confidence: Math.min(...(legs.map(leg => leg.metadata?.confidence_score || 0.7)))
+  };
+}
+
+/**
+ * Convert American odds to decimal
+ */
+function americanToDecimal(americanOdds) {
+  if (!americanOdds) return 1;
+  
+  if (americanOdds > 0) {
+    return (americanOdds / 100) + 1;
+  } else {
+    return (100 / Math.abs(americanOdds)) + 1;
+  }
 }
 
 /**

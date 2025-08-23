@@ -33,6 +33,7 @@ export default function AIParlayPage() {
   const [usageData, setUsageData] = useState({ generations: 0 });
   const [showPaywall, setShowPaywall] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [useEnhancedEV, setUseEnhancedEV] = useState(true); // Use enhanced EV calculations
 
   // Hero background images (sports-related)
   const backgroundImages = [
@@ -152,7 +153,10 @@ export default function AIParlayPage() {
     setIsGenerating(true);
     
     try {
-      const response = await apiFetch('/api/generate-parlay', {
+      // Use enhanced EV endpoint if enabled, otherwise use regular endpoint
+      const endpoint = useEnhancedEV ? '/api/generate-parlay-ev' : '/api/generate-parlay';
+      
+      const response = await apiFetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -161,7 +165,8 @@ export default function AIParlayPage() {
           preferences: {
             sport: selectedSports[0], // Use first selected sport
             riskLevel,
-            legs: parseInt(parlaySize)
+            legs: parseInt(parlaySize),
+            includePlayerProps: includePlayerProps
           },
           isPremium
         }),
@@ -603,6 +608,40 @@ export default function AIParlayPage() {
                     <option value="medium">Medium</option>
                     <option value="aggressive">Aggressive</option>
                   </select>
+                </div>
+                
+                <div>
+                  <label className="block text-[#9CA3AF] text-sm font-medium mb-2">
+                    Enhanced EV Mode 
+                    <span className="ml-2 text-xs text-green-400">Recommended</span>
+                  </label>
+                  <div className="flex rounded-lg overflow-hidden border border-[#1F2937] h-10">
+                    <button
+                      onClick={() => setUseEnhancedEV(true)}
+                      className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
+                        useEnhancedEV 
+                          ? 'bg-[#F4C430] text-[#0F172A]' 
+                          : 'bg-[#0F172A] text-[#6B7280] hover:text-[#9CA3AF]'
+                      }`}
+                    >
+                      Pinnacle Baseline
+                    </button>
+                    <button
+                      onClick={() => setUseEnhancedEV(false)}
+                      className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
+                        !useEnhancedEV 
+                          ? 'bg-[#F4C430] text-[#0F172A]' 
+                          : 'bg-[#0F172A] text-[#6B7280] hover:text-[#9CA3AF]'
+                      }`}
+                    >
+                      Standard AI
+                    </button>
+                  </div>
+                  <p className="text-xs text-[#6B7280] mt-1">
+                    {useEnhancedEV 
+                      ? "Uses Pinnacle's no-vig lines as baseline for precise EV calculations" 
+                      : "Uses AI pattern recognition for parlay generation"}
+                  </p>
                 </div>
                 
                 <div>

@@ -75,7 +75,7 @@ async function generateOptimizedParlay(preferences, positiveEVLines) {
   console.log(`🧮 [OptimizedParlay] Generating parlay from ${positiveEVLines.length} EV+ lines`);
   
   // Filter by risk level and select best EV options
-  const riskFilteredLines = filterByRiskLevel(positiveEVLines, preferences.riskLevel, preferences.legs);
+  const riskFilteredLines = filterByRiskLevel(positiveEVLines, preferences.riskLevel, preferences.legs, preferences.includePlayerProps);
   console.log(`🎯 [OptimizedParlay] Risk-filtered to ${riskFilteredLines.length} lines`);
   
   if (riskFilteredLines.length < preferences.legs) {
@@ -111,12 +111,16 @@ async function generateOptimizedParlay(preferences, positiveEVLines) {
       'risky': 'Include underdogs for higher payout potential'
     };
     
+    const playerPropsGuidance = preferences.includePlayerProps 
+      ? `IMPORTANT: Include at least ${Math.ceil(preferences.legs * 0.5)} player props (market_type starting with "player_"). `
+      : '';
+    
     const parlayResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: `${riskGuidance[preferences.riskLevel]}. Return only JSON.`
+          content: `${playerPropsGuidance}${riskGuidance[preferences.riskLevel]}. Return only JSON.`
         },
         {
           role: "user",
@@ -155,8 +159,8 @@ function formatCompactEVLines(lines) {
   ).join('\n');
 }
 
-// OPTIMIZATION: Simple EV-based risk scaling
-function filterByRiskLevel(lines, riskLevel, neededLegs = 3) {
+// OPTIMIZATION: EV-based risk scaling with player props prioritization
+function filterByRiskLevel(lines, riskLevel, neededLegs = 3, includePlayerProps = false) {
   // Sort by EV first (highest to lowest)
   const sortedByEV = [...lines].sort((a, b) => b.expected_value - a.expected_value);
   
@@ -175,7 +179,42 @@ function filterByRiskLevel(lines, riskLevel, neededLegs = 3) {
     maxLines = Math.min(neededLegs, sortedByEV.length);
   }
   
-  return sortedByEV.slice(0, maxLines);
+  let filteredLines = sortedByEV.slice(0, maxLines);
+  
+  // If user wants player props, ensure at least 50% are player props
+  if (includePlayerProps && neededLegs > 1) {
+    const playerPropLines = filteredLines.filter(line => line.market_type && line.market_type.startsWith('player_'));
+    const mainMarketLines = filteredLines.filter(line => !line.market_type || !line.market_type.startsWith('player_'));
+    
+    const requiredPlayerProps = Math.ceil(neededLegs * 0.5); // At least 50%
+    
+    console.log(`🎯 [PlayerProps] Need ${requiredPlayerProps}/${neededLegs} player props. Available: ${playerPropLines.length} player props, ${mainMarketLines.length} main markets`);
+    
+    if (playerPropLines.length >= requiredPlayerProps) {
+      // We have enough player props, balance the selection
+      const selectedPlayerProps = playerPropLines.slice(0, requiredPlayerProps);
+      const remainingSlots = neededLegs - requiredPlayerProps;
+      const selectedMainMarkets = mainMarketLines.slice(0, remainingSlots);
+      
+      // Combine and sort by EV again
+      filteredLines = [...selectedPlayerProps, ...selectedMainMarkets]
+        .sort((a, b) => b.expected_value - a.expected_value);
+        
+      console.log(`✅ [PlayerProps] Balanced selection: ${selectedPlayerProps.length} player props + ${selectedMainMarkets.length} main markets`);
+    } else if (playerPropLines.length > 0) {
+      // Not enough player props, use all available player props and fill with main markets
+      console.log(`⚠️ [PlayerProps] Only ${playerPropLines.length} player props available, using all + main markets`);
+      const remainingSlots = neededLegs - playerPropLines.length;
+      const selectedMainMarkets = mainMarketLines.slice(0, remainingSlots);
+      
+      filteredLines = [...playerPropLines, ...selectedMainMarkets]
+        .sort((a, b) => b.expected_value - a.expected_value);
+    } else {
+      console.log(`⚠️ [PlayerProps] No player props available, using main markets only`);
+    }
+  }
+  
+  return filteredLines;
 }
 
 // OPTIMIZATION: Mathematical parlay generation (no AI tokens)
@@ -188,25 +227,83 @@ function generateMathematicalParlay(evLines, preferences) {
   // Always prioritize highest EV first (simplest and most optimal)
   const sortedLines = evLines.sort((a, b) => b.expected_value - a.expected_value);
   
-  // Select legs from different games based on highest EV
-  for (const line of sortedLines) {
-    if (selectedLegs.length >= preferences.legs) break;
+  // If player props are requested, ensure we get the right balance
+  if (preferences.includePlayerProps && preferences.legs > 1) {
+    const playerPropLines = sortedLines.filter(line => line.market_type && line.market_type.startsWith('player_'));
+    const mainMarketLines = sortedLines.filter(line => !line.market_type || !line.market_type.startsWith('player_'));
     
-    const gameKey = line.game;
-    if (!usedGames.has(gameKey)) {
-      selectedLegs.push({
-        game: line.game,
-        sportsbook: line.sportsbook,
-        bet_type: line.market_type,
-        selection: line.selection,
-        odds: line.odds,
-        decimal_odds: line.decimal_odds,
-        expected_value: line.expected_value,
-        confidence_score: line.confidence_score,
-        edge_type: line.edge_type,
-        reasoning: `${preferences.riskLevel.charAt(0).toUpperCase() + preferences.riskLevel.slice(1)} pick: +${(line.expected_value * 100).toFixed(1)}% EV (${line.edge_type})`
-      });
-      usedGames.add(gameKey);
+    const requiredPlayerProps = Math.ceil(preferences.legs * 0.5);
+    
+    console.log(`🎯 [MathParlay] Targeting ${requiredPlayerProps}/${preferences.legs} player props`);
+    
+    // First, add player props (up to required amount)
+    let playerPropsAdded = 0;
+    for (const line of playerPropLines) {
+      if (selectedLegs.length >= preferences.legs || playerPropsAdded >= requiredPlayerProps) break;
+      
+      const gameKey = line.game;
+      if (!usedGames.has(gameKey)) {
+        selectedLegs.push({
+          game: line.game,
+          sportsbook: line.sportsbook,
+          bet_type: line.market_type,
+          selection: line.selection,
+          odds: line.odds,
+          decimal_odds: line.decimal_odds,
+          expected_value: line.expected_value,
+          confidence_score: line.confidence_score,
+          edge_type: line.edge_type,
+          reasoning: `${preferences.riskLevel.charAt(0).toUpperCase() + preferences.riskLevel.slice(1)} player prop: +${(line.expected_value * 100).toFixed(1)}% EV (${line.edge_type})`
+        });
+        usedGames.add(gameKey);
+        playerPropsAdded++;
+      }
+    }
+    
+    // Then fill remaining slots with main markets
+    for (const line of mainMarketLines) {
+      if (selectedLegs.length >= preferences.legs) break;
+      
+      const gameKey = line.game;
+      if (!usedGames.has(gameKey)) {
+        selectedLegs.push({
+          game: line.game,
+          sportsbook: line.sportsbook,
+          bet_type: line.market_type,
+          selection: line.selection,
+          odds: line.odds,
+          decimal_odds: line.decimal_odds,
+          expected_value: line.expected_value,
+          confidence_score: line.confidence_score,
+          edge_type: line.edge_type,
+          reasoning: `${preferences.riskLevel.charAt(0).toUpperCase() + preferences.riskLevel.slice(1)} pick: +${(line.expected_value * 100).toFixed(1)}% EV (${line.edge_type})`
+        });
+        usedGames.add(gameKey);
+      }
+    }
+    
+    console.log(`✅ [MathParlay] Selected ${playerPropsAdded} player props + ${selectedLegs.length - playerPropsAdded} main markets`);
+  } else {
+    // Regular selection without player props preference
+    for (const line of sortedLines) {
+      if (selectedLegs.length >= preferences.legs) break;
+      
+      const gameKey = line.game;
+      if (!usedGames.has(gameKey)) {
+        selectedLegs.push({
+          game: line.game,
+          sportsbook: line.sportsbook,
+          bet_type: line.market_type,
+          selection: line.selection,
+          odds: line.odds,
+          decimal_odds: line.decimal_odds,
+          expected_value: line.expected_value,
+          confidence_score: line.confidence_score,
+          edge_type: line.edge_type,
+          reasoning: `${preferences.riskLevel.charAt(0).toUpperCase() + preferences.riskLevel.slice(1)} pick: +${(line.expected_value * 100).toFixed(1)}% EV (${line.edge_type})`
+        });
+        usedGames.add(gameKey);
+      }
     }
   }
   
