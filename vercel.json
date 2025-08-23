@@ -7,16 +7,8 @@
   "regions": ["iad1"],
   "crons": [
     {
-      "path": "/api/daily-picks/warm-cache",
-      "schedule": "55 15 * * *"
-    },
-    {
       "path": "/api/daily-picks/publish",
       "schedule": "0 16 * * *"
-    },
-    {
-      "path": "/api/daily-picks/grade-bets",
-      "schedule": "0 4-11 * * *"
     }
   ],
   "functions": {
