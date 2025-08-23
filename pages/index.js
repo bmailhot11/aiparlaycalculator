@@ -329,11 +329,6 @@ export default function Home() {
                 )}
               </button>
               
-              {/* Premium Note */}
-              <p className="text-[#6B7280] text-xs text-center">
-                <AlertCircle className="w-3 h-3 inline mr-1" />
-                Fast check uses cached odds (≤5 min). For live refresh use Premium.
-              </p>
               
               {/* Trash/Cash Analysis Result */}
               {analysisResult && (
