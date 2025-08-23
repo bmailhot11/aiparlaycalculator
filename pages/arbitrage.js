@@ -18,8 +18,7 @@ export default function ArbitragePage() {
   const { isPremium } = useContext(PremiumContext);
   const [isLoading, setIsLoading] = useState(false);
   const [arbitrageData, setArbitrageData] = useState([]);
-  const [selectedSports, setSelectedSports] = useState(['NFL']);
-  const [minProfit, setMinProfit] = useState('1');
+  const [selectedSport, setSelectedSport] = useState('NFL');
   const [showPaywall, setShowPaywall] = useState(false);
 
   // Hero background images (sports-related)
@@ -163,7 +162,7 @@ export default function ArbitragePage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sport: selectedSports.includes('all') ? 'NFL' : selectedSports[0] || 'NFL'
+          sport: selectedSport
         }),
       });
 
@@ -244,60 +243,46 @@ export default function ArbitragePage() {
             transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
             className="card max-w-[800px] mx-auto"
           >
-            {/* Filters Section */}
+            {/* Simple Sport Selection */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
-                <Filter className="w-5 h-5 text-[#F4C430]" />
-                <h3 className="text-[#E5E7EB] font-semibold">Filter Options</h3>
+                <Target className="w-5 h-5 text-[#F4C430]" />
+                <h3 className="text-[#E5E7EB] font-semibold">Find Arbitrage Opportunities</h3>
               </div>
               
-              {/* Form Fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <select
-                  value={selectedSports[0]}
-                  onChange={(e) => setSelectedSports([e.target.value])}
-                  className="select"
-                >
-                  <option value="all">All Sports</option>
-                  <option value="nfl">NFL</option>
-                  <option value="nba">NBA</option>
-                  <option value="mlb">MLB</option>
-                  <option value="nhl">NHL</option>
-                </select>
-                <input
-                  type="number"
-                  value={minProfit}
-                  onChange={(e) => setMinProfit(e.target.value)}
-                  placeholder="Min Profit %"
-                  className="input"
-                  min="0"
-                  step="0.1"
-                />
-                <input
-                  type="number"
-                  value={100}
-                  readOnly
-                  placeholder="Stake Amount ($)"
-                  className="input bg-[#1F2937] text-[#6B7280]"
-                />
+              {/* Sport Selection */}
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6">
+                {['NFL', 'NBA', 'NHL', 'MLB', 'MMA'].map(sport => (
+                  <button
+                    key={sport}
+                    onClick={() => setSelectedSport(sport)}
+                    className={`py-2 px-2 rounded-lg font-medium transition-all text-xs sm:text-sm ${
+                      selectedSport === sport
+                        ? 'bg-[#F4C430] text-[#0B0F14]'
+                        : 'bg-[#1F2937] text-[#9CA3AF] hover:bg-[#253044]'
+                    }`}
+                  >
+                    {sport}
+                  </button>
+                ))}
               </div>
               
-              {/* CTA */}
+              {/* Single CTA Button */}
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={handleFindArbitrages}
                   disabled={isLoading}
-                  className="btn btn-primary flex-1"
+                  className="btn btn-primary w-full"
                 >
                   {isLoading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-[#0B0F14] border-t-transparent rounded-full animate-spin mr-2" />
-                      Scanning...
+                      Scanning {selectedSport}...
                     </>
                   ) : (
                     <>
                       <Target className="w-4 h-4 mr-2" />
-                      Find Arbitrage Opportunities
+                      Find {selectedSport} Arbitrage
                     </>
                   )}
                 </button>
