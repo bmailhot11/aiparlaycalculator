@@ -462,15 +462,45 @@ async function generateParlayWithRealOdds(preferences, sportData) {
       model: "gpt-4o-mini",
       messages: [
         {
-          role: "system",
-          content: `You are an expert sports betting analyst with deep knowledge of market inefficiencies, line movement patterns, and advanced betting strategies. Select exactly ${preferences.legs} legs with positive expected value from the provided options. ${preferences.includePlayerProps ? `IMPORTANT: Include at least ${Math.ceil(preferences.legs * 0.5)} player props (market_type starting with "player_"). ` : ''}CRITICAL: Do not select the same bet (game + selection + market type) from multiple sportsbooks - choose ONLY ONE sportsbook per unique bet. Ensure all legs are DIFFERENT bets from DIFFERENT games when possible. Use EXACT odds and sportsbook names. Provide sophisticated betting intelligence in your reasoning. Return ONLY valid JSON, no explanations.`
+          role: "system", 
+          content: `You are an expert sports betting analyst specializing in advanced market analysis and parlay construction. Your goal is to create diverse, well-reasoned parlays that exploit specific market inefficiencies.
+
+CORE REQUIREMENTS:
+- Select exactly ${preferences.legs} legs with positive expected value
+- Each leg must be from a DIFFERENT game (no same-game parlays)
+- Choose ONLY ONE sportsbook per unique bet (no duplicates)
+- Never select conflicting bets (over/under same game, opposing moneylines, etc.)
+${preferences.includePlayerProps ? `- Include at least ${Math.ceil(preferences.legs * 0.5)} player props (market_type starting with "player_")` : ''}
+
+STRATEGY VARIATIONS (rotate between these approaches):
+1. VALUE-FOCUSED: Target undervalued lines with highest EV
+2. CORRELATION-AWARE: Exploit related outcomes across different games
+3. CONTRARIAN: Fade public money on overbet favorites
+4. LINE MOVEMENT: Target reverse line movement indicators
+5. SITUATIONAL: Exploit scheduling, travel, or motivational factors
+
+REASONING REQUIREMENTS:
+- Identify specific market inefficiency for each leg
+- Explain why the line provides value
+- Reference relevant factors (injuries, trends, matchups)
+- Provide actionable betting intelligence
+
+Return ONLY valid JSON with no explanations outside the JSON structure.`
         },
         {
           role: "user",
-          content: `Create ${preferences.sport} parlay with ${preferences.legs} legs at ${preferences.riskLevel} risk level.
+          content: `Create a unique ${preferences.sport} parlay with ${preferences.legs} legs at ${preferences.riskLevel} risk level.
 
-Available bets (all positive EV):
+CONTEXT: ${new Date().toLocaleDateString()} - Generate a fresh parlay strategy that differs from typical patterns. Consider current market conditions and exploit specific inefficiencies.
+
+Available bets (sorted by EV, all positive expected value):
 ${formatBetsForAI(topBets)}
+
+ANALYSIS GUIDELINES:
+- Risk Level "${preferences.riskLevel}": ${getRiskLevelGuidance(preferences.riskLevel)}
+- Prioritize different bet types and game combinations
+- Look for market overreactions, public bias, or line movement value
+- Consider game contexts (division rivals, playoff implications, etc.)
 
 Return this exact JSON structure:
 {
@@ -482,28 +512,33 @@ Return this exact JSON structure:
       "selection": "team or over/under",
       "odds": "+150 or -110 format",
       "decimal_odds": "number like 2.5",
-      "reasoning": "specific market inefficiency exploited (line movement, public bias, sharp money indicator, etc.)"
+      "reasoning": "detailed analysis of specific market inefficiency - explain WHY this line has value (e.g. 'Public overvaluing home team after 3-game win streak, but advanced metrics show defensive regression. Line moved from -6 to -7.5 on square money.')",
+      "edge_type": "VALUE/CONTRARIAN/SITUATIONAL/LINE_MOVEMENT/CORRELATION",
+      "confidence_factors": ["list specific factors supporting this bet"]
     }
   ],
+  "parlay_strategy": "name the overall strategy (e.g. 'Contrarian Fade Heavy Favorites', 'Situational Scheduling Spots', 'Line Movement Reversals')",
   "total_decimal_odds": "multiply all decimal odds",
   "total_american_odds": "+450 format", 
-  "confidence": "High/Medium/Low based on EV",
-  "risk_assessment": "detailed risk analysis considering correlation and variance",
+  "confidence": "High/Medium/Low with specific reasoning",
+  "risk_assessment": "analyze correlation risk, variance, and key failure points",
   "strategic_insights": [
-    "specific market edge being exploited",
-    "optimal betting timing/conditions", 
-    "key factors that could invalidate the edge"
+    "primary market inefficiency being exploited across the parlay",
+    "optimal betting conditions and timing factors", 
+    "key injury/news risks that could invalidate edges",
+    "bankroll management recommendation for this specific parlay"
   ],
   "advanced_metrics": {
-    "kelly_criterion_size": "optimal bet size percentage",
-    "correlation_risk": "Low/Medium/High based on leg dependencies",
-    "market_efficiency_score": "1-100 rating of market inefficiency"
+    "expected_roi": "percentage expected return",
+    "kelly_criterion_size": "optimal bet size percentage", 
+    "correlation_risk": "Low/Medium/High with explanation",
+    "market_inefficiency_score": "1-100 rating with reasoning"
   }
 }`
         }
       ],
-      max_tokens: 1000, // Increased to handle complex parlay generation
-      temperature: 0.3
+      max_tokens: 2000, // Increased for detailed analysis and varied parlays
+      temperature: 0.4 // Slightly higher for more creative/varied responses
     });
 
     const aiResponse = parlayResponse.choices[0].message.content;
@@ -518,17 +553,89 @@ Return this exact JSON structure:
       
       const parlayData = JSON.parse(cleanedResponse);
       
-      // Remove duplicate bets (same game + selection + bet_type)
+      // Remove duplicate bets and conflicting bets (same game + selection + bet_type OR opposing bets)
       const seenBets = new Set();
+      const gameConflicts = new Map(); // Track opposing bets per game
       const uniqueLegs = [];
       
       for (const leg of parlayData.parlay_legs || []) {
         const betKey = `${leg.game}_${leg.selection}_${leg.bet_type}`;
-        if (!seenBets.has(betKey)) {
-          seenBets.add(betKey);
-          uniqueLegs.push(leg);
-        } else {
+        const gameKey = leg.game;
+        
+        // Check for exact duplicates
+        if (seenBets.has(betKey)) {
           console.log(`Removed duplicate bet: ${leg.game} - ${leg.selection} (${leg.bet_type})`);
+          continue;
+        }
+        
+        // Check for conflicting bets (over/under, opposing moneylines, etc.)
+        if (!gameConflicts.has(gameKey)) {
+          gameConflicts.set(gameKey, []);
+        }
+        
+        const existingBets = gameConflicts.get(gameKey);
+        let hasConflict = false;
+        
+        for (const existingBet of existingBets) {
+          // Check for over/under conflicts on totals
+          if (leg.bet_type === existingBet.bet_type && leg.bet_type === 'totals') {
+            const isCurrentOver = leg.selection.toLowerCase().includes('over');
+            const isCurrentUnder = leg.selection.toLowerCase().includes('under');
+            const isExistingOver = existingBet.selection.toLowerCase().includes('over');
+            const isExistingUnder = existingBet.selection.toLowerCase().includes('under');
+            
+            if ((isCurrentOver && isExistingUnder) || (isCurrentUnder && isExistingOver)) {
+              hasConflict = true;
+              console.log(`Removed conflicting total bet: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection}`);
+              break;
+            }
+          }
+          
+          // Check for opposing moneyline bets
+          if (leg.bet_type === existingBet.bet_type && leg.bet_type === 'h2h') {
+            // If one bet is for away team and other for home team in same game
+            const gameTeams = leg.game.split(' @ ');
+            if (gameTeams.length === 2) {
+              const [awayTeam, homeTeam] = gameTeams;
+              const currentTeamInSelection = leg.selection.includes(awayTeam) || leg.selection.includes(homeTeam);
+              const existingTeamInSelection = existingBet.selection.includes(awayTeam) || existingBet.selection.includes(homeTeam);
+              
+              if (currentTeamInSelection && existingTeamInSelection && 
+                  ((leg.selection.includes(awayTeam) && existingBet.selection.includes(homeTeam)) ||
+                   (leg.selection.includes(homeTeam) && existingBet.selection.includes(awayTeam)))) {
+                hasConflict = true;
+                console.log(`Removed conflicting moneyline bet: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection}`);
+                break;
+              }
+            }
+          }
+          
+          // Check for opposing spread bets (same team different spreads or opposing teams)
+          if (leg.bet_type === existingBet.bet_type && leg.bet_type === 'spreads') {
+            const gameTeams = leg.game.split(' @ ');
+            if (gameTeams.length === 2) {
+              const [awayTeam, homeTeam] = gameTeams;
+              const currentTeamInSelection = leg.selection.includes(awayTeam) || leg.selection.includes(homeTeam);
+              const existingTeamInSelection = existingBet.selection.includes(awayTeam) || existingBet.selection.includes(homeTeam);
+              
+              if (currentTeamInSelection && existingTeamInSelection && 
+                  ((leg.selection.includes(awayTeam) && existingBet.selection.includes(homeTeam)) ||
+                   (leg.selection.includes(homeTeam) && existingBet.selection.includes(awayTeam)))) {
+                hasConflict = true;
+                console.log(`Removed conflicting spread bet: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection}`);
+                break;
+              }
+            }
+          }
+        }
+        
+        if (!hasConflict) {
+          seenBets.add(betKey);
+          gameConflicts.get(gameKey).push({
+            selection: leg.selection,
+            bet_type: leg.bet_type
+          });
+          uniqueLegs.push(leg);
         }
       }
       
@@ -770,6 +877,8 @@ function validateAndOptimizeParlayOdds(parlayData, availableBets, preferences) {
       odds: bestOddsBet.odds,
       decimal_odds: bestOddsBet.decimal_odds,
       reasoning: leg.reasoning || "Optimized for best odds",
+      edge_type: leg.edge_type || "VALUE",
+      confidence_factors: leg.confidence_factors || ["Best available odds"],
       confidence_rating: leg.confidence_rating || "7",
       expected_probability: leg.expected_probability || "TBD",
       commence_time: bestOddsBet.commence_time,
@@ -781,16 +890,34 @@ function validateAndOptimizeParlayOdds(parlayData, availableBets, preferences) {
   const totalDecimalOdds = validatedLegs.reduce((product, leg) => product * parseFloat(leg.decimal_odds), 1);
   const totalAmericanOdds = decimalToAmerican(totalDecimalOdds);
   
+  // Final validation check for conflicts
+  if (hasConflictingBets(validatedLegs)) {
+    console.log('Final validation failed - conflicts detected in validated parlay');
+    return null;
+  }
+  
   // Get unique sportsbooks
   const bestSportsbooks = [...new Set(validatedLegs.map(leg => leg.sportsbook))];
   
   return {
     parlay_legs: validatedLegs,
+    parlay_strategy: parlayData.parlay_strategy || "Value-Focused Multi-Game Selection",
     total_decimal_odds: totalDecimalOdds.toFixed(2),
     total_american_odds: formatOdds(totalAmericanOdds),
     best_sportsbooks: bestSportsbooks,
     confidence: parlayData.confidence || calculateConfidence(validatedLegs),
-    risk_assessment: generateRiskAssessment(validatedLegs, preferences),
+    risk_assessment: parlayData.risk_assessment || generateRiskAssessment(validatedLegs, preferences),
+    strategic_insights: parlayData.strategic_insights || [
+      generateEVAnalysis(validatedLegs),
+      "Line shopping optimization applied",
+      "Positive expected value focus maintained"
+    ],
+    advanced_metrics: parlayData.advanced_metrics || {
+      expected_roi: `${(calculateParlayEV(validatedLegs) * 100).toFixed(1)}%`,
+      kelly_criterion_size: "1-3% of bankroll",
+      correlation_risk: "Low - different games selected",
+      market_inefficiency_score: "75 - positive EV selections"
+    },
     edge_analysis: generateEVAnalysis(validatedLegs),
     expected_value: calculateParlayEV(validatedLegs),
     ai_enhanced: true,
@@ -975,6 +1102,18 @@ function generateValidatedFallbackParlay(availableBets, preferences) {
     throw new Error(`Could only find ${selectedBets.length} suitable bets for ${legs}-leg parlay`);
   }
   
+  // Final validation check for conflicts in fallback parlay
+  const fallbackLegs = selectedBets.map(bet => ({
+    game: bet.game,
+    bet_type: bet.market_type,
+    selection: bet.selection
+  }));
+  
+  if (hasConflictingBets(fallbackLegs)) {
+    console.log('Fallback parlay validation failed - conflicts detected');
+    throw new Error('Could not generate conflict-free parlay with available bets');
+  }
+  
   // Calculate real total odds
   const totalDecimalOdds = selectedBets.reduce((product, bet) => product * bet.decimal_odds, 1);
   const totalAmericanOdds = decimalToAmerican(totalDecimalOdds);
@@ -990,22 +1129,108 @@ function generateValidatedFallbackParlay(availableBets, preferences) {
       point: bet.point,
       odds: bet.odds,
       decimal_odds: bet.decimal_odds,
-      reasoning: "Mathematically selected using best odds from premium sportsbooks",
+      reasoning: "Mathematically selected using best available odds and positive expected value analysis",
+      edge_type: "VALUE",
+      confidence_factors: ["Positive EV", "Best odds", "Premium sportsbook"],
       confidence_rating: "6",
       expected_probability: "TBD",
       commence_time: bet.commence_time
     })),
+    parlay_strategy: "Mathematical Value Selection",
     total_decimal_odds: totalDecimalOdds.toFixed(2),
     total_american_odds: formatOdds(totalAmericanOdds),
     best_sportsbooks: bestSportsbooks,
     confidence: calculateConfidence(selectedBets),
     risk_assessment: generateRiskAssessment(selectedBets, preferences),
+    strategic_insights: [
+      generateEVAnalysis(selectedBets),
+      "Line shopping optimization for maximum value",
+      "Conservative selection from different games",
+      "Recommended bet size: 1-3% of bankroll based on Kelly Criterion"
+    ],
+    advanced_metrics: {
+      expected_roi: `${(calculateParlayEV(selectedBets) * 100).toFixed(1)}%`,
+      kelly_criterion_size: "1-3% of bankroll",
+      correlation_risk: "Low - different games selected",
+      market_inefficiency_score: "70 - mathematical value focus"
+    },
     edge_analysis: generateEVAnalysis(selectedBets),
     expected_value: calculateParlayEV(selectedBets),
     ai_enhanced: false,
     odds_optimized: true,
     sportsbooks_used: "Premium sportsbooks"
   };
+}
+
+// Validation helper to check for conflicting bets
+function hasConflictingBets(legs) {
+  const gameConflicts = new Map();
+  
+  for (const leg of legs) {
+    const gameKey = leg.game;
+    
+    if (!gameConflicts.has(gameKey)) {
+      gameConflicts.set(gameKey, []);
+    }
+    
+    const existingBets = gameConflicts.get(gameKey);
+    
+    for (const existingBet of existingBets) {
+      // Check for over/under conflicts on totals
+      if (leg.bet_type === existingBet.bet_type && leg.bet_type === 'totals') {
+        const isCurrentOver = leg.selection.toLowerCase().includes('over');
+        const isCurrentUnder = leg.selection.toLowerCase().includes('under');
+        const isExistingOver = existingBet.selection.toLowerCase().includes('over');
+        const isExistingUnder = existingBet.selection.toLowerCase().includes('under');
+        
+        if ((isCurrentOver && isExistingUnder) || (isCurrentUnder && isExistingOver)) {
+          console.log(`⚠️ Conflict detected: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection}`);
+          return true;
+        }
+      }
+      
+      // Check for opposing moneyline bets
+      if (leg.bet_type === existingBet.bet_type && leg.bet_type === 'h2h') {
+        const gameTeams = leg.game.split(' @ ');
+        if (gameTeams.length === 2) {
+          const [awayTeam, homeTeam] = gameTeams;
+          const currentTeamInSelection = leg.selection.includes(awayTeam) || leg.selection.includes(homeTeam);
+          const existingTeamInSelection = existingBet.selection.includes(awayTeam) || existingBet.selection.includes(homeTeam);
+          
+          if (currentTeamInSelection && existingTeamInSelection && 
+              ((leg.selection.includes(awayTeam) && existingBet.selection.includes(homeTeam)) ||
+               (leg.selection.includes(homeTeam) && existingBet.selection.includes(awayTeam)))) {
+            console.log(`⚠️ Conflict detected: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection}`);
+            return true;
+          }
+        }
+      }
+      
+      // Check for opposing spread bets
+      if (leg.bet_type === existingBet.bet_type && leg.bet_type === 'spreads') {
+        const gameTeams = leg.game.split(' @ ');
+        if (gameTeams.length === 2) {
+          const [awayTeam, homeTeam] = gameTeams;
+          const currentTeamInSelection = leg.selection.includes(awayTeam) || leg.selection.includes(homeTeam);
+          const existingTeamInSelection = existingBet.selection.includes(awayTeam) || existingBet.selection.includes(homeTeam);
+          
+          if (currentTeamInSelection && existingTeamInSelection && 
+              ((leg.selection.includes(awayTeam) && existingBet.selection.includes(homeTeam)) ||
+               (leg.selection.includes(homeTeam) && existingBet.selection.includes(awayTeam)))) {
+            console.log(`⚠️ Conflict detected: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection}`);
+            return true;
+          }
+        }
+      }
+    }
+    
+    gameConflicts.get(gameKey).push({
+      selection: leg.selection,
+      bet_type: leg.bet_type
+    });
+  }
+  
+  return false;
 }
 
 // HELPER FUNCTIONS

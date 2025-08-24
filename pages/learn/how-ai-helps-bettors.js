@@ -7,6 +7,7 @@ import {
   DollarSign,
   TrendingUp,
   AlertCircle,
+  AlertTriangle,
   CheckCircle,
   ChevronLeft,
   Clock,
