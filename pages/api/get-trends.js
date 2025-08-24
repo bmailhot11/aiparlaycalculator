@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     if (!sport) {
       return res.status(400).json({ 
         error: 'Sport parameter required',
-        available_sports: ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'UFC', 'Soccer', 'Tennis']
+        available_sports: ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'UFC']
       });
     }
 

@@ -72,7 +72,7 @@ export default async function handler(req, res) {
 
     // Fetch odds data across all sports
     console.log('📊 Fetching odds data across all sports...');
-    const sportsToAnalyze = ['NFL', 'NBA', 'MLB', 'NHL', 'soccer', 'mma', 'tennis'];
+    const sportsToAnalyze = ['NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB', 'UFC'];
     const allOddsData = [];
 
     for (const sport of sportsToAnalyze) {
@@ -152,9 +152,9 @@ async function fetchSportOdds(sport) {
       'NBA': 'basketball_nba', 
       'MLB': 'baseball_mlb',
       'NHL': 'icehockey_nhl',
-      'soccer': 'soccer_epl', // English Premier League as primary
-      'mma': 'mma_mixed_martial_arts',
-      'tennis': 'tennis_atp' // ATP Tour
+      'NCAAF': 'americanfootball_ncaaf',
+      'NCAAB': 'basketball_ncaab',
+      'UFC': 'mma_mixed_martial_arts'
     };
 
     const sportKey = sportMap[sport];

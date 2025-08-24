@@ -45,7 +45,7 @@ export default function EVLines() {
   const [showParlayAnalysis, setShowParlayAnalysis] = useState(false);
   const [parlayComparison, setParlayComparison] = useState(null);
 
-  const sports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'UFC', 'MLS', 'UEFA', 'Tennis'];
+  const sports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'UFC'];
   
   // Sportsbook URLs (informational links only)
   const getSportsbookUrl = (sportsbook) => {

@@ -47,7 +47,7 @@ export default function PositiveEVPage() {
     '/api/placeholder/200/150'
   ];
 
-  const sports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'UFC', 'MLS', 'UEFA', 'Tennis'];
+  const sports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'UFC'];
 
   const sampleEVData = [
     {

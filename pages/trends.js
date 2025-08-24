@@ -12,7 +12,7 @@ export default function TrendsPage() {
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
 
-  const sports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'UFC', 'Soccer', 'Tennis'];
+  const sports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'UFC'];
   const dataTypes = [
     { key: 'trends', label: 'Sportsbook Trends', icon: TrendingUp },
     { key: 'movements', label: 'Odds Movements', icon: Activity },

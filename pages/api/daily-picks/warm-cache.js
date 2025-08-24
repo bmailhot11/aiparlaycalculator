@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   console.log('🔥 Starting cache warming process');
 
   try {
-    const sportsToWarm = ['NFL', 'NBA', 'MLB', 'NHL', 'soccer', 'mma', 'tennis'];
+    const sportsToWarm = ['NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB', 'UFC'];
     const cacheResults = [];
 
     for (const sport of sportsToWarm) {
@@ -69,9 +69,9 @@ async function warmSportCache(sport) {
     'NBA': 'basketball_nba', 
     'MLB': 'baseball_mlb',
     'NHL': 'icehockey_nhl',
-    'soccer': 'soccer_epl',
-    'mma': 'mma_mixed_martial_arts',
-    'tennis': 'tennis_atp'
+    'NCAAF': 'americanfootball_ncaaf',
+    'NCAAB': 'basketball_ncaab',
+    'UFC': 'mma_mixed_martial_arts'
   };
 
   const sportKey = sportMap[sport];
