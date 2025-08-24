@@ -25,7 +25,8 @@ export default function Header() {
     { href: '/positive-ev', label: 'View Positive EV Lines' },
     { href: '/ai-parlay', label: 'AI-Generated Parlay' },
     { href: '/arbitrage', label: 'Arbitrage Opportunities' },
-    { href: '/premium/today', label: 'Daily Picks' },
+    { href: '/daily-picks', label: 'Daily Picks' },
+    { href: '/line-shopping', label: 'Line Shopping' },
     { href: '/results', label: 'Results' }
   ];
 
