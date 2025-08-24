@@ -29,6 +29,16 @@ export default function LearnSection() {
     },
     // Future articles placeholder
     {
+      slug: 'what-is-arbitrage-betting',
+      title: 'What Is Arbitrage Betting?',
+      subtitle: 'How Some Made Millions',
+      description: 'Learn how arbitrage betting works and real stories of people who made millions.',
+      readTime: '8 min read',
+      category: 'Strategy',
+      icon: <Target className="w-5 h-5" />,
+      featured: false
+    },
+    {
       slug: 'understanding-parlays',
       title: 'Understanding Parlay Bets',
       subtitle: 'Risk vs Reward',
@@ -39,14 +49,24 @@ export default function LearnSection() {
       comingSoon: true
     },
     {
-      slug: 'expected-value-explained',
-      title: 'Expected Value (EV) Explained',
+      slug: 'what-is-expected-value',
+      title: 'What Is EV (Expected Value)?',
       subtitle: 'Advanced Concepts',
       description: 'Why EV is the most important concept in profitable sports betting.',
-      readTime: '8 min read',
+      readTime: '6 min read',
       category: 'Advanced',
       icon: <Brain className="w-5 h-5" />,
-      comingSoon: true
+      featured: false
+    },
+    {
+      slug: 'how-ai-helps-bettors',
+      title: 'How AI Can Help Bettors',
+      subtitle: 'BetChekr AI Explained',
+      description: 'How AI makes complex betting math simple and accessible for beginners.',
+      readTime: '7 min read',
+      category: 'Advanced',
+      icon: <Brain className="w-5 h-5" />,
+      featured: false
     },
     {
       slug: 'bankroll-management',
@@ -62,8 +82,8 @@ export default function LearnSection() {
 
   const categories = [
     { name: 'Basics', count: 1, color: 'bg-blue-500' },
-    { name: 'Strategy', count: 0, color: 'bg-green-500' },
-    { name: 'Advanced', count: 0, color: 'bg-purple-500' }
+    { name: 'Strategy', count: 1, color: 'bg-green-500' },
+    { name: 'Advanced', count: 2, color: 'bg-purple-500' }
   ];
 
   return (
