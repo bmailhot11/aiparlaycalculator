@@ -185,3 +185,226 @@ $$ LANGUAGE plpgsql;
 
 -- Optional: Set up automatic cleanup (run this if you want automated cleanup)
 -- SELECT cron.schedule('cleanup-cache', '*/15 * * * *', 'SELECT cleanup_expired_cache();');
+
+-- 6. CLV (Closing Line Value) Tracking System
+CREATE TABLE IF NOT EXISTS clv_bet_tracking (
+    id SERIAL PRIMARY KEY,
+    bet_id VARCHAR(50) NOT NULL, -- Unique identifier for this bet suggestion
+    sport VARCHAR(50) NOT NULL,
+    home_team VARCHAR(100) NOT NULL,
+    away_team VARCHAR(100) NOT NULL,
+    market_type VARCHAR(50) NOT NULL,
+    selection VARCHAR(200) NOT NULL,
+    game_id VARCHAR(100) NOT NULL, -- External game ID for tracking
+    commence_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    
+    -- Opening line data (when we first suggest the bet)
+    opening_odds_decimal DECIMAL(10,3) NOT NULL,
+    opening_odds_american VARCHAR(10) NOT NULL,
+    opening_sportsbook VARCHAR(50) NOT NULL,
+    opening_timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- Closing line data (when game starts)
+    closing_odds_decimal DECIMAL(10,3),
+    closing_odds_american VARCHAR(10),
+    closing_sportsbook VARCHAR(50),
+    closing_timestamp TIMESTAMP WITH TIME ZONE,
+    
+    -- CLV metrics
+    clv_decimal DECIMAL(10,4), -- (closing_odds - opening_odds) / opening_odds
+    clv_percent DECIMAL(7,3), -- CLV as percentage
+    cents_clv INTEGER, -- CLV in American odds "cents" (e.g., +150 to +160 = 10 cents)
+    
+    -- Model performance data
+    suggested_probability DECIMAL(5,4), -- Our model's estimated true probability
+    opening_implied_prob DECIMAL(5,4), -- Implied probability from opening odds
+    closing_implied_prob DECIMAL(5,4), -- Implied probability from closing odds
+    ev_at_suggestion DECIMAL(8,4), -- Expected value when we suggested it
+    kelly_size_suggested DECIMAL(6,3), -- Kelly criterion sizing we suggested
+    
+    -- Game result tracking
+    game_result VARCHAR(20), -- 'win', 'loss', 'push', 'cancelled', 'pending'
+    result_timestamp TIMESTAMP WITH TIME ZONE,
+    actual_outcome_correct BOOLEAN, -- Did our prediction match the actual result?
+    
+    -- Metadata
+    suggestion_source VARCHAR(50) DEFAULT 'ai_model', -- 'ai_model', 'user_slip', 'daily_pick'
+    confidence_score INTEGER, -- 1-100 confidence in our suggestion
+    model_version VARCHAR(20) DEFAULT 'v2.1',
+    notes TEXT,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 7. CLV aggregate performance metrics
+CREATE TABLE IF NOT EXISTS clv_performance_summary (
+    id SERIAL PRIMARY KEY,
+    period_type VARCHAR(20) NOT NULL, -- 'daily', 'weekly', 'monthly'
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    
+    -- Volume metrics
+    total_bets_tracked INTEGER DEFAULT 0,
+    bets_with_closing_lines INTEGER DEFAULT 0,
+    
+    -- CLV performance
+    avg_clv_decimal DECIMAL(8,4),
+    avg_clv_percent DECIMAL(7,3),
+    positive_clv_rate DECIMAL(5,2), -- % of bets with positive CLV
+    
+    -- CLV distribution
+    clv_above_5pct INTEGER DEFAULT 0,
+    clv_2_to_5pct INTEGER DEFAULT 0,
+    clv_0_to_2pct INTEGER DEFAULT 0,
+    clv_negative INTEGER DEFAULT 0,
+    
+    -- Model accuracy
+    suggestions_settled INTEGER DEFAULT 0,
+    correct_predictions INTEGER DEFAULT 0,
+    prediction_accuracy DECIMAL(5,2),
+    
+    -- Expected vs actual performance
+    total_expected_value DECIMAL(10,3),
+    total_actual_profit DECIMAL(10,2),
+    ev_realization_rate DECIMAL(5,2), -- actual_profit / expected_value
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for CLV tracking performance
+CREATE INDEX IF NOT EXISTS idx_clv_bet_tracking_game_id ON clv_bet_tracking(game_id);
+CREATE INDEX IF NOT EXISTS idx_clv_bet_tracking_sport ON clv_bet_tracking(sport);
+CREATE INDEX IF NOT EXISTS idx_clv_bet_tracking_commence_time ON clv_bet_tracking(commence_time);
+CREATE INDEX IF NOT EXISTS idx_clv_bet_tracking_opening_timestamp ON clv_bet_tracking(opening_timestamp);
+CREATE INDEX IF NOT EXISTS idx_clv_bet_tracking_suggestion_source ON clv_bet_tracking(suggestion_source);
+CREATE INDEX IF NOT EXISTS idx_clv_performance_period ON clv_performance_summary(period_type, period_start, period_end);
+
+-- Views for CLV analysis
+CREATE OR REPLACE VIEW v_clv_recent_performance AS
+SELECT 
+    sport,
+    suggestion_source,
+    COUNT(*) as total_tracked,
+    COUNT(CASE WHEN clv_decimal IS NOT NULL THEN 1 END) as with_closing_lines,
+    ROUND(AVG(clv_percent), 2) as avg_clv_pct,
+    ROUND(
+        (COUNT(CASE WHEN clv_percent > 0 THEN 1 END)::DECIMAL / 
+         NULLIF(COUNT(CASE WHEN clv_percent IS NOT NULL THEN 1 END), 0)) * 100, 
+        1
+    ) as positive_clv_rate,
+    COUNT(CASE WHEN game_result IN ('win', 'loss', 'push') THEN 1 END) as settled_bets,
+    COUNT(CASE WHEN actual_outcome_correct = true THEN 1 END) as correct_predictions,
+    ROUND(
+        (COUNT(CASE WHEN actual_outcome_correct = true THEN 1 END)::DECIMAL /
+         NULLIF(COUNT(CASE WHEN game_result IN ('win', 'loss', 'push') THEN 1 END), 0)) * 100,
+        1
+    ) as accuracy_pct
+FROM clv_bet_tracking 
+WHERE opening_timestamp >= NOW() - INTERVAL '30 days'
+GROUP BY sport, suggestion_source
+ORDER BY total_tracked DESC;
+
+CREATE OR REPLACE VIEW v_clv_model_performance AS
+SELECT 
+    DATE(opening_timestamp) as date,
+    COUNT(*) as bets_suggested,
+    COUNT(CASE WHEN clv_decimal IS NOT NULL THEN 1 END) as with_closing_data,
+    ROUND(AVG(clv_percent), 2) as avg_clv_pct,
+    COUNT(CASE WHEN clv_percent > 5 THEN 1 END) as strong_clv_count,
+    COUNT(CASE WHEN clv_percent > 0 THEN 1 END) as positive_clv_count,
+    ROUND(AVG(ev_at_suggestion), 4) as avg_suggested_ev,
+    COUNT(CASE WHEN actual_outcome_correct = true THEN 1 END) as correct_predictions,
+    COUNT(CASE WHEN game_result IN ('win', 'loss', 'push') THEN 1 END) as settled_bets
+FROM clv_bet_tracking
+WHERE opening_timestamp >= NOW() - INTERVAL '90 days'
+GROUP BY DATE(opening_timestamp)
+ORDER BY date DESC;
+
+-- Add CLV tracking to existing bet tables
+ALTER TABLE reco_bet_legs 
+ADD COLUMN IF NOT EXISTS clv_tracking_id INTEGER REFERENCES clv_bet_tracking(id);
+
+-- Functions for CLV calculation and updates
+CREATE OR REPLACE FUNCTION calculate_clv_metrics(
+    opening_decimal DECIMAL, 
+    closing_decimal DECIMAL
+)
+RETURNS TABLE(
+    clv_decimal_result DECIMAL(10,4),
+    clv_percent_result DECIMAL(7,3),
+    cents_clv_result INTEGER
+) AS $$
+BEGIN
+    RETURN QUERY SELECT 
+        ROUND((closing_decimal - opening_decimal) / opening_decimal, 4) as clv_decimal_result,
+        ROUND(((closing_decimal - opening_decimal) / opening_decimal) * 100, 3) as clv_percent_result,
+        CASE 
+            WHEN opening_decimal >= 2.0 AND closing_decimal >= 2.0 THEN
+                -- Both positive American odds
+                ROUND(((closing_decimal - 1) * 100) - ((opening_decimal - 1) * 100))::INTEGER
+            WHEN opening_decimal < 2.0 AND closing_decimal < 2.0 THEN
+                -- Both negative American odds  
+                ROUND((100 / (opening_decimal - 1)) - (100 / (closing_decimal - 1)))::INTEGER
+            ELSE
+                -- Mixed positive/negative - calculate difference in American odds
+                ROUND(
+                    CASE WHEN closing_decimal >= 2.0 THEN (closing_decimal - 1) * 100 
+                         ELSE -100 / (closing_decimal - 1) END -
+                    CASE WHEN opening_decimal >= 2.0 THEN (opening_decimal - 1) * 100 
+                         ELSE -100 / (opening_decimal - 1) END
+                )::INTEGER
+        END as cents_clv_result;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to update closing lines and calculate CLV
+CREATE OR REPLACE FUNCTION update_closing_line(
+    tracking_id INTEGER,
+    closing_decimal DECIMAL,
+    closing_american VARCHAR(10),
+    closing_book VARCHAR(50)
+)
+RETURNS void AS $$
+DECLARE
+    opening_decimal DECIMAL;
+    clv_metrics RECORD;
+BEGIN
+    -- Get opening odds
+    SELECT opening_odds_decimal INTO opening_decimal 
+    FROM clv_bet_tracking 
+    WHERE id = tracking_id;
+    
+    -- Calculate CLV metrics
+    SELECT * INTO clv_metrics FROM calculate_clv_metrics(opening_decimal, closing_decimal);
+    
+    -- Update the tracking record
+    UPDATE clv_bet_tracking SET
+        closing_odds_decimal = closing_decimal,
+        closing_odds_american = closing_american,
+        closing_sportsbook = closing_book,
+        closing_timestamp = NOW(),
+        clv_decimal = clv_metrics.clv_decimal_result,
+        clv_percent = clv_metrics.clv_percent_result,
+        cents_clv = clv_metrics.cents_clv_result,
+        closing_implied_prob = ROUND(1.0 / closing_decimal, 4),
+        updated_at = NOW()
+    WHERE id = tracking_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- RLS policies for CLV tables
+ALTER TABLE clv_bet_tracking ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clv_performance_summary ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read access on clv_bet_tracking" ON clv_bet_tracking
+    FOR SELECT USING (true);
+
+CREATE POLICY "Public read access on clv_performance_summary" ON clv_performance_summary
+    FOR SELECT USING (true);
+
+-- Grant permissions for CLV views
+GRANT SELECT ON v_clv_recent_performance TO anon;
+GRANT SELECT ON v_clv_model_performance TO anon;
+GRANT SELECT ON v_clv_recent_performance TO authenticated;
+GRANT SELECT ON v_clv_model_performance TO authenticated;

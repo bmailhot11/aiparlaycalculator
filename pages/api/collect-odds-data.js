@@ -1,5 +1,5 @@
-// Automated odds data collection for historical analysis
-import { OddsHistoryDB } from '../../lib/database.js';
+// Automated odds data collection for Supabase storage
+import { supabase } from '../../utils/supabaseClient.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -32,8 +32,8 @@ export default async function handler(req, res) {
         const oddsData = await fetchOddsForStorage(sport);
         
         if (oddsData.success && oddsData.odds.length > 0) {
-          // Store in historical database
-          const snapshotId = OddsHistoryDB.storeOddsSnapshot(oddsData);
+          // Store in Supabase
+          const snapshotId = await storeOddsInSupabase(sport, oddsData);
           
           results.collected.push({
             sport,
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
             timestamp: new Date().toISOString()
           });
           
-          console.log(`[Odds Collection] Stored ${oddsData.odds.length} ${sport} games`);
+          console.log(`[Odds Collection] Stored ${oddsData.odds.length} ${sport} games in Supabase`);
         } else {
           results.errors.push({
             sport,
@@ -73,6 +73,65 @@ export default async function handler(req, res) {
       message: 'Odds collection failed',
       error: error.message
     });
+  }
+}
+
+// Store odds data in Supabase
+async function storeOddsInSupabase(sport, oddsData) {
+  const timestamp = new Date().toISOString();
+  const snapshotId = `${sport}_${Date.now()}`;
+  
+  try {
+    // Store in cache_data table for immediate use
+    const cacheKey = `${sport}_h2h_us_manual`;
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    
+    const { error: cacheError } = await supabase
+      .from('cache_data')
+      .upsert({
+        cache_key: cacheKey,
+        data: oddsData.odds,
+        sport: sport,
+        cache_type: 'h2h',
+        market: 'moneyline',
+        expires_at: expiresAt.toISOString(),
+        updated_at: timestamp
+      }, {
+        onConflict: 'cache_key'
+      });
+
+    if (cacheError) {
+      console.error('❌ [Supabase] Cache storage error:', cacheError.message);
+    } else {
+      console.log(`✅ [Supabase] Cached ${oddsData.odds.length} ${sport} games`);
+    }
+    
+    // Also store in historical odds table if it exists
+    try {
+      const { error: historyError } = await supabase
+        .from('odds_history')
+        .insert({
+          snapshot_id: snapshotId,
+          sport: sport,
+          timestamp: timestamp,
+          game_count: oddsData.odds.length,
+          odds_data: oddsData.odds,
+          markets: ['h2h', 'spreads', 'totals'],
+          source: 'manual_collection'
+        });
+        
+      if (!historyError) {
+        console.log(`✅ [Supabase] Stored historical snapshot: ${snapshotId}`);
+      }
+    } catch (historyError) {
+      console.log('ℹ️ [Supabase] Historical table not available, using cache only');
+    }
+    
+    return snapshotId;
+    
+  } catch (error) {
+    console.error('❌ [Supabase] Storage error:', error.message);
+    throw error;
   }
 }
 

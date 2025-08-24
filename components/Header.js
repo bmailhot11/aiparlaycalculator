@@ -22,11 +22,10 @@ export default function Header() {
   }, [isPremium]);
   
   const navLinks = [
-    { href: '/positive-ev', label: 'View Positive EV Lines' },
+    { href: '/line-shopping', label: 'Line Shopping' },
     { href: '/ai-parlay', label: 'AI-Generated Parlay' },
     { href: '/arbitrage', label: 'Arbitrage Opportunities' },
     { href: '/daily-picks', label: 'Daily Picks' },
-    { href: '/line-shopping', label: 'Line Shopping' },
     { href: '/learn', label: 'Learn' },
     { href: '/results', label: 'Results' }
   ];
