@@ -27,6 +27,7 @@ export default function Header() {
     { href: '/arbitrage', label: 'Arbitrage Opportunities' },
     { href: '/daily-picks', label: 'Daily Picks' },
     { href: '/line-shopping', label: 'Line Shopping' },
+    { href: '/learn', label: 'Learn' },
     { href: '/results', label: 'Results' }
   ];
 
