@@ -1,4 +1,4 @@
-// Generate improved betting slip image using BetChekr template
+// Generate improved betting slip image with BetChekr branding
 export async function generateImprovedSlipImage({ originalSlip, improvedBets, explanation, analysis }) {
   console.log('🎨 Starting slip image generation...');
   
@@ -13,154 +13,160 @@ export async function generateImprovedSlipImage({ originalSlip, improvedBets, ex
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   
-  // Canvas dimensions to match template
+  // Canvas dimensions
   const width = 800;
-  const height = 1200;
+  const height = 1000;
   canvas.width = width;
   canvas.height = height;
   
-  try {
-    console.log('🖼️ Loading template image...');
-    // Load the BetChekr template as base
-    const templateImg = new Image();
-    templateImg.crossOrigin = 'anonymous';
-    
-    const templateLoaded = new Promise((resolve, reject) => {
-      templateImg.onload = () => {
-        console.log('✅ Template image loaded successfully');
-        resolve();
-      };
-      templateImg.onerror = (error) => {
-        console.error('❌ Template image failed to load:', error);
-        reject(error);
-      };
-      templateImg.src = '/betchekr_betslip_template_with_provided_logo.jpg';
-    });
-    
-    await templateLoaded;
-    
-    // Draw the template as background
-    ctx.drawImage(templateImg, 0, 0, width, height);
-    console.log('🎨 Template drawn to canvas');
-    
-    // Clear/overlay areas where we'll put our custom text
-    // Cover the existing bet information areas with white rectangles
-    ctx.fillStyle = '#ffffff';
-    
-    // Clear bet ID area (top section)
-    ctx.fillRect(80, 150, 300, 30);
-    
-    // Clear main betting area (middle section)
-    ctx.fillRect(30, 220, width - 60, 600);
-    
-    // Clear total/payout area (bottom section)  
-    ctx.fillRect(30, 850, width - 60, 150);
-    
-    console.log('🧹 Template cleared for custom content');
-    
-  } catch (error) {
-    console.log('⚠️ Template not loaded, using plain background:', error.message);
-    // Fallback to plain background
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(0, 0, width, height);
-    
-    // Add BetChekr branding manually
+  // Background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+  
+  // Header background
+  ctx.fillStyle = '#0B0F14';
+  ctx.fillRect(0, 0, width, 120);
+  
+  // BetChekr Logo/Title
+  ctx.fillStyle = '#F4C430';
+  ctx.font = 'bold 42px system-ui, -apple-system, sans-serif';
+  ctx.fillText('BETCHEKR', 50, 65);
+  
+  // Bet Slip subtitle
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '20px system-ui, -apple-system, sans-serif';
+  ctx.fillText('BET SLIP', 50, 95);
+  
+  // Date in header
+  ctx.fillStyle = '#9CA3AF';
+  ctx.font = '14px system-ui, -apple-system, sans-serif';
+  const dateText = new Date().toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+  ctx.fillText(dateText, width - 150, 95);
+  
+  // Main content area with border
+  ctx.strokeStyle = '#E5E7EB';
+  ctx.lineWidth = 1;
+  roundRect(ctx, 30, 140, width - 60, height - 170, 12);
+  ctx.stroke();
+  
+  // Bet ID Section
+  const betId = generateBetId();
+  ctx.fillStyle = '#0B0F14';
+  ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
+  ctx.fillText('BET ID:', 50, 180);
+  ctx.font = '16px system-ui, -apple-system, sans-serif';
+  ctx.fillText(betId, 120, 180);
+  
+  // Stake Section
+  const stakeAmount = originalSlip?.total_stake || '$100';
+  ctx.fillStyle = '#0B0F14';
+  ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
+  ctx.fillText('STAKE:', width - 250, 180);
+  ctx.fillStyle = '#F4C430';
+  ctx.font = 'bold 20px system-ui, -apple-system, sans-serif';
+  ctx.fillText(stakeAmount, width - 150, 180);
+  
+  // Separator line
+  ctx.strokeStyle = '#E5E7EB';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(50, 200);
+  ctx.lineTo(width - 50, 200);
+  ctx.stroke();
+  
+  // Bet Legs Section
+  let currentY = 230;
+  const legSpacing = 110;
+  
+  improvedBets.forEach((bet, index) => {
+    // Leg number badge
     ctx.fillStyle = '#F4C430';
-    ctx.font = 'bold 48px Arial, sans-serif';
-    ctx.fillText('BetChekr', 50, 80);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '24px Arial, sans-serif';
-    ctx.fillText('Daily Pick Slip', 50, 120);
-  }
-  
-  // Template overlay content - position data on template
-  // Since we're using a template, we need to position text appropriately
-  // Based on typical template layout, bet info starts around y=150
-  
-  // Bet ID and Date (positioned over template fields)
-  ctx.fillStyle = '#000000';
-  ctx.font = 'bold 14px Arial, sans-serif';
-  ctx.fillText(generateBetId(), 100, 170);
-  ctx.fillText(new Date().toLocaleDateString(), 100, 195);
-  
-  // Stake and Potential Payout (right side)
-  const rightX = width - 180;
-  ctx.fillStyle = '#000000';
-  ctx.font = 'bold 14px Arial, sans-serif';
-  ctx.fillText(originalSlip.total_stake || '$100', rightX, 170);
-  
-  // Calculate and display improved payout
-  const improvedPayout = calculateImprovedPayout(improvedBets, originalSlip.total_stake || '$100');
-  ctx.fillStyle = '#22C55E';
-  ctx.font = 'bold 14px Arial, sans-serif';
-  ctx.fillText(improvedPayout, rightX, 195);
-  
-  // Bet legs section - positioned to align with template
-  let currentY = 260;
-  const maxLegs = Math.min(improvedBets.length, 4); // Limit legs to fit template
-  
-  improvedBets.slice(0, maxLegs).forEach((bet, index) => {
-    const legHeight = 100; // Reduced height to fit template better
+    ctx.beginPath();
+    ctx.arc(60, currentY + 25, 15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0B0F14';
+    ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
+    ctx.fillText((index + 1).toString(), 56, currentY + 30);
     
-    // Game/Matchup (main text)
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold 16px Arial, sans-serif';
+    // Teams/Game
+    ctx.fillStyle = '#0B0F14';
+    ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
     const gameText = bet.matchup || bet.game || `Game ${index + 1}`;
-    ctx.fillText(gameText, 50, currentY + 25);
+    ctx.fillText(gameText, 90, currentY + 20);
     
-    // Market and Selection
-    ctx.fillStyle = '#333333';
-    ctx.font = '14px Arial, sans-serif';
-    const betText = `${bet.market || 'Bet'}: ${bet.selection || 'TBD'}`;
-    ctx.fillText(betText, 50, currentY + 45);
+    // Market type and selection
+    ctx.fillStyle = '#6B7280';
+    ctx.font = '15px system-ui, -apple-system, sans-serif';
+    const marketText = `${bet.market || 'Bet'}: ${bet.selection || 'Selection'}`;
+    ctx.fillText(marketText, 90, currentY + 45);
     
     // Sportsbook
-    ctx.fillStyle = '#666666';
-    ctx.font = '12px Arial, sans-serif';
-    ctx.fillText(bet.sportsbook || 'Best Line', 50, currentY + 65);
+    ctx.fillStyle = '#9CA3AF';
+    ctx.font = '13px system-ui, -apple-system, sans-serif';
+    ctx.fillText(bet.sportsbook || 'Best Available', 90, currentY + 68);
     
     // Odds (right aligned)
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold 16px Arial, sans-serif';
-    const oddsText = bet.odds || '+100';
+    const oddsText = formatOdds(bet.odds);
+    ctx.fillStyle = '#0B0F14';
+    ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
     const oddsWidth = ctx.measureText(oddsText).width;
-    ctx.fillText(oddsText, width - oddsWidth - 50, currentY + 35);
+    ctx.fillText(oddsText, width - oddsWidth - 60, currentY + 35);
     
-    currentY += legHeight;
+    // Separator between legs
+    if (index < improvedBets.length - 1) {
+      ctx.strokeStyle = '#F0F0F0';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(60, currentY + 85);
+      ctx.lineTo(width - 60, currentY + 85);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    
+    currentY += legSpacing;
   });
   
-  // Notes section - minimal explanation positioned in template notes area
-  const notesY = Math.max(currentY + 30, 750); // Position in lower area of template
+  // Total Section Background
+  const totalSectionY = Math.max(currentY + 20, height - 200);
+  ctx.fillStyle = '#F9FAFB';
+  roundRect(ctx, 40, totalSectionY, width - 80, 120, 8);
+  ctx.fill();
   
-  // Add minimal bet explanation
-  ctx.fillStyle = '#333333';
-  ctx.font = '12px Arial, sans-serif';
+  // Total Odds
+  const totalOdds = calculateTotalOdds(improvedBets);
+  ctx.fillStyle = '#0B0F14';
+  ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
+  ctx.fillText('TOTAL ODDS:', 60, totalSectionY + 35);
+  ctx.fillStyle = '#F4C430';
+  ctx.font = 'bold 24px system-ui, -apple-system, sans-serif';
+  ctx.fillText(totalOdds, width - 200, totalSectionY + 35);
   
-  const shortExplanation = createMinimalExplanation(improvedBets, explanation);
-  const wrappedText = wrapText(ctx, shortExplanation, width - 100, 14);
-  wrappedText.slice(0, 4).forEach((line, index) => { // Limit to 4 lines max
-    ctx.fillText(line, 50, notesY + (index * 16));
-  });
+  // Potential Payout
+  const payout = calculateImprovedPayout(improvedBets, stakeAmount);
+  ctx.fillStyle = '#0B0F14';
+  ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
+  ctx.fillText('POTENTIAL PAYOUT:', 60, totalSectionY + 75);
+  ctx.fillStyle = '#10B981';
+  ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
+  ctx.fillText(payout, width - 200, totalSectionY + 75);
+  
+  // Footer with branding
+  ctx.fillStyle = '#9CA3AF';
+  ctx.font = '11px system-ui, -apple-system, sans-serif';
+  ctx.fillText('Generated by BetChekr.com', width/2 - 70, height - 20);
   
   console.log('✅ Image generation completed, returning data URL');
-  const dataUrl = canvas.toDataURL('image/png', 0.96);
+  const dataUrl = canvas.toDataURL('image/png', 0.95);
   console.log('📊 Data URL length:', dataUrl.length, 'characters');
   return dataUrl;
 }
 
 // Helper functions
-function createMinimalExplanation(bets, fullExplanation) {
-  const legCount = bets.length;
-  const avgEV = bets.reduce((sum, bet) => sum + (bet.expected_value || 0), 0) / legCount;
-  const hasEV = avgEV > 0;
-  
-  if (hasEV) {
-    return `${legCount}-leg parlay with ${(avgEV * 100).toFixed(1)}% avg edge. Mathematical analysis shows positive expected value.`;
-  } else {
-    return `${legCount}-leg parlay with diversified market selection. Recommended bet sizing: 2-3% of bankroll.`;
-  }
-}
-
 function roundRect(ctx, x, y, width, height, radius) {
   ctx.beginPath();
   ctx.moveTo(x + radius, y);
@@ -176,37 +182,80 @@ function roundRect(ctx, x, y, width, height, radius) {
 }
 
 function generateBetId() {
-  return 'BC' + Date.now().toString().slice(-8);
+  // Generate unique bet ID with timestamp
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+  return `BC${timestamp}${random}`;
+}
+
+function formatOdds(odds) {
+  if (typeof odds === 'string') {
+    return odds;
+  }
+  return odds > 0 ? `+${odds}` : odds.toString();
+}
+
+function calculateTotalOdds(bets) {
+  // Calculate parlay odds
+  let totalDecimalOdds = 1;
+  
+  bets.forEach(bet => {
+    let decimalOdds;
+    if (bet.decimal_odds) {
+      decimalOdds = parseFloat(bet.decimal_odds);
+    } else if (bet.odds) {
+      // Convert American to decimal
+      const american = typeof bet.odds === 'string' ? 
+        parseInt(bet.odds.replace('+', '')) : bet.odds;
+      
+      if (american > 0) {
+        decimalOdds = (american / 100) + 1;
+      } else {
+        decimalOdds = (100 / Math.abs(american)) + 1;
+      }
+    } else {
+      decimalOdds = 2.0; // Default
+    }
+    totalDecimalOdds *= decimalOdds;
+  });
+  
+  // Convert back to American odds
+  if (totalDecimalOdds >= 2) {
+    const americanOdds = Math.round((totalDecimalOdds - 1) * 100);
+    return `+${americanOdds}`;
+  } else {
+    const americanOdds = Math.round(-100 / (totalDecimalOdds - 1));
+    return americanOdds.toString();
+  }
 }
 
 function calculateImprovedPayout(bets, stake) {
-  const stakeAmount = parseFloat(stake.replace('$', '')) || 10;
-  const totalDecimalOdds = bets.reduce((acc, bet) => acc * parseFloat(bet.decimal_odds), 1);
+  const stakeAmount = parseFloat(stake.replace('$', '')) || 100;
+  
+  // Calculate total decimal odds
+  let totalDecimalOdds = 1;
+  bets.forEach(bet => {
+    if (bet.decimal_odds) {
+      totalDecimalOdds *= parseFloat(bet.decimal_odds);
+    } else if (bet.odds) {
+      // Convert American to decimal
+      const american = typeof bet.odds === 'string' ? 
+        parseInt(bet.odds.replace('+', '')) : bet.odds;
+      
+      if (american > 0) {
+        totalDecimalOdds *= (american / 100) + 1;
+      } else {
+        totalDecimalOdds *= (100 / Math.abs(american)) + 1;
+      }
+    }
+  });
+  
   const payout = (stakeAmount * totalDecimalOdds).toFixed(2);
   return `$${payout}`;
 }
 
-function wrapText(ctx, text, maxWidth, lineHeight) {
-  const words = text.split(' ');
-  const lines = [];
-  let currentLine = words[0];
-
-  for (let i = 1; i < words.length; i++) {
-    const word = words[i];
-    const width = ctx.measureText(currentLine + ' ' + word).width;
-    if (width < maxWidth) {
-      currentLine += ' ' + word;
-    } else {
-      lines.push(currentLine);
-      currentLine = word;
-    }
-  }
-  lines.push(currentLine);
-  return lines.slice(0, 8); // Limit to 8 lines
-}
-
 // Export function to download the improved slip
-export function downloadImprovedSlip(dataUrl, filename = 'betchekr-improved-slip.png') {
+export function downloadImprovedSlip(dataUrl, filename = 'betchekr-bet-slip.png') {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     console.log('⚠️ Download not available in server environment');
     return;
