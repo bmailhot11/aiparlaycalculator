@@ -19,7 +19,6 @@ import {
   HelpCircle,
   Download,
   Star,
-  Clock
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -32,12 +31,9 @@ export default function ResultsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState(30);
   const [showMethodology, setShowMethodology] = useState(false);
   const [selectedBetType, setSelectedBetType] = useState('all'); // 'all', '1leg', '2leg', '4leg'
-  const [dailyPicks, setDailyPicks] = useState(null);
-  const [picksLoading, setPicksLoading] = useState(true);
 
   useEffect(() => {
     fetchResults();
-    fetchDailyPicks();
   }, [selectedPeriod]);
 
   const fetchResults = async () => {
@@ -58,21 +54,7 @@ export default function ResultsPage() {
     }
   };
 
-  const fetchDailyPicks = async () => {
-    setPicksLoading(true);
-    try {
-      const response = await fetch('/api/daily-picks/today-static');
-      const data = await response.json();
-      
-      if (data.success) {
-        setDailyPicks(data);
-      }
-    } catch (err) {
-      console.error('Error loading daily picks:', err);
-    } finally {
-      setPicksLoading(false);
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-[#0B0F14]">
@@ -143,8 +125,6 @@ export default function ResultsPage() {
         </div>
       </section>
 
-      {/* Today's Daily Picks Section */}
-      <DailyPicksSection picks={dailyPicks} loading={picksLoading} />
 
       {/* Main Content */}
       <section className="pb-16">
@@ -158,15 +138,25 @@ export default function ResultsPage() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="card max-w-md mx-auto text-center"
+              className="card max-w-2xl mx-auto text-center"
             >
-              <p className="text-[#9CA3AF] text-sm mb-3">Unable to load results at this time</p>
-              <button 
-                onClick={fetchResults}
-                className="btn btn-outline btn-sm"
-              >
-                Retry
-              </button>
+              <div className="mb-6">
+                <BarChart3 className="w-16 h-16 mx-auto mb-4 text-[#6B7280]" />
+                <h3 className="text-xl font-semibold text-[#E5E7EB] mb-2">No Results Available Yet</h3>
+                <p className="text-[#9CA3AF] text-sm mb-4">
+                  We're currently building our track record. Results tracking began August 23, 2025.
+                  Check back soon to see our performance data!
+                </p>
+                <div className="bg-[#1F2937] rounded-lg p-4 text-left">
+                  <h4 className="text-[#E5E7EB] font-medium mb-2">What to expect:</h4>
+                  <ul className="text-[#9CA3AF] text-sm space-y-1">
+                    <li>• Daily performance tracking</li>
+                    <li>• ROI and win rate statistics</li>
+                    <li>• Bankroll progression charts</li>
+                    <li>• Complete transparency</li>
+                  </ul>
+                </div>
+              </div>
             </motion.div>
           ) : (
             <div className="space-y-8">
@@ -524,6 +514,7 @@ function PnLCell({ value, hasAction }) {
   );
 }
 
+
 /**
  * Methodology Section Component
  */
@@ -588,193 +579,6 @@ function convertAmericanToDecimal(americanOdds) {
   }
 }
 
-/**
- * Daily Picks Section Component
- */
-function DailyPicksSection({ picks, loading }) {
-  const handleDownloadSlip = async (bet, betType) => {
-    try {
-      // Format the bet data for the improved slip generator
-      const improvedBets = bet.legs.map((leg, index) => ({
-        league: leg.sport || 'Sports',
-        matchup: `${leg.awayTeam} @ ${leg.homeTeam}`,
-        market: leg.marketType || 'Moneyline',
-        selection: leg.selection,
-        odds: leg.bestOdds,
-        decimal_odds: convertAmericanToDecimal(leg.bestOdds),
-        sportsbook: leg.bestSportsbook || 'Best Line',
-        improved: true,
-        improvement_percentage: leg.edgePercentage || 0,
-        original_odds: leg.bestOdds
-      }));
-
-      const slipData = {
-        originalSlip: {
-          sportsbook: 'BetChekr AI Daily Picks',
-          total_stake: 100,
-          potential_payout: bet.estimatedPayout || 200
-        },
-        improvedBets: improvedBets,
-        explanation: `${betType === 'single' ? 'Single Bet' : betType === 'parlay2' ? '2-Leg Parlay' : '4-Leg Parlay'} - ${bet.edgePercentage?.toFixed(1)}% Edge`,
-        analysis: {
-          expectedValue: bet.edgePercentage || 0,
-          impliedProbability: bet.impliedProbability || 50
-        }
-      };
-
-      // Generate the image
-      const imageData = await generateImprovedSlipImage(slipData);
-      
-      if (imageData) {
-        // Download the image
-        downloadImprovedSlip(imageData, `${betType}-pick-${new Date().toISOString().split('T')[0]}.png`);
-      } else {
-        console.error('Failed to generate slip image');
-      }
-    } catch (error) {
-      console.error('Error downloading slip:', error);
-    }
-  };
-
-  if (loading) {
-    return (
-      <section className="py-8 bg-[#111827]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="w-8 h-8 border-2 border-[#F4C430] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-[#9CA3AF]">Loading today's picks...</p>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  if (!picks) {
-    return (
-      <section className="py-8 bg-[#111827]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="card text-center">
-            <Clock className="w-12 h-12 mx-auto mb-4 text-[#6B7280]" />
-            <h3 className="text-xl font-semibold text-[#E5E7EB] mb-2">Daily Picks Coming Soon</h3>
-            <p className="text-[#9CA3AF]">Check back at 11 AM CT for today's recommendations</p>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  if (picks.noBetReason) {
-    return (
-      <section className="py-8 bg-[#111827]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="card text-center">
-            <Eye className="w-12 h-12 mx-auto mb-4 text-[#6B7280]" />
-            <h3 className="text-xl font-semibold text-[#E5E7EB] mb-2">No Bets Today</h3>
-            <p className="text-[#9CA3AF]">{picks.noBetReason}</p>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  const availablePicks = [
-    { key: 'single', label: 'Single Bet', pick: picks.single },
-    { key: 'parlay2', label: '2-Leg Parlay', pick: picks.parlay2 },
-    { key: 'parlay4', label: '4-Leg Parlay', pick: picks.parlay4 }
-  ].filter(item => item.pick);
-
-  return (
-    <section className="py-8 bg-[#111827]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Star className="w-8 h-8 text-[#F4C430]" />
-            <h2 className="text-3xl font-bold text-[#E5E7EB]">Today's Picks</h2>
-          </div>
-          <p className="text-[#9CA3AF]">
-            {new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
-          </p>
-        </motion.div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          {availablePicks.map(({ key, label, pick }) => (
-            <motion.div
-              key={key}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="card"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-[#E5E7EB]">{label}</h3>
-                <span className={`text-sm px-2 py-1 rounded ${
-                  pick.edgePercentage >= 5 ? 'bg-green-500/20 text-green-400' :
-                  pick.edgePercentage >= 3 ? 'bg-yellow-500/20 text-yellow-400' :
-                  'bg-blue-500/20 text-blue-400'
-                }`}>
-                  {pick.edgePercentage.toFixed(1)}% Edge
-                </span>
-              </div>
-
-              <div className="space-y-3 mb-4">
-                {pick.legs.map((leg, index) => (
-                  <div key={index} className="bg-[#1F2937] rounded-lg p-3">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="font-medium text-[#E5E7EB]">{leg.selection}</div>
-                        <div className="text-sm text-[#9CA3AF]">
-                          {leg.homeTeam} vs {leg.awayTeam}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold text-[#F4C430]">{leg.bestOdds}</div>
-                        <div className="text-xs text-[#6B7280]">{leg.bestSportsbook}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-between items-center mb-4 p-3 bg-[#0B0F14] rounded-lg">
-                <div>
-                  <div className="text-sm text-[#9CA3AF]">Combined Odds</div>
-                  <div className="font-bold text-[#E5E7EB]">{pick.combinedOdds}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-[#9CA3AF]">Potential Return</div>
-                  <div className="font-bold text-green-400">+${pick.estimatedPayout.toFixed(0)}</div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => handleDownloadSlip(pick, key)}
-                className="w-full btn btn-primary flex items-center justify-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Download Slip
-              </button>
-            </motion.div>
-          ))}
-        </div>
-
-        {availablePicks.length === 0 && (
-          <div className="card text-center">
-            <Eye className="w-12 h-12 mx-auto mb-4 text-[#6B7280]" />
-            <p className="text-[#9CA3AF]">No qualifying picks found for today</p>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
 
 /**
  * Helper functions for bet slip generation

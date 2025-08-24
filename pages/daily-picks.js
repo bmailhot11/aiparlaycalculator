@@ -29,13 +29,40 @@ export default function DailyPicks() {
 
   const fetchDailyPicks = async () => {
     try {
-      const response = await fetch('/api/daily-picks/today-static');
-      if (!response.ok) throw new Error('Failed to fetch picks');
+      // Try real database API first
+      console.log('Fetching daily picks from database...');
+      let response = await fetch('/api/daily-picks/today');
+      
+      // If no database data, fallback to static
+      if (!response.ok) {
+        console.log('Database API failed, falling back to static picks');
+        response = await fetch('/api/daily-picks/today-static');
+      }
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
+      console.log('Received data:', data);
+      
+      // Validate the data structure
+      if (!data.success) {
+        throw new Error(data.message || 'API returned unsuccessful response');
+      }
+      
+      if (!data.single && !data.parlay2 && !data.parlay4) {
+        throw new Error('No pick data received from API');
+      }
+      
       setPicks(data);
+      setError(null); // Clear any previous errors
     } catch (error) {
       console.error('Error fetching daily picks:', error);
-      setError('Failed to load today\'s picks');
+      setError(`Failed to load picks: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -52,6 +79,7 @@ export default function DailyPicks() {
       console.error('Error fetching track record:', error);
     }
   };
+
 
   const handleDownloadSlip = async (bet, betType) => {
     try {
@@ -104,6 +132,9 @@ export default function DailyPicks() {
       return ((100 / Math.abs(odds)) + 1).toFixed(2);
     }
   }
+
+  // Debug logging
+  console.log('Daily picks state:', { loading, error, picks });
 
   if (loading) {
     return (
@@ -182,6 +213,7 @@ export default function DailyPicks() {
                     <option value="7d">Last 7 Days</option>
                     <option value="30d">Last 30 Days</option>
                     <option value="90d">Last 90 Days</option>
+                    <option value="all">All Time</option>
                   </select>
                 </div>
                 
@@ -216,7 +248,7 @@ export default function DailyPicks() {
           )}
 
           {/* Today's Picks */}
-          {picks && (
+          {picks && picks.success && (
             <div className="space-y-8">
               {/* Single Bet */}
               {picks.single && (
@@ -265,6 +297,25 @@ export default function DailyPicks() {
               >
                 Try Again
               </button>
+              {/* Debug info */}
+              <div className="mt-4 text-xs text-gray-500">
+                <details>
+                  <summary>Debug Info</summary>
+                  <pre className="text-left mt-2 p-2 bg-gray-800 rounded">
+                    {JSON.stringify({ loading, error, picks }, null, 2)}
+                  </pre>
+                </details>
+              </div>
+            </div>
+          )}
+
+          {/* Raw data fallback for debugging */}
+          {!loading && !error && picks && !picks.success && (
+            <div className="text-center py-12">
+              <div className="text-yellow-400 mb-4">⚠️ Data received but format unexpected</div>
+              <pre className="text-left text-xs bg-gray-800 p-4 rounded">
+                {JSON.stringify(picks, null, 2)}
+              </pre>
             </div>
           )}
 
@@ -313,15 +364,15 @@ function DailyPickCard({ title, subtitle, pick, onDownload, cardColor, borderCol
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-gray-400">Edge:</span>
-              <span className="text-green-400 font-bold">+{pick.edgePercentage}%</span>
+              <span className="text-green-400 font-bold">+{pick.edgePercentage || 0}%</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-400">Odds:</span>
-              <span className="text-white font-bold">{pick.combinedOdds}</span>
+              <span className="text-white font-bold">{pick.combinedOdds || 'N/A'}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-400">Payout (per $100):</span>
-              <div className="font-bold text-green-400">+${pick.estimatedPayout - 100}</div>
+              <div className="font-bold text-green-400">+${(pick.estimatedPayout || 0) - 100}</div>
             </div>
           </div>
         </div>
@@ -330,26 +381,26 @@ function DailyPickCard({ title, subtitle, pick, onDownload, cardColor, borderCol
         <div className="lg:w-2/4">
           <h4 className="text-lg font-semibold text-white mb-4">Bet Legs</h4>
           <div className="space-y-3">
-            {pick.legs.map((leg, index) => (
+            {(pick.legs || []).map((leg, index) => (
               <div key={index} className="bg-gray-700/50 rounded-lg p-4">
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <div className="font-semibold text-white">
-                      {leg.awayTeam} @ {leg.homeTeam}
+                      {leg.awayTeam || 'Away'} @ {leg.homeTeam || 'Home'}
                     </div>
-                    <div className="text-sm text-gray-300">{leg.sport}</div>
+                    <div className="text-sm text-gray-300">{leg.sport || 'Sport'}</div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-blue-400">{leg.bestOdds}</div>
-                    <div className="text-xs text-gray-400">{leg.bestSportsbook}</div>
+                    <div className="font-bold text-blue-400">{leg.bestOdds || 'N/A'}</div>
+                    <div className="text-xs text-gray-400">{leg.bestSportsbook || 'Sportsbook'}</div>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="text-sm">
-                    <span className="text-gray-400">{leg.marketType}:</span>
-                    <span className="text-white ml-2">{leg.selection}</span>
+                    <span className="text-gray-400">{leg.marketType || 'Market'}:</span>
+                    <span className="text-white ml-2">{leg.selection || 'Selection'}</span>
                   </div>
-                  <div className="text-xs text-green-400">+{leg.edgePercentage}% edge</div>
+                  <div className="text-xs text-green-400">+{leg.edgePercentage || 0}% edge</div>
                 </div>
               </div>
             ))}

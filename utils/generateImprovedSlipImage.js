@@ -1,10 +1,14 @@
 // Generate improved betting slip image using BetChekr template
 export async function generateImprovedSlipImage({ originalSlip, improvedBets, explanation, analysis }) {
+  console.log('🎨 Starting slip image generation...');
+  
   // Check if we're in a browser environment
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     console.log('⚠️ Canvas not available in server environment, skipping image generation');
     return null;
   }
+  
+  console.log('📊 Data received:', { originalSlip, improvedBets: improvedBets?.length, explanation, analysis });
   
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -16,13 +20,20 @@ export async function generateImprovedSlipImage({ originalSlip, improvedBets, ex
   canvas.height = height;
   
   try {
+    console.log('🖼️ Loading template image...');
     // Load the BetChekr template as base
     const templateImg = new Image();
     templateImg.crossOrigin = 'anonymous';
     
     const templateLoaded = new Promise((resolve, reject) => {
-      templateImg.onload = resolve;
-      templateImg.onerror = reject;
+      templateImg.onload = () => {
+        console.log('✅ Template image loaded successfully');
+        resolve();
+      };
+      templateImg.onerror = (error) => {
+        console.error('❌ Template image failed to load:', error);
+        reject(error);
+      };
       templateImg.src = '/betchekr_betslip_template_with_provided_logo.jpg';
     });
     
@@ -30,12 +41,36 @@ export async function generateImprovedSlipImage({ originalSlip, improvedBets, ex
     
     // Draw the template as background
     ctx.drawImage(templateImg, 0, 0, width, height);
+    console.log('🎨 Template drawn to canvas');
+    
+    // Clear/overlay areas where we'll put our custom text
+    // Cover the existing bet information areas with white rectangles
+    ctx.fillStyle = '#ffffff';
+    
+    // Clear bet ID area (top section)
+    ctx.fillRect(80, 150, 300, 30);
+    
+    // Clear main betting area (middle section)
+    ctx.fillRect(30, 220, width - 60, 600);
+    
+    // Clear total/payout area (bottom section)  
+    ctx.fillRect(30, 850, width - 60, 150);
+    
+    console.log('🧹 Template cleared for custom content');
     
   } catch (error) {
-    console.log('⚠️ Template not loaded, using plain background');
+    console.log('⚠️ Template not loaded, using plain background:', error.message);
     // Fallback to plain background
-    ctx.fillStyle = '#f5f5f5';
+    ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, width, height);
+    
+    // Add BetChekr branding manually
+    ctx.fillStyle = '#F4C430';
+    ctx.font = 'bold 48px Arial, sans-serif';
+    ctx.fillText('BetChekr', 50, 80);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '24px Arial, sans-serif';
+    ctx.fillText('Daily Pick Slip', 50, 120);
   }
   
   // Template overlay content - position data on template
@@ -107,7 +142,10 @@ export async function generateImprovedSlipImage({ originalSlip, improvedBets, ex
     ctx.fillText(line, 50, notesY + (index * 16));
   });
   
-  return canvas.toDataURL('image/png', 0.96);
+  console.log('✅ Image generation completed, returning data URL');
+  const dataUrl = canvas.toDataURL('image/png', 0.96);
+  console.log('📊 Data URL length:', dataUrl.length, 'characters');
+  return dataUrl;
 }
 
 // Helper functions
@@ -174,10 +212,19 @@ export function downloadImprovedSlip(dataUrl, filename = 'betchekr-improved-slip
     return;
   }
   
+  console.log('💾 Initiating download:', filename);
+  console.log('📂 Data URL provided:', dataUrl ? 'Yes' : 'No');
+  
+  if (!dataUrl) {
+    console.error('❌ No data URL provided for download');
+    return;
+  }
+  
   const link = document.createElement('a');
   link.href = dataUrl;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  console.log('✅ Download initiated');
 }

@@ -15,19 +15,42 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log(`🎯 Fetching positive EV lines for ${sport}...`);
+    console.log(`🎯 Fetching positive EV lines for ${sport}... (Premium: ${isPremium})`);
     
-    // Use the optimized EV fetcher
-    const result = await optimizedEVFetcher.fetchOptimalEVLines(sport, {
+    // Quick test mode - return basic response if no data
+    if (!sport || !['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB'].includes(sport)) {
+      return res.status(400).json({
+        success: false,
+        message: `Unsupported sport: ${sport}. Try NFL, NBA, NHL, MLB, NCAAF, or NCAAB.`,
+        lines: [],
+        arbitrage: []
+      });
+    }
+    
+    // Add timeout to prevent hanging
+    const fetchPromise = optimizedEVFetcher.fetchOptimalEVLines(sport, {
       isPremium: isPremium || false,
-      maxLines: isPremium ? 50 : 10 // Limit free users to 10 lines
+      maxLines: isPremium ? 50 : 20 // More lines for testing
+    });
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Request timeout after 25 seconds')), 25000)
+    );
+    
+    const result = await Promise.race([fetchPromise, timeoutPromise]);
+    
+    console.log(`📊 EV Fetcher Result:`, {
+      success: result.success,
+      linesCount: result.lines?.length || 0,
+      reason: result.reason,
+      arbitrageCount: result.arbitrage?.length || 0
     });
 
     if (!result.success) {
       return res.status(400).json({
         success: false,
         message: result.reason === 'no_candidates' 
-          ? `No positive EV lines found for ${sport}. This sport may be out of season.`
+          ? `No positive EV lines found for ${sport}. This sport may be out of season or we're building our data coverage.`
           : `Failed to fetch EV lines: ${result.reason}`,
         lines: [],
         arbitrage: []

@@ -10,14 +10,49 @@ export default async function handler(req, res) {
   }
 
   const startTime = Date.now();
-  console.log('🚀 Starting daily picks publication process');
+  console.log('🚀 Starting comprehensive daily workflow');
+
+  const results = {
+    grading: null,
+    publishing: null,
+    trackRecord: null
+  };
 
   try {
     // Get current date in CT timezone
     const publishTime = new Date();
-    const ctOffset = -6; // Central Time offset (adjust for DST as needed)
+    const ctOffset = -5; // Central Time offset (-6 for CST, -5 for CDT - currently CDT in August)
     const ctTime = new Date(publishTime.getTime() + (ctOffset * 60 * 60 * 1000));
     const publishDate = ctTime.toISOString().split('T')[0];
+    
+    // STEP 1: Grade yesterday's picks first
+    console.log('📊 Step 1: Grading yesterday\'s picks...');
+    try {
+      const yesterday = new Date(ctTime);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayDate = yesterday.toISOString().split('T')[0];
+      
+      const gradingResponse = await fetch(`${process.env.VERCEL_URL || req.headers.host ? `https://${req.headers.host}` : 'https://aiparlaycalculator-3yw4fy17r-benmailhots-projects.vercel.app'}/api/daily-picks/grade-bets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: yesterdayDate })
+      });
+      
+      if (gradingResponse.ok) {
+        const gradingData = await gradingResponse.json();
+        results.grading = { success: true, data: gradingData };
+        console.log('✅ Yesterday\'s picks graded successfully');
+      } else {
+        results.grading = { success: false, error: 'Grading API failed' };
+        console.log('⚠️ Grading failed, continuing with publishing...');
+      }
+    } catch (gradingError) {
+      results.grading = { success: false, error: gradingError.message };
+      console.log('⚠️ Grading error:', gradingError.message);
+    }
+    
+    // STEP 2: Generate and publish today's picks
+    console.log('📝 Step 2: Publishing today\'s picks...');
 
     // Check if we already published today
     const { data: existingReco } = await supabase
@@ -72,19 +107,25 @@ export default async function handler(req, res) {
     const recoId = await saveRecommendations(publishDate, publishTime, recommendations);
 
     const duration = Date.now() - startTime;
-    console.log(`✅ Successfully published daily recommendations in ${duration}ms`);
+    console.log(`✅ Successfully completed daily workflow in ${duration}ms`);
 
     return res.status(200).json({
       success: true,
       reco_id: recoId,
       publish_date: publishDate,
-      recommendations: {
-        single: !!recommendations.single,
-        parlay2: !!recommendations.parlay2,
-        parlay4: !!recommendations.parlay4,
-        no_bet_reason: recommendations.noBetReason
+      workflow_results: {
+        grading: results.grading,
+        publishing: {
+          success: true,
+          recommendations: {
+            single: !!recommendations.single,
+            parlay2: !!recommendations.parlay2,
+            parlay4: !!recommendations.parlay4,
+            no_bet_reason: recommendations.noBetReason
+          },
+          metadata: recommendations.metadata
+        }
       },
-      metadata: recommendations.metadata,
       duration_ms: duration
     });
 

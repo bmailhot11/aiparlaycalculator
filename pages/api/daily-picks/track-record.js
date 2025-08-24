@@ -33,16 +33,17 @@ async function getTrackRecord(period) {
       const data = await fs.readFile(dataFile, 'utf8');
       results = JSON.parse(data);
     } catch (fileError) {
-      // File doesn't exist yet, create sample data for demo
-      console.log('📁 Creating sample track record data');
-      results = await createSampleTrackRecord();
-      
-      // Ensure data directory exists
-      const dataDir = path.join(process.cwd(), 'data');
-      await fs.mkdir(dataDir, { recursive: true });
-      
-      // Save sample data
-      await fs.writeFile(dataFile, JSON.stringify(results, null, 2), 'utf8');
+      // File doesn't exist yet, no real data available
+      console.log('📁 No track record data available yet');
+      return {
+        roi: 0,
+        winRate: 0,
+        totalPicks: 0,
+        avgEdge: 0,
+        period,
+        message: 'Track record will be available after first day of picks',
+        startDate: '2025-08-24'
+      };
     }
 
     // Calculate stats for the requested period
@@ -53,13 +54,14 @@ async function getTrackRecord(period) {
   } catch (error) {
     console.error('Error in getTrackRecord:', error);
     
-    // Return sample data as fallback
+    // Return no data as fallback
     return {
-      roi: 12.5,
-      winRate: 62.3,
-      totalPicks: 48,
-      avgEdge: 4.8,
-      period: period
+      roi: 0,
+      winRate: 0,
+      totalPicks: 0,
+      avgEdge: 0,
+      period: period,
+      message: 'Track record will be available after first day of picks'
     };
   }
 }
