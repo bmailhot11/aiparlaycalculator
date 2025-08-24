@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { motion } from 'framer-motion';
 import Head from 'next/head';
 import { 
@@ -9,62 +9,75 @@ import {
   Star,
   BarChart3,
   Trophy,
-  Activity
+  Activity,
+  Crown,
+  Check,
+  X,
+  Clock,
+  DollarSign
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import Paywall from '../components/Paywall';
+import { PremiumContext } from './_app';
 import { generateImprovedSlipImage, downloadImprovedSlip } from '../utils/generateImprovedSlipImage';
 
 export default function DailyPicks() {
+  const { isPremium } = useContext(PremiumContext);
   const [picks, setPicks] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [trackRecord, setTrackRecord] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState('7d');
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [yesterdaysPicks, setYesterdaysPicks] = useState(null);
+  const [activeTab, setActiveTab] = useState('today');
 
   useEffect(() => {
+    if (!isPremium) {
+      setShowPaywall(true);
+      setLoading(false);
+      return;
+    }
+    
     fetchDailyPicks();
     fetchTrackRecord();
-  }, []);
+    fetchYesterdaysPicks();
+  }, [isPremium, selectedPeriod]);
 
   const fetchDailyPicks = async () => {
     try {
-      // Try real database API first
-      console.log('Fetching daily picks from database...');
-      let response = await fetch('/api/daily-picks/today');
-      
-      // If no database data, fallback to static
-      if (!response.ok) {
-        console.log('Database API failed, falling back to static picks');
-        response = await fetch('/api/daily-picks/today-static');
-      }
-      console.log('Response status:', response.status, response.statusText);
+      const response = await fetch('/api/daily-picks/today');
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Response error:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
-      console.log('Received data:', data);
       
-      // Validate the data structure
       if (!data.success) {
         throw new Error(data.message || 'API returned unsuccessful response');
       }
       
-      if (!data.single && !data.parlay2 && !data.parlay4) {
-        throw new Error('No pick data received from API');
-      }
-      
       setPicks(data);
-      setError(null); // Clear any previous errors
+      setError(null);
     } catch (error) {
       console.error('Error fetching daily picks:', error);
       setError(`Failed to load picks: ${error.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchYesterdaysPicks = async () => {
+    try {
+      const response = await fetch('/api/daily-picks/yesterday');
+      if (response.ok) {
+        const data = await response.json();
+        setYesterdaysPicks(data);
+      }
+    } catch (error) {
+      console.error('Error fetching yesterday\'s picks:', error);
     }
   };
 
@@ -80,10 +93,9 @@ export default function DailyPicks() {
     }
   };
 
-
   const handleDownloadSlip = async (bet, betType) => {
     try {
-      const improvedBets = bet.legs.map((leg, index) => ({
+      const improvedBets = bet.legs.map((leg) => ({
         league: leg.sport || 'Sports',
         matchup: `${leg.awayTeam} @ ${leg.homeTeam}`,
         game: `${leg.awayTeam} @ ${leg.homeTeam}`,
@@ -101,7 +113,7 @@ export default function DailyPicks() {
           total_stake: '$100',
         },
         improvedBets,
-        explanation: `${betType.toUpperCase()} Pick: ${bet.edgePercentage}% edge with ${bet.impliedProbability}% win probability. Professional analysis shows positive expected value.`,
+        explanation: `${betType.toUpperCase()} Pick: ${bet.edgePercentage}% edge with ${bet.impliedProbability}% win probability.`,
         analysis: {
           edge_percentage: bet.edgePercentage,
           confidence_level: 'High',
@@ -113,15 +125,12 @@ export default function DailyPicks() {
       
       if (imageData) {
         downloadImprovedSlip(imageData, `betchekr-${betType}-pick-${new Date().toISOString().split('T')[0]}.png`);
-      } else {
-        console.error('Failed to generate slip image');
       }
     } catch (error) {
       console.error('Error downloading slip:', error);
     }
   };
 
-  // Convert American odds to decimal
   function convertAmericanToDecimal(americanOdds) {
     const odds = typeof americanOdds === 'string' ? 
       parseInt(americanOdds.replace('+', '')) : americanOdds;
@@ -133,25 +142,28 @@ export default function DailyPicks() {
     }
   }
 
-  // Debug logging
-  console.log('Daily picks state:', { loading, error, picks });
+  const formatOdds = (odds) => {
+    return typeof odds === 'number' ? (odds > 0 ? `+${odds}` : odds) : odds;
+  };
 
-  if (loading) {
+  const periods = [
+    { value: '7d', label: '7 Days' },
+    { value: '30d', label: '30 Days' },
+    { value: 'all', label: 'All Time' }
+  ];
+
+  if (!isPremium || showPaywall) {
     return (
       <>
         <Head>
-          <title>Daily Picks - BetChekr</title>
-          <meta name="description" content="Expert daily betting picks with mathematical analysis and edge calculations." />
-          <link rel="icon" href="/betchekr_owl_logo.ico" />
+          <title>Daily Picks - Premium Feature | BetChekr</title>
         </Head>
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
+        <div className="min-h-screen bg-[#0B0F14]">
           <Header />
-          <main className="container mx-auto px-4 py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-400 mx-auto mb-4"></div>
-              <p className="text-gray-300">Loading today's picks...</p>
-            </div>
-          </main>
+          <Paywall 
+            feature="Daily Picks"
+            onClose={() => setShowPaywall(false)}
+          />
           <Footer />
         </div>
       </>
@@ -161,183 +173,237 @@ export default function DailyPicks() {
   return (
     <>
       <Head>
-        <title>Daily Picks - Professional Betting Analysis | BetChekr</title>
-        <meta name="description" content="Expert daily betting picks with mathematical edge analysis. Track our proven performance with documented results." />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/betchekr_owl_logo.ico" />
+        <title>Daily Picks - Expert Betting Analysis | BetChekr</title>
+        <meta name="description" content="Expert daily betting picks with mathematical analysis and edge calculations." />
       </Head>
-
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
+      
+      <div className="min-h-screen bg-[#0B0F14]">
         <Header />
         
-        <main className="container mx-auto px-4 py-8">
+        <main className="max-w-7xl mx-auto px-4 py-8">
           {/* Hero Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-12"
+            className="text-center mb-8"
           >
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Daily <span className="text-blue-400">Picks</span>
+            <h1 className="text-3xl md:text-4xl font-bold text-[#E5E7EB] mb-3">
+              Daily Picks <Crown className="inline w-6 h-6 text-[#F4C430] ml-2" />
             </h1>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Mathematically-driven betting recommendations with documented performance tracking
+            <p className="text-[#9CA3AF] text-sm md:text-base max-w-2xl mx-auto">
+              Mathematically analyzed picks with positive expected value
             </p>
-            <div className="flex items-center justify-center gap-2 mt-4 text-gray-400">
-              <Calendar className="w-5 h-5" />
-              <span>{picks?.date || new Date().toLocaleDateString()}</span>
-            </div>
           </motion.div>
 
-          {/* Track Record Section */}
+          {/* Track Record Stats */}
           {trackRecord && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-12"
+              transition={{ delay: 0.1 }}
+              className="mb-8"
             >
-              <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                    <Trophy className="text-yellow-400" />
+              <div className="bg-[#141C28] rounded-lg p-4 md:p-6 border border-[#1F2937]">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-[#E5E7EB] font-semibold flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-[#F4C430]" />
                     Track Record
                   </h2>
-                  <select
-                    value={selectedPeriod}
-                    onChange={(e) => {
-                      setSelectedPeriod(e.target.value);
-                      fetchTrackRecord();
-                    }}
-                    className="bg-gray-700 border border-gray-600 text-white px-3 py-1 rounded-lg text-sm"
-                  >
-                    <option value="7d">Last 7 Days</option>
-                    <option value="30d">Last 30 Days</option>
-                    <option value="90d">Last 90 Days</option>
-                    <option value="all">All Time</option>
-                  </select>
+                  <div className="flex gap-1">
+                    {periods.map(period => (
+                      <button
+                        key={period.value}
+                        onClick={() => setSelectedPeriod(period.value)}
+                        className={`px-3 py-1 text-xs rounded transition-all ${
+                          selectedPeriod === period.value
+                            ? 'bg-[#F4C430] text-[#0B0F14] font-medium'
+                            : 'bg-[#0F172A] text-[#9CA3AF] hover:text-[#F4C430]'
+                        }`}
+                      >
+                        {period.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-400 mb-1">
-                      {trackRecord.roi >= 0 ? '+' : ''}{trackRecord.roi}%
-                    </div>
-                    <div className="text-sm text-gray-400">ROI</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-[#0F172A] rounded-lg p-3">
+                    <p className="text-[#6B7280] text-xs mb-1">Win Rate</p>
+                    <p className="text-[#F4C430] text-xl font-bold">
+                      {trackRecord.winRate || '0'}%
+                    </p>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-400 mb-1">
-                      {trackRecord.winRate}%
-                    </div>
-                    <div className="text-sm text-gray-400">Win Rate</div>
+                  <div className="bg-[#0F172A] rounded-lg p-3">
+                    <p className="text-[#6B7280] text-xs mb-1">Total Picks</p>
+                    <p className="text-[#E5E7EB] text-xl font-bold">
+                      {trackRecord.totalPicks || 0}
+                    </p>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-purple-400 mb-1">
-                      {trackRecord.totalPicks}
-                    </div>
-                    <div className="text-sm text-gray-400">Total Picks</div>
+                  <div className="bg-[#0F172A] rounded-lg p-3">
+                    <p className="text-[#6B7280] text-xs mb-1">ROI</p>
+                    <p className="text-green-400 text-xl font-bold">
+                      +{trackRecord.roi || '0'}%
+                    </p>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-yellow-400 mb-1">
-                      {trackRecord.avgEdge}%
-                    </div>
-                    <div className="text-sm text-gray-400">Avg Edge</div>
+                  <div className="bg-[#0F172A] rounded-lg p-3">
+                    <p className="text-[#6B7280] text-xs mb-1">Avg Edge</p>
+                    <p className="text-[#E5E7EB] text-xl font-bold">
+                      {trackRecord.avgEdge || '0'}%
+                    </p>
                   </div>
                 </div>
               </div>
             </motion.div>
           )}
 
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setActiveTab('today')}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                activeTab === 'today'
+                  ? 'bg-[#F4C430] text-[#0B0F14]'
+                  : 'bg-[#141C28] text-[#9CA3AF] hover:text-[#F4C430]'
+              }`}
+            >
+              Today's Picks
+            </button>
+            <button
+              onClick={() => setActiveTab('yesterday')}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                activeTab === 'yesterday'
+                  ? 'bg-[#F4C430] text-[#0B0F14]'
+                  : 'bg-[#141C28] text-[#9CA3AF] hover:text-[#F4C430]'
+              }`}
+            >
+              Yesterday's Results
+            </button>
+          </div>
+
           {/* Today's Picks */}
-          {picks && picks.success && (
-            <div className="space-y-8">
-              {/* Single Bet */}
+          {activeTab === 'today' && picks && !loading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-4"
+            >
+              {/* Single Pick */}
               {picks.single && (
-                <DailyPickCard
-                  title="Single Bet"
-                  subtitle="Low risk, solid edge"
-                  pick={picks.single}
+                <PickCard
+                  title="Single Pick"
+                  subtitle="Best straight bet"
+                  bet={picks.single}
                   onDownload={() => handleDownloadSlip(picks.single, 'single')}
-                  cardColor="from-green-500/20 to-blue-500/20"
-                  borderColor="border-green-500/50"
+                  icon={<Target className="w-5 h-5" />}
+                  accentColor="#F4C430"
                 />
               )}
 
               {/* 2-Leg Parlay */}
               {picks.parlay2 && (
-                <DailyPickCard
+                <PickCard
                   title="2-Leg Parlay"
-                  subtitle="Medium risk, higher payout"
-                  pick={picks.parlay2}
+                  subtitle="Optimal risk/reward"
+                  bet={picks.parlay2}
                   onDownload={() => handleDownloadSlip(picks.parlay2, 'parlay2')}
-                  cardColor="from-blue-500/20 to-purple-500/20"
-                  borderColor="border-blue-500/50"
+                  icon={<TrendingUp className="w-5 h-5" />}
+                  accentColor="#10B981"
                 />
               )}
 
               {/* 4-Leg Parlay */}
               {picks.parlay4 && (
-                <DailyPickCard
+                <PickCard
                   title="4-Leg Parlay"
-                  subtitle="High risk, maximum payout"
-                  pick={picks.parlay4}
+                  subtitle="High value opportunity"
+                  bet={picks.parlay4}
                   onDownload={() => handleDownloadSlip(picks.parlay4, 'parlay4')}
-                  cardColor="from-purple-500/20 to-pink-500/20"
-                  borderColor="border-purple-500/50"
+                  icon={<Star className="w-5 h-5" />}
+                  accentColor="#8B5CF6"
                 />
               )}
+
+              {/* Publication Time */}
+              {picks.publishedAt && (
+                <div className="text-center text-[#6B7280] text-xs mt-4">
+                  <Clock className="inline w-3 h-3 mr-1" />
+                  Published at {new Date(picks.publishedAt).toLocaleTimeString()}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Yesterday's Results */}
+          {activeTab === 'yesterday' && yesterdaysPicks && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-4"
+            >
+              {yesterdaysPicks.picks?.map((pick, index) => (
+                <div
+                  key={index}
+                  className="bg-[#141C28] rounded-lg border border-[#1F2937] p-4"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-[#E5E7EB] font-medium">{pick.type}</h3>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      pick.result === 'won' 
+                        ? 'bg-green-500/20 text-green-400'
+                        : pick.result === 'lost'
+                        ? 'bg-red-500/20 text-red-400'
+                        : 'bg-[#6B7280]/20 text-[#6B7280]'
+                    }`}>
+                      {pick.result === 'won' ? <Check className="inline w-3 h-3 mr-1" /> : 
+                       pick.result === 'lost' ? <X className="inline w-3 h-3 mr-1" /> : null}
+                      {pick.result.toUpperCase()}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {pick.legs?.map((leg, legIndex) => (
+                      <div key={legIndex} className="text-[#9CA3AF] text-sm">
+                        {leg.selection} • {formatOdds(leg.odds)}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-3 pt-3 border-t border-[#1F2937] text-[#6B7280] text-xs">
+                    Edge: {pick.edge}% • Payout: {pick.payout}
+                  </div>
+                </div>
+              ))}
+              
+              {yesterdaysPicks.summary && (
+                <div className="bg-[#0F172A] rounded-lg p-4 text-center">
+                  <p className="text-[#9CA3AF] text-sm">
+                    Yesterday: {yesterdaysPicks.summary.wins}W - {yesterdaysPicks.summary.losses}L
+                    {yesterdaysPicks.summary.profit > 0 ? (
+                      <span className="text-green-400 ml-2">+{yesterdaysPicks.summary.profit} units</span>
+                    ) : (
+                      <span className="text-red-400 ml-2">{yesterdaysPicks.summary.profit} units</span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Loading State */}
+          {loading && (
+            <div className="text-center py-12">
+              <Activity className="w-12 h-12 text-[#6B7280] mx-auto mb-4 animate-pulse" />
+              <p className="text-[#9CA3AF]">Loading picks...</p>
             </div>
           )}
 
+          {/* Error State */}
           {error && (
             <div className="text-center py-12">
-              <div className="text-red-400 mb-4">⚠️ {error}</div>
-              <button 
-                onClick={() => window.location.reload()}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors"
-              >
-                Try Again
-              </button>
-              {/* Debug info */}
-              <div className="mt-4 text-xs text-gray-500">
-                <details>
-                  <summary>Debug Info</summary>
-                  <pre className="text-left mt-2 p-2 bg-gray-800 rounded">
-                    {JSON.stringify({ loading, error, picks }, null, 2)}
-                  </pre>
-                </details>
-              </div>
+              <X className="w-12 h-12 text-red-400 mx-auto mb-4" />
+              <p className="text-red-400">{error}</p>
             </div>
           )}
-
-          {/* Raw data fallback for debugging */}
-          {!loading && !error && picks && !picks.success && (
-            <div className="text-center py-12">
-              <div className="text-yellow-400 mb-4">⚠️ Data received but format unexpected</div>
-              <pre className="text-left text-xs bg-gray-800 p-4 rounded">
-                {JSON.stringify(picks, null, 2)}
-              </pre>
-            </div>
-          )}
-
-          {/* Disclaimer */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-16 bg-gray-800/30 backdrop-blur-lg rounded-2xl p-6 border border-gray-700"
-          >
-            <h3 className="text-lg font-bold text-yellow-400 mb-4">⚠️ Important Disclaimer</h3>
-            <div className="text-sm text-gray-300 space-y-2">
-              <p>
-                These picks are based on mathematical analysis and historical data. Past performance does not guarantee future results.
-              </p>
-              <p>
-                Always bet responsibly and only with money you can afford to lose. Consider these picks as educational content, not financial advice.
-              </p>
-              <p>
-                Track record data is updated daily and reflects actual documented performance over the specified time periods.
-              </p>
-            </div>
-          </motion.div>
         </main>
 
         <Footer />
@@ -346,85 +412,83 @@ export default function DailyPicks() {
   );
 }
 
-// Daily Pick Card Component
-function DailyPickCard({ title, subtitle, pick, onDownload, cardColor, borderColor }) {
+// Pick Card Component
+function PickCard({ title, subtitle, bet, onDownload, icon, accentColor }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`bg-gradient-to-br ${cardColor} backdrop-blur-lg rounded-2xl p-6 border ${borderColor}`}
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="bg-[#141C28] rounded-lg border border-[#1F2937] overflow-hidden"
     >
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Header */}
-        <div className="lg:w-1/4">
-          <h3 className="text-2xl font-bold text-white mb-2">{title}</h3>
-          <p className="text-gray-300 mb-4">{subtitle}</p>
-          
-          {/* Key Metrics */}
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Edge:</span>
-              <span className="text-green-400 font-bold">+{pick.edgePercentage || 0}%</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Odds:</span>
-              <span className="text-white font-bold">{pick.combinedOdds || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Payout (per $100):</span>
-              <div className="font-bold text-green-400">+${(pick.estimatedPayout || 0) - 100}</div>
+      <div className="bg-[#0F172A] px-4 py-3 border-b border-[#1F2937]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div style={{ color: accentColor }}>{icon}</div>
+            <div>
+              <h3 className="text-[#E5E7EB] font-semibold">{title}</h3>
+              <p className="text-[#6B7280] text-xs">{subtitle}</p>
             </div>
           </div>
-        </div>
-
-        {/* Bet Legs */}
-        <div className="lg:w-2/4">
-          <h4 className="text-lg font-semibold text-white mb-4">Bet Legs</h4>
-          <div className="space-y-3">
-            {(pick.legs || []).map((leg, index) => (
-              <div key={index} className="bg-gray-700/50 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="font-semibold text-white">
-                      {leg.awayTeam || 'Away'} @ {leg.homeTeam || 'Home'}
-                    </div>
-                    <div className="text-sm text-gray-300">{leg.sport || 'Sport'}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-blue-400">{leg.bestOdds || 'N/A'}</div>
-                    <div className="text-xs text-gray-400">{leg.bestSportsbook || 'Sportsbook'}</div>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="text-sm">
-                    <span className="text-gray-400">{leg.marketType || 'Market'}:</span>
-                    <span className="text-white ml-2">{leg.selection || 'Selection'}</span>
-                  </div>
-                  <div className="text-xs text-green-400">+{leg.edgePercentage || 0}% edge</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Action Button */}
-        <div className="lg:w-1/4 flex flex-col justify-center">
-          <button
-            onClick={onDownload}
-            className="w-full bg-white text-gray-900 font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 mb-4"
-          >
-            <Download className="w-4 h-4" />
-            Download Slip
-          </button>
-          
-          <div className="text-center">
-            <div className="text-xs text-gray-400 mb-2">Recommended Bet Size</div>
-            <div className="text-sm text-yellow-400 font-semibold">
-              2-5% of bankroll
+          <div className="text-right">
+            <div className="text-[#F4C430] font-bold text-lg">
+              {formatOdds(bet.totalOdds)}
+            </div>
+            <div className="text-[#6B7280] text-xs">
+              {bet.edgePercentage}% edge
             </div>
           </div>
         </div>
       </div>
+
+      <div className="p-4">
+        {/* Bet Legs */}
+        <div className="space-y-3 mb-4">
+          {bet.legs.map((leg, index) => (
+            <div key={index} className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-[#E5E7EB] text-sm font-medium">
+                  {leg.awayTeam} @ {leg.homeTeam}
+                </p>
+                <p className="text-[#6B7280] text-xs mt-1">
+                  {leg.selection} • {leg.marketType}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[#E5E7EB] font-mono text-sm">
+                  {formatOdds(leg.bestOdds)}
+                </p>
+                <p className="text-[#6B7280] text-xs">
+                  {leg.bestSportsbook}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Stats Row */}
+        <div className="flex items-center justify-between py-3 border-t border-[#1F2937]">
+          <div className="flex gap-4 text-xs">
+            <span className="text-[#6B7280]">
+              Win Prob: <span className="text-[#E5E7EB] font-medium">{bet.impliedProbability}%</span>
+            </span>
+            <span className="text-[#6B7280]">
+              Payout: <span className="text-[#E5E7EB] font-medium">{bet.potentialPayout}</span>
+            </span>
+          </div>
+          <button
+            onClick={onDownload}
+            className="px-3 py-1.5 bg-[#F4C430] text-[#0B0F14] text-xs font-medium rounded hover:bg-[#e6b829] transition-colors flex items-center gap-1"
+          >
+            <Download className="w-3 h-3" />
+            Download
+          </button>
+        </div>
+      </div>
     </motion.div>
   );
+}
+
+function formatOdds(odds) {
+  if (typeof odds === 'string') return odds;
+  return odds > 0 ? `+${odds}` : odds.toString();
 }
