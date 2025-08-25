@@ -131,10 +131,6 @@ export default function LineShopping() {
       alert('Please select a sport first');
       return;
     }
-    if (!searchQuery.trim()) {
-      alert('Please enter a team or player name');
-      return;
-    }
     fetchLines();
   };
 
@@ -142,20 +138,21 @@ export default function LineShopping() {
   const groupedLines = () => {
     const groups = {};
     lines.forEach(line => {
-      const key = `${line.game}_${line.market}_${line.selection}`;
+      const key = `${line.game}_${line.market_type}_${line.selection}`;
       if (!groups[key]) {
         groups[key] = {
           game: line.game,
-          market: line.market,
+          market: line.market_display || line.market_type,
           selection: line.selection,
           books: []
         };
       }
       groups[key].books.push({
         name: line.sportsbook,
-        odds: line.odds,
+        odds: line.american_odds,
         americanOdds: line.american_odds,
         value: line.expected_value,
+        deviation: line.pinnacle_deviation,
         movement: line.line_movement
       });
     });
@@ -224,49 +221,98 @@ export default function LineShopping() {
             </div>
           </motion.div>
 
-          {/* Search Section */}
+          {/* Filter Section */}
           {selectedSport && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="mb-6"
             >
-              <div className="max-w-3xl mx-auto">
+              <div className="max-w-5xl mx-auto">
                 <div className="bg-[#141C28] rounded-lg p-4 border border-[#1F2937]">
-                  <div className="flex flex-col md:flex-row gap-3">
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        placeholder="Search for team or player..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                        className="w-full px-4 py-3 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#F4C430]/50"
-                      />
+                  <h3 className="text-[#E5E7EB] font-medium mb-4 flex items-center gap-2">
+                    <Filter className="w-4 h-4" />
+                    Filters
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                    {/* Team Filter */}
+                    <div>
+                      <label className="block text-[#9CA3AF] text-sm mb-2">Team</label>
+                      <select
+                        value={selectedTeam}
+                        onChange={(e) => setSelectedTeam(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50"
+                      >
+                        <option value="">All Teams</option>
+                        {availableTeams.map(team => (
+                          <option key={team} value={team}>{team}</option>
+                        ))}
+                      </select>
                     </div>
-                    
+
+                    {/* Game Filter */}
+                    <div>
+                      <label className="block text-[#9CA3AF] text-sm mb-2">Specific Game</label>
+                      <select
+                        value={selectedGame}
+                        onChange={(e) => setSelectedGame(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50"
+                      >
+                        <option value="">All Games</option>
+                        {availableGames.map(game => (
+                          <option key={game.id} value={game.id}>{game.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Time Filter */}
+                    <div>
+                      <label className="block text-[#9CA3AF] text-sm mb-2">Time Frame</label>
+                      <select
+                        value={timeFilter}
+                        onChange={(e) => setTimeFilter(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50"
+                      >
+                        {timeFilters.map(filter => (
+                          <option key={filter.value} value={filter.value}>{filter.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Edge Filter */}
+                    <div>
+                      <label className="block text-[#9CA3AF] text-sm mb-2">Minimum Edge</label>
+                      <select
+                        value={edgeFilter}
+                        onChange={(e) => setEdgeFilter(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50"
+                      >
+                        {edgeFilters.map(filter => (
+                          <option key={filter.value} value={filter.value}>{filter.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
                     {/* Market Type Filter */}
-                    <div className="flex gap-1 md:gap-2">
-                      {marketTypes.map(type => (
-                        <button
-                          key={type.value}
-                          onClick={() => setMarketType(type.value)}
-                          className={`px-3 py-2 text-xs rounded-lg transition-all ${
-                            marketType === type.value
-                              ? 'bg-[#F4C430] text-[#0B0F14] font-medium'
-                              : 'bg-[#0F172A] text-[#9CA3AF] hover:text-[#F4C430]'
-                          }`}
-                        >
-                          {type.label}
-                        </button>
-                      ))}
+                    <div>
+                      <label className="block text-[#9CA3AF] text-sm mb-2">Market Type</label>
+                      <select
+                        value={marketType}
+                        onChange={(e) => setMarketType(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50"
+                      >
+                        {marketTypes.map(type => (
+                          <option key={type.value} value={type.value}>{type.label}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                   
                   <button
                     onClick={handleSearch}
-                    disabled={loading || !searchQuery}
-                    className="w-full mt-3 px-4 py-3 bg-[#F4C430] text-[#0B0F14] font-semibold rounded-lg hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    disabled={loading}
+                    className="w-full px-4 py-3 bg-[#F4C430] text-[#0B0F14] font-semibold rounded-lg hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {loading ? (
                       <>
