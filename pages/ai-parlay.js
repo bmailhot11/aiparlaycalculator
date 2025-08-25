@@ -606,40 +606,6 @@ export default function AIParlayPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-[#9CA3AF] text-sm font-medium mb-2">
-                    Enhanced EV Mode 
-                    <span className="ml-2 text-xs text-green-400">Recommended</span>
-                  </label>
-                  <div className="flex rounded-lg overflow-hidden border border-[#1F2937] h-10">
-                    <button
-                      onClick={() => setUseEnhancedEV(true)}
-                      className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
-                        useEnhancedEV 
-                          ? 'bg-[#F4C430] text-[#0F172A]' 
-                          : 'bg-[#0F172A] text-[#6B7280] hover:text-[#9CA3AF]'
-                      }`}
-                    >
-                      Pinnacle Baseline
-                    </button>
-                    <button
-                      onClick={() => setUseEnhancedEV(false)}
-                      className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
-                        !useEnhancedEV 
-                          ? 'bg-[#F4C430] text-[#0F172A]' 
-                          : 'bg-[#0F172A] text-[#6B7280] hover:text-[#9CA3AF]'
-                      }`}
-                    >
-                      Standard AI
-                    </button>
-                  </div>
-                  <p className="text-xs text-[#6B7280] mt-1">
-                    {useEnhancedEV 
-                      ? "Uses Pinnacle's no-vig lines as baseline for precise EV calculations" 
-                      : "Uses AI pattern recognition for parlay generation"}
-                  </p>
-                </div>
-                
-                <div>
                   <label className="block text-[#9CA3AF] text-sm font-medium mb-2">Include Player Props</label>
                   <div className="flex rounded-lg overflow-hidden border border-[#1F2937] h-10">
                     <button
