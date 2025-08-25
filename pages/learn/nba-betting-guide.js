@@ -1,6 +1,8 @@
-import Layout from '../../components/Layout';
 import { motion } from 'framer-motion';
+import Head from 'next/head';
 import Link from 'next/link';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
 
 export default function NBABettingGuide() {
   const fadeIn = {
@@ -10,8 +12,14 @@ export default function NBABettingGuide() {
   };
 
   return (
-    <Layout>
+    <>
+      <Head>
+        <title>NBA Betting Guide - Line Reading & Strategy | BetChekr</title>
+        <meta name="description" content="Master NBA betting with our comprehensive guide. Learn point spreads, totals, player props, and advanced basketball betting strategies." />
+      </Head>
+      
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+        <Header />
         <div className="container mx-auto px-6 py-20">
           {/* Back to Learning */}
           <motion.div 
@@ -97,7 +105,9 @@ export default function NBABettingGuide() {
             </div>
           </motion.div>
         </div>
+        
+        <Footer />
       </div>
-    </Layout>
+    </>
   );
 }

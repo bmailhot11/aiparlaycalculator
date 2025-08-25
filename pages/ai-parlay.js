@@ -19,7 +19,6 @@ import { PremiumContext } from './_app';
 import { renderSlipImage, downloadImage, copyImageToClipboard } from '../utils/renderSlipImage';
 import { generateImprovedSlipImage, downloadImprovedSlip } from '../utils/generateImprovedSlipImage';
 import { apiFetch } from '../utils/api';
-import AIPerformanceDashboard from '../components/AIPerformanceDashboard';
 
 export default function AIParlayPage() {
   const { isPremium } = useContext(PremiumContext);
@@ -895,34 +894,6 @@ export default function AIParlayPage() {
         </motion.div>
       </section>
 
-      {/* AI Performance Dashboard */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-3xl md:text-4xl font-bold text-[#E5E7EB] mb-4">
-              AI Performance Track Record
-            </h2>
-            <p className="text-[#9CA3AF] text-lg max-w-2xl mx-auto mb-4">
-              See how our AI-generated parlays perform in real-time. Transparent results build confidence.
-            </p>
-            <p className="text-[#6B7280] text-sm">
-              AI bet tracking began August 23, 2025
-            </p>
-          </motion.div>
-
-          <AIPerformanceDashboard 
-            period={30}
-            user_id={currentUser?.id}
-            showUserStats={!!currentUser}
-          />
-        </div>
-      </section>
       
       <Footer />
     </div>
