@@ -11,6 +11,15 @@ export default async function handler(req, res) {
     
     console.log(`📅 Fetching daily picks for ${today}`);
 
+    // Test Supabase connection first
+    if (!supabase) {
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection not available',
+        error: 'Supabase client not initialized'
+      });
+    }
+
     // Get today's recommendation
     const { data: dailyReco, error: recoError } = await supabase
       .from('daily_recos')
@@ -26,19 +35,17 @@ export default async function handler(req, res) {
 
     if (recoError) {
       console.error('Database error:', recoError);
-      
-      // Fallback to static data if no database data
-      return res.status(200).json({
+      return res.status(500).json({
         success: false,
-        message: 'No picks published for today yet',
-        fallback_to_static: true
+        message: 'Database connection error',
+        error: recoError.message
       });
     }
 
     if (!dailyReco) {
       return res.status(404).json({
         success: false,
-        message: 'No picks available for today',
+        message: 'No picks published for today yet. Check back later.',
         date: today
       });
     }
