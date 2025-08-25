@@ -1,7 +1,15 @@
 const openai = require('../../lib/openai');
 const eventsCache = require('../../lib/events-cache.js');
 const bettingMath = require('../../lib/betting-math.js');
-const historicalAnalyzer = require('../../lib/historical-edge-analyzer.js');
+
+// Optional historical analyzer (may require Supabase)
+let historicalAnalyzer;
+try {
+  historicalAnalyzer = require('../../lib/historical-edge-analyzer.js');
+} catch (error) {
+  console.log('Historical analyzer not available:', error.message);
+  historicalAnalyzer = null;
+}
 
 export default async function handler(req, res) {
   // Environment Variables Check
@@ -492,14 +500,23 @@ async function generateParlayWithRealOdds(preferences, sportData) {
   // Get optimal bets from selected sportsbook only
   const optimizedBets = getOptimalBetsPerGame(availableBetsForBook);
   
-  // Apply historical analysis to identify profitable patterns
-  console.log(`🔍 Analyzing historical patterns for ${preferences.sport}...`);
-  const enhancedBets = await historicalAnalyzer.detectCurrentEdges(optimizedBets, preferences.sport);
-  
-  // Prioritize bets with strong historical edges
-  const topBets = enhancedBets
-    .sort((a, b) => (b.priority_boost || 1.0) - (a.priority_boost || 1.0))
-    .slice(0, 10); // Top 10 with historical analysis applied
+  // Apply historical analysis if available
+  let topBets;
+  if (historicalAnalyzer) {
+    console.log(`🔍 Analyzing historical patterns for ${preferences.sport}...`);
+    try {
+      const enhancedBets = await historicalAnalyzer.detectCurrentEdges(optimizedBets, preferences.sport);
+      topBets = enhancedBets
+        .sort((a, b) => (b.priority_boost || 1.0) - (a.priority_boost || 1.0))
+        .slice(0, 10);
+    } catch (error) {
+      console.log('Historical analysis failed, using basic selection:', error.message);
+      topBets = optimizedBets.slice(0, 10);
+    }
+  } else {
+    console.log('Historical analysis not available, using basic selection');
+    topBets = optimizedBets.slice(0, 10);
+  }
 
   try {
     const parlayResponse = await openai.chat.completions.create({
