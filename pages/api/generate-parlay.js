@@ -1,7 +1,6 @@
 const openai = require('../../lib/openai');
 const eventsCache = require('../../lib/events-cache.js');
 const bettingMath = require('../../lib/betting-math.js');
-const { calculateMovementSignals, calculateLineMoveSignal } = require('../../lib/line-movement');
 
 export default async function handler(req, res) {
   // Environment Variables Check
@@ -53,10 +52,6 @@ export default async function handler(req, res) {
     // Step 2: Generate parlay with real odds validation
     const parlayData = await generateParlayWithRealOdds(config, sportData);
 
-    // Step 3: Track parlay legs for CLV analysis (if parlay is generated successfully)
-    if (parlayData.legs && parlayData.legs.length > 0) {
-      await trackParlayForCLV(parlayData, config.sport);
-    }
 
     return res.status(200).json({
       success: true,
@@ -318,9 +313,8 @@ async function fetchSportSpecificOdds(sport) {
 
 // 🚀 OPTIMIZED: Filter to only top 5 sportsbooks for better performance
 function filterToTop5Sportsbooks(gameData) {
-  // Define the most reliable sportsbooks with best odds (INCLUDING PINNACLE FOR SHARP LINES)
+  // Define the most reliable sportsbooks with best odds
   const TOP_SPORTSBOOKS = [
-    'Pinnacle',      // Sharp book - MOST IMPORTANT for true probability calculation
     'DraftKings',
     'FanDuel', 
     'BetMGM',
@@ -1068,18 +1062,44 @@ async function generateValidatedFallbackParlay(availableBets, preferences, sport
     throw new Error(`Could only find ${selectedBets.length} suitable bets for ${legs}-leg parlay`);
   }
   
-  // Enhance bets with movement signals
-  let enhancedBets;
-  try {
-    enhancedBets = await enhanceParlayWithMovement(selectedBets);
-    console.log(`✅ Enhanced ${enhancedBets.length} bets with movement signals`);
-  } catch (error) {
-    console.error('Movement enhancement failed, using original bets:', error);
-    enhancedBets = selectedBets.map(bet => ({ ...bet, lineMoveSignal: 0 }));
-  }
+  // Use selected bets without movement enhancement
+  const enhancedBets = selectedBets.map(bet => ({ ...bet, lineMoveSignal: 0 }));
   
-  // Process the parlay with betting math
-  const parlayAnalysis = bettingMath.processParlay(enhancedBets, sportData);
+  // Process each leg individually with its bookmakers data
+  const processedLegs = enhancedBets.map(bet => {
+    try {
+      return bettingMath.processLeg(bet, bet.bookmakers);
+    } catch (error) {
+      console.error(`Error processing leg ${bet.selection}:`, error);
+      // Return a basic processed leg structure
+      return {
+        ...bet,
+        metrics: { ev: 0, evPercent: 0, kellyFractional: 0.01, passesFilters: true },
+        probabilities: { true: 0.5 },
+        confidence: { score: 50 }
+      };
+    }
+  });
+  
+  // Process the parlay with betting math using processed legs
+  let parlayAnalysis;
+  try {
+    parlayAnalysis = bettingMath.processParlay(processedLegs, null);
+  } catch (error) {
+    console.error('Error in processParlay:', error);
+    // Fallback to simple calculations
+    const totalDecimalOdds = enhancedBets.reduce((product, bet) => product * bet.decimal_odds, 1);
+    parlayAnalysis = {
+      legs: processedLegs,
+      parlay: {
+        odds: { decimal: totalDecimalOdds, american: decimalToAmerican(totalDecimalOdds) },
+        metrics: { evPercent: 0, ev: 0, kellyFractional: 0.01, smartScore: 50 },
+        probability: { naive: 0.2, adjusted: 0.2, correlationFactor: 0.9 },
+        confidence: 50,
+        qualityGates: { parlayEVAcceptable: true }
+      }
+    };
+  }
   
   // Check quality gates
   if (!parlayAnalysis.parlay.qualityGates.parlayEVAcceptable) {
@@ -1268,126 +1288,3 @@ function decimalToAmerican(decimal) {
   }
 }
 
-// Movement enhancement is now imported at top
-
-// Enhanced parlay generation with movement signals
-async function enhanceParlayWithMovement(selectedBets) {
-  const enhancedBets = [];
-  
-  for (const bet of selectedBets) {
-    try {
-      // Generate consistent game_key from bet data
-      const gameKey = bet.game_id || `${bet.away_team || 'away'}-${bet.home_team || 'home'}-${bet.commence_time?.split('T')[0] || 'today'}`;
-      
-      // Get movement signals for this bet
-      const signals = await calculateMovementSignals(
-        gameKey,
-        bet.market_type,
-        bet.outcome || bet.selection
-      );
-      
-      if (signals) {
-        // Apply movement filters
-        const shouldSkip = signals.signals.FP_signal > 0.7 && 
-                          signals.signals.drift_open < 0 && // Movement against us
-                          bet.ev < 0.02; // Marginal EV
-        
-        if (shouldSkip) {
-          console.log(`Skipping ${bet.selection} due to negative movement (FP: ${signals.signals.FP_signal})`);
-          continue;
-        }
-        
-        // Add movement data to bet
-        bet.movement_signals = signals.signals;
-        bet.lineMoveSignal = calculateLineMoveSignal(
-          signals.signals.LM_signal, 
-          signals.signals.Vel_signal
-        );
-      } else {
-        // No movement data available
-        bet.lineMoveSignal = 0;
-      }
-      
-      enhancedBets.push(bet);
-    } catch (error) {
-      console.error('Movement enhancement error:', error);
-      bet.lineMoveSignal = 0; // Default value
-      enhancedBets.push(bet); // Include bet without movement data
-    }
-  }
-  
-  return enhancedBets;
-}
-
-// CLV Tracking Integration
-async function trackParlayForCLV(parlayData, sport) {
-  try {
-    if (!parlayData.parlay_legs || parlayData.parlay_legs.length === 0) {
-      return;
-    }
-
-    console.log(`📈 Starting CLV tracking for ${parlayData.parlay_legs.length}-leg parlay...`);
-
-    for (const leg of parlayData.parlay_legs) {
-      // Create CLV tracking entry for each leg
-      const trackingData = {
-        sport,
-        home_team: extractHomeTeam(leg.game),
-        away_team: extractAwayTeam(leg.game),
-        market_type: leg.bet_type,
-        selection: leg.selection,
-        game_id: generateGameId(leg.game, leg.commence_time),
-        commence_time: leg.commence_time,
-        opening_odds_decimal: leg.decimal_odds,
-        opening_odds_american: leg.odds,
-        opening_sportsbook: leg.sportsbook,
-        suggested_probability: leg.true_probability,
-        ev_at_suggestion: leg.ev_percent ? leg.ev_percent / 100 : null,
-        kelly_size_suggested: leg.kelly_fraction,
-        suggestion_source: 'ai_parlay',
-        confidence_score: Math.round(parseFloat(leg.confidence_rating || 70)),
-        model_version: 'v2.1',
-        notes: `AI Generated Parlay - ${leg.reasoning || 'Mathematical selection'}`
-      };
-
-      // Call CLV tracking API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/clv/track-bet`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(trackingData)
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log(`✅ CLV tracking started for ${leg.selection} (ID: ${result.bet_id})`);
-      } else {
-        console.error(`❌ CLV tracking failed for ${leg.selection}:`, await response.text());
-      }
-    }
-  } catch (error) {
-    console.error('❌ CLV tracking error:', error);
-    // Don't throw - CLV tracking failure shouldn't break parlay generation
-  }
-}
-
-// Helper functions for CLV tracking
-function extractHomeTeam(gameString) {
-  // Format: "Away Team @ Home Team"
-  const parts = gameString.split(' @ ');
-  return parts.length === 2 ? parts[1] : gameString;
-}
-
-function extractAwayTeam(gameString) {
-  // Format: "Away Team @ Home Team"
-  const parts = gameString.split(' @ ');
-  return parts.length === 2 ? parts[0] : gameString;
-}
-
-function generateGameId(gameString, commenceTime) {
-  // Create consistent game ID from teams and date
-  const normalizedGame = gameString.replace(/\s+/g, '-').toLowerCase();
-  const dateStr = new Date(commenceTime).toISOString().split('T')[0];
-  return `${normalizedGame}-${dateStr}`;
-}
