@@ -281,8 +281,8 @@ export default function LineShopping() {
                         className="w-full px-3 py-2 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50"
                       >
                         <option value="">All Teams</option>
-                        {availableTeams.map(team => (
-                          <option key={team} value={team}>{team}</option>
+                        {Array.isArray(availableTeams) && availableTeams.map((team, index) => (
+                          <option key={team || index} value={team || ''}>{team || 'Unknown Team'}</option>
                         ))}
                       </select>
                     </div>
@@ -296,8 +296,8 @@ export default function LineShopping() {
                         className="w-full px-3 py-2 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50"
                       >
                         <option value="">All Games</option>
-                        {availableGames.map(game => (
-                          <option key={game.id} value={game.id}>{game.label}</option>
+                        {Array.isArray(availableGames) && availableGames.map(game => (
+                          <option key={game?.id || Math.random()} value={game?.id || ''}>{game?.label || 'Unknown Game'}</option>
                         ))}
                       </select>
                     </div>
