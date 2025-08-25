@@ -78,14 +78,26 @@ export default function LineShopping() {
     
     try {
       const response = await fetch(`/api/line-shopping?sport=${sport}&getTeams=true`);
+      
+      if (!response.ok) {
+        console.warn(`Failed to fetch teams for ${sport}: HTTP ${response.status}`);
+        return;
+      }
+      
       const data = await response.json();
       
       if (data.success) {
-        setAvailableTeams(data.teams || []);
-        setAvailableGames(data.games || []);
+        setAvailableTeams(Array.isArray(data.teams) ? data.teams : []);
+        setAvailableGames(Array.isArray(data.games) ? data.games : []);
+      } else {
+        console.warn('Teams API returned error:', data.message);
+        setAvailableTeams([]);
+        setAvailableGames([]);
       }
     } catch (error) {
       console.error('Error fetching teams:', error);
+      setAvailableTeams([]);
+      setAvailableGames([]);
     }
   };
 
@@ -110,14 +122,24 @@ export default function LineShopping() {
       });
 
       const response = await fetch(`/api/line-shopping?${params}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.success) {
-        setLines(data.lines || []);
+        setLines(Array.isArray(data.lines) ? data.lines : []);
         setLastUpdated(new Date());
+      } else {
+        console.error('API returned error:', data.message);
+        setLines([]);
       }
     } catch (error) {
       console.error('Error fetching lines:', error);
+      setLines([]);
+      // You could also show a user-friendly error message here
     } finally {
       setLoading(false);
     }
@@ -144,29 +166,44 @@ export default function LineShopping() {
   // Group lines by selection for comparison
   const groupedLines = () => {
     const groups = {};
+    
+    if (!Array.isArray(lines)) {
+      return [];
+    }
+    
     lines.forEach(line => {
+      // Safety checks for required properties
+      if (!line || !line.game || !line.market_type || !line.selection) {
+        console.warn('Invalid line data:', line);
+        return;
+      }
+      
       const key = `${line.game}_${line.market_type}_${line.selection}`;
       if (!groups[key]) {
         groups[key] = {
           game: line.game,
+          game_id: line.game_id,
           market: line.market_display || line.market_type,
           selection: line.selection,
           books: []
         };
       }
+      
       groups[key].books.push({
-        name: line.sportsbook,
-        odds: line.american_odds,
-        americanOdds: line.american_odds,
-        value: line.expected_value,
-        deviation: line.pinnacle_deviation,
-        movement: line.line_movement
+        name: line.sportsbook || 'Unknown',
+        odds: line.american_odds || 0,
+        americanOdds: line.american_odds || 0,
+        value: line.expected_value || 0,
+        deviation: line.pinnacle_deviation || 0,
+        movement: line.line_movement || 0
       });
     });
     
-    // Sort books by best odds
+    // Sort books by best odds (safely)
     Object.values(groups).forEach(group => {
-      group.books.sort((a, b) => b.americanOdds - a.americanOdds);
+      if (group.books && Array.isArray(group.books)) {
+        group.books.sort((a, b) => (b.americanOdds || 0) - (a.americanOdds || 0));
+      }
     });
     
     return Object.values(groups);

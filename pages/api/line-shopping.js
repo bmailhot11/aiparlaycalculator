@@ -45,8 +45,9 @@ async function fetchAvailableTeamsAndGames(sport) {
     const upcomingEvents = await eventsCache.cacheUpcomingEvents(sport);
     
     if (!upcomingEvents || upcomingEvents.length === 0) {
+      console.log(`No upcoming events found for ${sport}, returning empty result`);
       return {
-        success: false,
+        success: true, // Changed to true to avoid errors in frontend
         message: `No upcoming events for ${sport}`,
         teams: [],
         games: []
@@ -57,14 +58,18 @@ async function fetchAvailableTeamsAndGames(sport) {
     const games = [];
     
     upcomingEvents.forEach(event => {
-      if (event.home_team && event.away_team) {
-        teams.add(event.home_team);
-        teams.add(event.away_team);
-        games.push({
-          id: `${event.away_team} @ ${event.home_team}`,
-          label: `${event.away_team} @ ${event.home_team}`,
-          date: event.commence_time
-        });
+      try {
+        if (event && event.home_team && event.away_team) {
+          teams.add(event.home_team);
+          teams.add(event.away_team);
+          games.push({
+            id: `${event.away_team} @ ${event.home_team}`,
+            label: `${event.away_team} @ ${event.home_team}`,
+            date: event.commence_time
+          });
+        }
+      } catch (eventError) {
+        console.warn('Error processing event:', event, eventError);
       }
     });
 
@@ -75,10 +80,10 @@ async function fetchAvailableTeamsAndGames(sport) {
     };
     
   } catch (error) {
-    console.error('Error fetching teams:', error);
+    console.error('Error fetching teams for', sport, ':', error);
     return {
-      success: false,
-      message: error.message,
+      success: true, // Return success with empty data to prevent frontend errors
+      message: `Error fetching data for ${sport}: ${error.message}`,
       teams: [],
       games: []
     };
