@@ -158,53 +158,58 @@ export default function LineShopping() {
 
   // Group lines by selection for comparison
   const groupedLines = () => {
-    const groups = {};
-    
-    if (!Array.isArray(lines)) {
+    try {
+      const groups = {};
+      
+      if (!Array.isArray(lines)) {
+        return [];
+      }
+      
+      lines.forEach(line => {
+        // Safety checks for required properties
+        if (!line || !line.game || !line.market_type || !line.selection) {
+          return;
+        }
+        
+        const key = `${line.game}_${line.market_type}_${line.selection}`;
+        if (!groups[key]) {
+          groups[key] = {
+            game: line.game,
+            game_id: line.game_id,
+            market: line.market_display || line.market_type,
+            selection: line.selection,
+            books: []
+          };
+        }
+        
+        groups[key].books.push({
+          name: line.sportsbook || 'Unknown',
+          odds: line.american_odds || 0,
+          americanOdds: line.american_odds || 0,
+          value: line.expected_value || 0,
+          deviation: line.pinnacle_deviation || 0,
+          movement: line.line_movement || 0
+        });
+      });
+      
+      // Sort books by best odds (safely)
+      Object.values(groups).forEach(group => {
+        if (group.books && Array.isArray(group.books)) {
+          group.books.sort((a, b) => (b.americanOdds || 0) - (a.americanOdds || 0));
+        }
+      });
+      
+      return Object.values(groups);
+    } catch (error) {
+      console.error('Error in groupedLines:', error);
       return [];
     }
-    
-    lines.forEach(line => {
-      // Safety checks for required properties
-      if (!line || !line.game || !line.market_type || !line.selection) {
-        console.warn('Invalid line data:', line);
-        return;
-      }
-      
-      const key = `${line.game}_${line.market_type}_${line.selection}`;
-      if (!groups[key]) {
-        groups[key] = {
-          game: line.game,
-          game_id: line.game_id,
-          market: line.market_display || line.market_type,
-          selection: line.selection,
-          books: []
-        };
-      }
-      
-      groups[key].books.push({
-        name: line.sportsbook || 'Unknown',
-        odds: line.american_odds || 0,
-        americanOdds: line.american_odds || 0,
-        value: line.expected_value || 0,
-        deviation: line.pinnacle_deviation || 0,
-        movement: line.line_movement || 0
-      });
-    });
-    
-    // Sort books by best odds (safely)
-    Object.values(groups).forEach(group => {
-      if (group.books && Array.isArray(group.books)) {
-        group.books.sort((a, b) => (b.americanOdds || 0) - (a.americanOdds || 0));
-      }
-    });
-    
-    return Object.values(groups);
   };
 
   const formatOdds = (odds) => {
     return odds > 0 ? `+${odds}` : odds;
   };
+
 
   return (
     <>
@@ -481,7 +486,7 @@ export default function LineShopping() {
             </div>
           )}
 
-          {selectedSport && !loading && lines.length === 0 && searchQuery && (
+          {selectedSport && !loading && lines.length === 0 && (selectedTeam || selectedGame || marketType !== 'all' || edgeFilter !== '0' || timeFilter !== 'all') && (
             <div className="text-center py-12">
               <Search className="w-12 h-12 text-[#6B7280] mx-auto mb-4" />
               <p className="text-[#9CA3AF]">No lines found. Try a different search.</p>

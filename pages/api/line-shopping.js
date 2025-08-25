@@ -125,15 +125,23 @@ async function fetchLineShoppingData(sport, filters = {}) {
     }
 
     // Step 2: Get comprehensive odds data including player props
-    const markets = getMarketsForLineShopping(sport, filters.market);
-    const oddsData = await eventsCache.getOddsForEvents(
+    let markets = getMarketsForLineShopping(sport, filters.market);
+    let oddsData = await eventsCache.getOddsForEvents(
       upcomingEvents, 
       markets, 
       true // Include player props
     );
 
     // Step 3: Extract and process all betting lines
-    const allLines = await extractAndProcessLines(oddsData, sport, filters);
+    let allLines = await extractAndProcessLines(oddsData, sport, filters);
+    
+    // Fallback: if player props don't work, use h2h instead of returning nothing
+    if (allLines.length === 0 && markets.includes('player_')) {
+      console.log(`⚠️ [LineShopping] No lines found with player props for ${sport}, falling back to h2h`);
+      markets = 'h2h';
+      oddsData = await eventsCache.getOddsForEvents(upcomingEvents, markets, false);
+      allLines = await extractAndProcessLines(oddsData, sport, filters);
+    }
     
     // Step 4: Add Pinnacle deviation calculations
     const linesWithDeviations = await calculatePinnacleDeviations(allLines);
