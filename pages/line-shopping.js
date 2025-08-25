@@ -34,13 +34,13 @@ export default function LineShopping() {
   const [lastUpdated, setLastUpdated] = useState(null);
 
   const sports = [
-    { value: 'NFL', label: 'NFL', icon: '🏈' },
-    { value: 'NBA', label: 'NBA', icon: '🏀' },
-    { value: 'NHL', label: 'NHL', icon: '🏒' },
-    { value: 'MLB', label: 'MLB', icon: '⚾' },
-    { value: 'NCAAF', label: 'NCAAF', icon: '🏈' },
-    { value: 'NCAAB', label: 'NCAAB', icon: '🏀' },
-    { value: 'UFC', label: 'UFC', icon: '🥊' }
+    { value: 'NFL', label: 'NFL' },
+    { value: 'NBA', label: 'NBA' },
+    { value: 'NHL', label: 'NHL' },
+    { value: 'MLB', label: 'MLB' },
+    { value: 'NCAAF', label: 'NCAAF' },
+    { value: 'NCAAB', label: 'NCAAB' },
+    { value: 'UFC', label: 'UFC' }
   ];
 
   const marketTypes = [
@@ -214,8 +214,7 @@ export default function LineShopping() {
                       : 'bg-[#141C28] border-[#1F2937] text-[#9CA3AF] hover:border-[#F4C430]/50'
                   }`}
                 >
-                  <div className="text-2xl mb-1">{sport.icon}</div>
-                  <div className="text-xs font-medium">{sport.label}</div>
+                  <div className="text-sm font-medium">{sport.label}</div>
                 </button>
               ))}
             </div>

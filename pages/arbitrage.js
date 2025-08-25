@@ -18,7 +18,8 @@ export default function ArbitragePage() {
   const { isPremium } = useContext(PremiumContext);
   const [isLoading, setIsLoading] = useState(false);
   const [arbitrageData, setArbitrageData] = useState([]);
-  const [selectedSport, setSelectedSport] = useState('NFL');
+  const [selectedSport, setSelectedSport] = useState('ALL');
+  const [scanAllSports, setScanAllSports] = useState(true);
   const [showPaywall, setShowPaywall] = useState(false);
 
   // Hero background images (sports-related)
@@ -156,33 +157,26 @@ export default function ArbitragePage() {
     setIsLoading(true);
     
     try {
-      const response = await apiFetch('/api/live-odds', {
+      const response = await apiFetch('/api/arbitrage/find-opportunities', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sport: selectedSport
+          sport: scanAllSports || selectedSport === 'ALL' ? null : selectedSport,
+          includeAllSports: scanAllSports || selectedSport === 'ALL'
         }),
       });
 
       const data = await response.json();
       
-      console.log('Live odds response:', data);
+      console.log('Arbitrage response:', data);
       
-      if (response.ok && data.success && data.odds?.length > 0) {
-        // Calculate arbitrage opportunities from live odds
-        console.log('Calculating arbitrage from', data.odds.length, 'games');
-        const arbitrageOpps = calculateArbitrageOpportunities(data.odds);
-        console.log('Found', arbitrageOpps.length, 'arbitrage opportunities');
-        
-        if (arbitrageOpps.length > 0) {
-          setArbitrageData(arbitrageOpps);
-        } else {
-          setArbitrageData([]);
-        }
+      if (response.ok && data.success) {
+        console.log(`Found ${data.opportunities.length} arbitrage opportunities from ${data.total_games_checked} games`);
+        setArbitrageData(data.opportunities || []);
       } else {
-        console.log('No live data available');
+        console.log('No arbitrage data available');
         setArbitrageData([]);
       }
     } catch (error) {
@@ -190,6 +184,44 @@ export default function ArbitragePage() {
       setArbitrageData([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleNotifyMe = async (arbitrage) => {
+    if (!isPremium) {
+      setShowPaywall(true);
+      return;
+    }
+
+    try {
+      // Get user email from premium context or prompt
+      const userEmail = prompt('Enter your email address to receive this arbitrage alert:');
+      if (!userEmail) return;
+
+      console.log('Sending arbitrage notification...');
+      
+      const response = await apiFetch('/api/arbitrage/notify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          arbitrageData: arbitrage,
+          userPremiumStatus: { isPremium: true }
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        alert('✅ Arbitrage alert sent to your email successfully!');
+      } else {
+        alert('❌ Failed to send alert: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      alert('❌ Error sending notification. Please try again.');
     }
   };
 
@@ -269,6 +301,23 @@ export default function ArbitragePage() {
               
               {/* Single CTA Button */}
               <div className="flex flex-col gap-3">
+                {/* All Sports Toggle */}
+                <div className="flex items-center justify-between p-3 bg-[#0F172A] rounded border border-[#1F2937]">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="scanAllSports"
+                      checked={scanAllSports}
+                      onChange={(e) => setScanAllSports(e.target.checked)}
+                      className="rounded border-[#1F2937] bg-[#0F172A] text-[#F4C430] focus:ring-[#F4C430]"
+                    />
+                    <label htmlFor="scanAllSports" className="text-[#E5E7EB] font-medium">
+                      Scan All Sports & Leagues
+                    </label>
+                  </div>
+                  <span className="text-[#6B7280] text-xs">16+ leagues</span>
+                </div>
+
                 <button 
                   onClick={handleFindArbitrages}
                   disabled={isLoading}
@@ -277,12 +326,12 @@ export default function ArbitragePage() {
                   {isLoading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-[#0B0F14] border-t-transparent rounded-full animate-spin mr-2" />
-                      Scanning {selectedSport}...
+                      {scanAllSports ? 'Scanning All Sports...' : `Scanning ${selectedSport}...`}
                     </>
                   ) : (
                     <>
                       <Target className="w-4 h-4 mr-2" />
-                      Find {selectedSport} Arbitrage
+                      {scanAllSports ? 'Find Arbitrage (All Sports)' : `Find ${selectedSport} Arbitrage`}
                     </>
                   )}
                 </button>
@@ -301,52 +350,66 @@ export default function ArbitragePage() {
                   animate={{ opacity: 1, height: 'auto' }}
                   className="mt-6"
                 >
-                  <h3 className="text-[#E5E7EB] font-semibold mb-4">Live Arbitrage Opportunities</h3>
+                  <h3 className="text-[#E5E7EB] font-semibold mb-4">🎯 Live Arbitrage Opportunities</h3>
                   <div className="space-y-4">
                     {arbitrageData.map((arb) => (
-                      <div key={arb.id} className="p-4 bg-[#0B1220] rounded-lg border border-[#1F2937]">
+                      <div key={arb.id} className="p-4 bg-[#0B1220] rounded-lg border border-[#1F2937] hover:border-[#F4C430]/30 transition-colors">
                         <div className="flex items-center justify-between mb-3">
                           <div>
-                            <h4 className="text-[#E5E7EB] font-medium">{arb.game}</h4>
-                            <p className="text-[#6B7280] text-sm">{arb.sport} • {arb.market}</p>
+                            <h4 className="text-[#E5E7EB] font-medium">{arb.matchup}</h4>
+                            <p className="text-[#6B7280] text-sm">{arb.sport} • {arb.market_display}</p>
+                            <p className="text-[#6B7280] text-xs">{new Date(arb.commence_time).toLocaleDateString()} {new Date(arb.commence_time).toLocaleTimeString()}</p>
                           </div>
                           <div className="text-right">
-                            <span className="text-green-400 font-semibold text-lg">+{arb.profit}%</span>
-                            <p className="text-[#6B7280] text-sm">Profit</p>
+                            <span className="text-green-400 font-semibold text-xl">+{arb.profit_percentage}%</span>
+                            <p className="text-[#6B7280] text-sm">Guaranteed Profit</p>
+                            <p className="text-[#F4C430] text-sm">${arb.guaranteed_profit}</p>
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="p-3 bg-[#0F172A] rounded border border-[#1F2937]">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-[#D1D5DB] font-medium text-sm">{arb.book1.name}</span>
-                              <span className="text-[#F4C430] font-semibold">{arb.book1.odds}</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                          {arb.legs.map((leg, index) => (
+                            <div key={index} className="p-3 bg-[#0F172A] rounded border border-[#1F2937]">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[#D1D5DB] font-medium text-sm">{leg.sportsbook}</span>
+                                <span className="text-[#F4C430] font-semibold">{leg.american_odds > 0 ? '+' : ''}{leg.american_odds}</span>
+                              </div>
+                              <p className="text-[#9CA3AF] text-xs break-words">{leg.selection}</p>
+                              <p className="text-[#6B7280] text-xs">Decimal: {leg.decimal_odds} • Implied: {leg.implied_prob}</p>
                             </div>
-                            <p className="text-[#9CA3AF] text-xs break-words">{arb.book1.bet}</p>
-                          </div>
-                          
-                          <div className="p-3 bg-[#0F172A] rounded border border-[#1F2937]">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-[#D1D5DB] font-medium text-sm">{arb.book2.name}</span>
-                              <span className="text-[#F4C430] font-semibold">{arb.book2.odds}</span>
-                            </div>
-                            <p className="text-[#9CA3AF] text-xs break-words">{arb.book2.bet}</p>
+                          ))}
+                        </div>
+
+                        {/* Stakes Breakdown */}
+                        <div className="bg-[#0F172A] rounded p-3 mb-4">
+                          <h5 className="text-[#E5E7EB] font-medium text-sm mb-2">💸 Optimal Stakes (${arb.investment_needed} total)</h5>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {arb.stake_distribution.map((stake, index) => (
+                              <div key={index} className="flex justify-between text-sm">
+                                <span className="text-[#9CA3AF]">{stake.sportsbook}:</span>
+                                <span className="text-[#F4C430] font-medium">{stake.stake} → {stake.payout}</span>
+                              </div>
+                            ))}
                           </div>
                         </div>
                         
-                        <div className="flex gap-2 mt-4">
+                        <div className="flex gap-2">
                           <button 
-                            onClick={() => handleCalculateStakes(arb)}
+                            onClick={() => handleNotifyMe(arb)}
                             className="btn btn-outline text-sm flex-1"
                           >
-                            <Check className="w-4 h-4 mr-2" />
-                            Calculate Stakes
+                            <AlertCircle className="w-4 h-4 mr-2" />
+                            Notify Me
                           </button>
                           <button 
-                            onClick={() => handlePlaceBets(arb)}
+                            onClick={() => {
+                              const stakeInfo = arb.stake_distribution.map(s => `${s.sportsbook}: ${s.stake} on ${s.selection}`).join('\n');
+                              alert(`🎯 Arbitrage Instructions:\n\n${stakeInfo}\n\nTotal Investment: $${arb.investment_needed}\nGuaranteed Profit: $${arb.guaranteed_profit} (${arb.profit_percentage}%)\n\nPlace these bets quickly - odds may change!`);
+                            }}
                             className="btn btn-primary text-sm flex-1"
                           >
-                            Place Bets
+                            <Target className="w-4 h-4 mr-2" />
+                            Show Stakes
                           </button>
                         </div>
                       </div>
