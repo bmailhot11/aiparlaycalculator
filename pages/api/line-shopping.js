@@ -31,10 +31,24 @@ export default async function handler(req, res) {
     
   } catch (error) {
     console.error('Line shopping error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch line shopping data',
-      error: error.message
+    
+    // Handle specific API key error
+    if (error.message === 'Odds API key not configured') {
+      return res.status(200).json({
+        success: true,
+        message: 'API temporarily unavailable',
+        teams: [],
+        games: [],
+        lines: []
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: error.message || 'Failed to fetch line shopping data',
+      teams: [],
+      games: [],
+      lines: []
     });
   }
 }
@@ -57,21 +71,28 @@ async function fetchAvailableTeamsAndGames(sport) {
     const teams = new Set();
     const games = [];
     
-    upcomingEvents.forEach(event => {
-      try {
-        if (event && event.home_team && event.away_team) {
-          teams.add(event.home_team);
-          teams.add(event.away_team);
-          games.push({
-            id: `${event.away_team} @ ${event.home_team}`,
-            label: `${event.away_team} @ ${event.home_team}`,
-            date: event.commence_time
-          });
+    // Ensure we have a valid array
+    if (Array.isArray(upcomingEvents)) {
+      upcomingEvents.forEach((event, index) => {
+        try {
+          if (event && typeof event === 'object' && event.home_team && event.away_team) {
+            teams.add(event.home_team);
+            teams.add(event.away_team);
+            games.push({
+              id: `${event.away_team} @ ${event.home_team}`,
+              label: `${event.away_team} @ ${event.home_team}`,
+              date: event.commence_time
+            });
+          } else {
+            console.warn(`Invalid event at index ${index}:`, event);
+          }
+        } catch (eventError) {
+          console.warn('Error processing event at index', index, ':', event, eventError);
         }
-      } catch (eventError) {
-        console.warn('Error processing event:', event, eventError);
-      }
-    });
+      });
+    } else {
+      console.error('upcomingEvents is not an array:', typeof upcomingEvents, upcomingEvents);
+    }
 
     return {
       success: true,

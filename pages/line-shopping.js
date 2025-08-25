@@ -78,19 +78,12 @@ export default function LineShopping() {
     
     try {
       const response = await fetch(`/api/line-shopping?sport=${sport}&getTeams=true`);
-      
-      if (!response.ok) {
-        console.warn(`Failed to fetch teams for ${sport}: HTTP ${response.status}`);
-        return;
-      }
-      
       const data = await response.json();
       
       if (data.success) {
-        setAvailableTeams(Array.isArray(data.teams) ? data.teams : []);
-        setAvailableGames(Array.isArray(data.games) ? data.games : []);
+        setAvailableTeams(data.teams || []);
+        setAvailableGames(data.games || []);
       } else {
-        console.warn('Teams API returned error:', data.message);
         setAvailableTeams([]);
         setAvailableGames([]);
       }
