@@ -311,7 +311,7 @@ export default function LearnSection() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid gap-4 sm:gap-6">
               {leagueGuides.map((guide, index) => (
                 <motion.div
                   key={guide.slug}
@@ -320,77 +320,66 @@ export default function LearnSection() {
                   transition={{ delay: index * 0.1 }}
                 >
                   {guide.comingSoon ? (
-                    <div className="bg-[#141C28] rounded-lg border border-[#1F2937] p-6 opacity-60">
+                    <div className="bg-[#141C28] rounded-lg border border-[#1F2937] p-4 sm:p-6 opacity-60">
                       <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-4">
-                          <div className="text-4xl">{guide.icon}</div>
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[#F4C430] text-sm font-bold">
-                                {guide.league}
-                              </span>
-                              <span className="text-[#6B7280] text-xs">
-                                Coming Soon
-                              </span>
-                            </div>
-                            <h3 className="text-[#9CA3AF] font-semibold text-lg">
-                              {guide.title}
-                            </h3>
+                        <div className="flex-1">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                            <span className="text-[#F4C430] text-sm font-bold">
+                              {guide.league}
+                            </span>
+                            <span className="text-[#6B7280] text-xs">
+                              Coming Soon
+                            </span>
                           </div>
+                          <h3 className="text-[#9CA3AF] font-semibold text-lg mb-2">
+                            {guide.title}
+                          </h3>
+                          <p className="text-[#6B7280] text-sm mb-2">
+                            {guide.subtitle}
+                          </p>
+                          <p className="text-[#6B7280] text-sm">
+                            {guide.description}
+                          </p>
                         </div>
-                        <div className="text-[#6B7280] text-xs">
+                        <div className="text-[#6B7280] text-xs ml-4">
                           {guide.readTime}
                         </div>
                       </div>
-                      
-                      <p className="text-[#6B7280] text-sm mb-3">
-                        {guide.subtitle}
-                      </p>
-                      <p className="text-[#6B7280] text-sm">
-                        {guide.description}
-                      </p>
                     </div>
                   ) : (
                     <Link href={`/learn/${guide.slug}`}>
-                      <div className={`bg-[#141C28] rounded-lg border border-[#1F2937] p-6 hover:border-[#F4C430]/50 transition-all cursor-pointer group ${
+                      <div className={`bg-[#141C28] rounded-lg border border-[#1F2937] p-4 sm:p-6 hover:border-[#F4C430]/50 transition-all cursor-pointer group ${
                         guide.featured ? 'ring-2 ring-[#F4C430]/20' : ''
                       }`}>
                         <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-4">
-                            <div className="text-4xl group-hover:scale-110 transition-transform">
-                              {guide.icon}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[#F4C430] text-sm font-bold">
-                                  {guide.league}
+                          <div className="flex-1">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                              <span className="text-[#F4C430] text-sm font-bold">
+                                {guide.league}
+                              </span>
+                              {guide.featured && (
+                                <span className="px-2 py-0.5 bg-[#F4C430] text-[#0B0F14] text-xs font-medium rounded">
+                                  New
                                 </span>
-                                {guide.featured && (
-                                  <span className="px-2 py-0.5 bg-[#F4C430] text-[#0B0F14] text-xs font-medium rounded">
-                                    New
-                                  </span>
-                                )}
-                              </div>
-                              <h3 className="text-[#E5E7EB] font-semibold text-lg group-hover:text-[#F4C430] transition-colors">
-                                {guide.title}
-                              </h3>
+                              )}
+                            </div>
+                            <h3 className="text-[#E5E7EB] font-semibold text-lg group-hover:text-[#F4C430] transition-colors mb-2">
+                              {guide.title}
+                            </h3>
+                            <p className="text-[#F4C430] text-sm mb-2 font-medium">
+                              {guide.subtitle}
+                            </p>
+                            <p className="text-[#9CA3AF] text-sm mb-4">
+                              {guide.description}
+                            </p>
+                            <div className="flex items-center text-[#F4C430] text-sm font-medium">
+                              Read Guide
+                              <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                             </div>
                           </div>
-                          <div className="text-[#6B7280] text-xs">
+                          <div className="text-[#6B7280] text-xs ml-4">
                             {guide.readTime}
                           </div>
-                        </div>
-                        
-                        <p className="text-[#F4C430] text-sm mb-3 font-medium">
-                          {guide.subtitle}
-                        </p>
-                        <p className="text-[#9CA3AF] text-sm mb-4">
-                          {guide.description}
-                        </p>
-                        
-                        <div className="flex items-center text-[#F4C430] text-sm font-medium">
-                          Read Guide
-                          <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                         </div>
                       </div>
                     </Link>

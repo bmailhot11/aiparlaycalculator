@@ -380,15 +380,18 @@ export default function LineShopping() {
                             </div>
                           )}
                           <button
-                            onClick={() => setLineMovementModal({
-                              isOpen: true,
-                              sport: selectedSport,
-                              gameId: group.game_id || group.game.replace(' @ ', '_').replace(' ', '_').toLowerCase(),
-                              gameInfo: {
-                                away_team: group.game.split(' @ ')[0],
-                                home_team: group.game.split(' @ ')[1]
-                              }
-                            })}
+                            onClick={() => {
+                              const gameTeams = group.game.split(' @ ');
+                              setLineMovementModal({
+                                isOpen: true,
+                                sport: selectedSport,
+                                gameId: group.game_id || group.game.replace(' @ ', '_').replace(/ /g, '_').toLowerCase(),
+                                gameInfo: {
+                                  away_team: gameTeams.length >= 2 ? gameTeams[0] : group.game,
+                                  home_team: gameTeams.length >= 2 ? gameTeams[1] : 'vs TBD'
+                                }
+                              });
+                            }}
                             className="px-2 py-1 bg-[#1F2937] hover:bg-[#374151] border border-[#374151] rounded text-[#9CA3AF] hover:text-[#F4C430] text-xs transition-colors flex items-center gap-1"
                           >
                             <Activity className="w-3 h-3" />

@@ -438,9 +438,9 @@ function extractAvailableBets(gameData) {
             // Format: "PlayerName Over 2.5 Assists" instead of just "Over"
             enhancedSelection = `${outcome.name} ${outcome.point}`;
           } else if (outcome.point !== undefined && outcome.point !== null) {
-            // For spreads/totals with points: "Team +7.5" or "Over 45.5"
+            // For spreads/totals with points: "Team +7.5" or "Over 45.5 Points"
             if (outcome.name.toLowerCase().includes('over') || outcome.name.toLowerCase().includes('under')) {
-              enhancedSelection = `${outcome.name} ${outcome.point}`;
+              enhancedSelection = `${outcome.name} ${outcome.point} Points`;
             } else if (outcome.point > 0) {
               enhancedSelection = `${outcome.name} +${outcome.point}`;
             } else if (outcome.point < 0) {
@@ -695,8 +695,8 @@ Return this exact JSON structure:
         let hasConflict = false;
         
         for (const existingBet of existingBets) {
-          // Check for over/under conflicts on totals
-          if (leg.bet_type === existingBet.bet_type && leg.bet_type === 'totals') {
+          // Check for over/under conflicts on totals - MUST BE SAME GAME
+          if (leg.bet_type === existingBet.bet_type && leg.bet_type === 'totals' && leg.game === existingBet.game) {
             const isCurrentOver = leg.selection.toLowerCase().includes('over');
             const isCurrentUnder = leg.selection.toLowerCase().includes('under');
             const isExistingOver = existingBet.selection.toLowerCase().includes('over');
@@ -704,7 +704,7 @@ Return this exact JSON structure:
             
             if ((isCurrentOver && isExistingUnder) || (isCurrentUnder && isExistingOver)) {
               hasConflict = true;
-              console.log(`Removed conflicting total bet: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection}`);
+              console.log(`Removed conflicting total bet: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection} (SAME GAME)`);
               break;
             }
           }
@@ -1299,15 +1299,15 @@ function hasConflictingBets(legs) {
     const existingBets = gameConflicts.get(gameKey);
     
     for (const existingBet of existingBets) {
-      // Check for over/under conflicts on totals
-      if (leg.bet_type === existingBet.bet_type && leg.bet_type === 'totals') {
+      // Check for over/under conflicts on totals - MUST BE SAME GAME
+      if (leg.bet_type === existingBet.bet_type && leg.bet_type === 'totals' && leg.game === existingBet.game) {
         const isCurrentOver = leg.selection.toLowerCase().includes('over');
         const isCurrentUnder = leg.selection.toLowerCase().includes('under');
         const isExistingOver = existingBet.selection.toLowerCase().includes('over');
         const isExistingUnder = existingBet.selection.toLowerCase().includes('under');
         
         if ((isCurrentOver && isExistingUnder) || (isCurrentUnder && isExistingOver)) {
-          console.log(`⚠️ Conflict detected: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection}`);
+          console.log(`⚠️ Conflict detected: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection} (SAME GAME)`);
           return true;
         }
       }
