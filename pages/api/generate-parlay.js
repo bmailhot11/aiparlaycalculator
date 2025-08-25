@@ -463,9 +463,34 @@ async function generateParlayWithRealOdds(preferences, sportData) {
     throw new Error(`Not enough betting options for ${preferences.legs} legs at ${preferences.riskLevel} risk level`);
   }
 
-  // 🚀 MAJOR OPTIMIZATION: Get only the 10 BEST options (reduced from 20)
-  const optimizedBets = getOptimalBetsPerGame(filteredBets);
-  const topBets = optimizedBets.slice(0, 10); // REDUCED from 20 to 10 for token efficiency
+  // Group bets by sportsbook for single-book parlays
+  const betsBySportsbook = {};
+  filteredBets.forEach(bet => {
+    if (!betsBySportsbook[bet.sportsbook]) {
+      betsBySportsbook[bet.sportsbook] = [];
+    }
+    betsBySportsbook[bet.sportsbook].push(bet);
+  });
+  
+  // Find sportsbooks with enough bets for the parlay
+  const viableSportsbooks = Object.entries(betsBySportsbook)
+    .filter(([book, bets]) => {
+      const uniqueGames = new Set(bets.map(bet => bet.game_id));
+      return uniqueGames.size >= preferences.legs;
+    })
+    .sort(([bookA, betsA], [bookB, betsB]) => betsB.length - betsA.length);
+  
+  if (viableSportsbooks.length === 0) {
+    throw new Error(`No single sportsbook has enough games (${preferences.legs} needed) for this parlay`);
+  }
+  
+  // Use the sportsbook with the most options
+  const [selectedSportsbook, availableBetsForBook] = viableSportsbooks[0];
+  console.log(`🎯 Selected ${selectedSportsbook} with ${availableBetsForBook.length} available bets for AI parlay`);
+  
+  // Get optimal bets from selected sportsbook only
+  const optimizedBets = getOptimalBetsPerGame(availableBetsForBook);
+  const topBets = optimizedBets.slice(0, 10); // Top 10 from selected sportsbook
 
   try {
     const parlayResponse = await openai.chat.completions.create({
@@ -477,8 +502,8 @@ async function generateParlayWithRealOdds(preferences, sportData) {
 
 CORE REQUIREMENTS:
 - Select exactly ${preferences.legs} legs with positive expected value
-- Each leg must be from a DIFFERENT game (no same-game parlays)
-- Choose ONLY ONE sportsbook per unique bet (no duplicates)
+- Each leg must be from a DIFFERENT game (no same-game parlays)  
+- ALL LEGS MUST BE FROM THE SAME SPORTSBOOK (${selectedSportsbook}) for user convenience
 - Never select conflicting bets (over/under same game, opposing moneylines, etc.)
 ${preferences.includePlayerProps ? `- Include at least ${Math.ceil(preferences.legs * 0.5)} player props (market_type starting with "player_")` : ''}
 
@@ -558,7 +583,7 @@ Return this exact JSON structure:
       
       if (!cleanedResponse.startsWith('{')) {
         console.log('AI returned non-JSON response, using fallback');
-        return await generateValidatedFallbackParlay(filteredBets, preferences);
+        return await generateValidatedFallbackParlay(availableBetsForBook, preferences, null, selectedSportsbook);
       }
       
       const parlayData = JSON.parse(cleanedResponse);
@@ -655,20 +680,20 @@ Return this exact JSON structure:
       // If we don't have enough unique legs, return null to trigger fallback
       if (uniqueLegs.length < preferences.legs) {
         console.log(`Only found ${uniqueLegs.length} unique bets, need ${preferences.legs}. Using fallback.`);
-        return await generateValidatedFallbackParlay(filteredBets, preferences);
+        return await generateValidatedFallbackParlay(availableBetsForBook, preferences, null, selectedSportsbook);
       }
       
       // Validate that AI used real odds and potentially upgrade to even better odds
       const validatedParlay = validateAndOptimizeParlayOdds(parlayData, availableBets, preferences);
       if (!validatedParlay) {
         console.log('AI used invalid data, generating fallback');
-        return await generateValidatedFallbackParlay(filteredBets, preferences);
+        return await generateValidatedFallbackParlay(availableBetsForBook, preferences, null, selectedSportsbook);
       }
       
       return validatedParlay;
     } catch (parseError) {
       console.log('Failed to parse AI parlay, using fallback');
-      return generateValidatedFallbackParlay(filteredBets, preferences);
+      return generateValidatedFallbackParlay(availableBetsForBook, preferences, null, selectedSportsbook);
     }
   } catch (openaiError) {
     console.error('OpenAI API Error:', openaiError);
@@ -679,7 +704,7 @@ Return this exact JSON structure:
     }
     
     console.log('OpenAI failed, using mathematical fallback');
-    return generateValidatedFallbackParlay(filteredBets, preferences);
+    return generateValidatedFallbackParlay(availableBetsForBook, preferences, null, selectedSportsbook);
   }
 }
 
@@ -1033,33 +1058,37 @@ function countSameGameBets(legs) {
 }
 
 // ENHANCED: Fallback parlay with betting math v2.1
-async function generateValidatedFallbackParlay(availableBets, preferences, sportData) {
+async function generateValidatedFallbackParlay(availableBets, preferences, sportData, selectedSportsbook) {
   const legs = preferences.legs || 3;
   const riskLevel = preferences.riskLevel || 'moderate';
   
-  // Bets are already filtered by quality in extractAvailableBets
-  // Now sort by EV to get the best value
+  // Bets are already from a single sportsbook (selectedSportsbook)
+  console.log(`🎯 Fallback using ${selectedSportsbook} with ${availableBets.length} available bets`);
+  
+  // Sort bets by value/EV
   const sortedBets = availableBets.sort((a, b) => (b.ev || 0) - (a.ev || 0));
   
-  if (sortedBets.length === 0) {
-    throw new Error(`No quality bets available for ${riskLevel} risk level`);
-  }
-  
-  // Select best non-correlated legs
+  // Select best non-correlated legs from single sportsbook
   const selectedBets = [];
   const usedGames = new Set();
   
-  // Select legs avoiding same-game correlation
   for (const bet of sortedBets) {
     if (selectedBets.length >= legs) break;
     if (!usedGames.has(bet.game_id)) {
-      selectedBets.push(bet);
-      usedGames.add(bet.game_id);
+      // Additional conflict check before adding
+      const tempBets = [...selectedBets, bet];
+      if (!hasConflictingBets(tempBets)) {
+        selectedBets.push(bet);
+        usedGames.add(bet.game_id);
+        console.log(`✅ Added ${bet.selection} from ${bet.game} (${bet.sportsbook})`);
+      } else {
+        console.log(`⚠️ Skipped ${bet.selection} from ${bet.game} due to conflict`);
+      }
     }
   }
   
   if (selectedBets.length < legs) {
-    throw new Error(`Could only find ${selectedBets.length} suitable bets for ${legs}-leg parlay`);
+    throw new Error(`Could only find ${selectedBets.length} non-conflicting bets from ${selectedSportsbook} for ${legs}-leg parlay`);
   }
   
   // Use selected bets without movement enhancement
@@ -1114,8 +1143,8 @@ async function generateValidatedFallbackParlay(availableBets, preferences, sport
     throw new Error('Could not generate conflict-free parlay with available bets');
   }
   
-  // Build response using betting math calculations
-  const bestSportsbooks = [...new Set(selectedBets.map(bet => bet.sportsbook))];
+  // Build response using betting math calculations  
+  const primarySportsbook = selectedSportsbook;
   
   return {
     parlay_legs: parlayAnalysis.legs.map(leg => ({
@@ -1139,22 +1168,24 @@ async function generateValidatedFallbackParlay(availableBets, preferences, sport
       kelly_fraction: leg.metrics.kellyFractional,
       commence_time: leg.commence_time
     })),
-    parlay_strategy: "Mathematical Value Selection - Positive EV Focus",
+    parlay_strategy: `Single-Sportsbook Parlay - All bets from ${primarySportsbook}`,
     total_decimal_odds: parlayAnalysis.parlay.odds.decimal.toFixed(2),
     total_american_odds: formatOdds(parlayAnalysis.parlay.odds.american),
-    best_sportsbooks: bestSportsbooks,
+    best_sportsbooks: [primarySportsbook],
+    primary_sportsbook: primarySportsbook,
     confidence: parlayAnalysis.parlay.confidence,
     win_probability: {
       naive: parlayAnalysis.parlay.probability.naive,
       adjusted: parlayAnalysis.parlay.probability.adjusted
     },
     correlation_factor: parlayAnalysis.parlay.probability.correlationFactor,
-    risk_assessment: `${legs}-leg parlay with ${(parlayAnalysis.parlay.probability.adjusted * 100).toFixed(1)}% win probability and +${parlayAnalysis.parlay.metrics.evPercent.toFixed(1)}% EV`,
+    risk_assessment: `${legs}-leg parlay with ${(parlayAnalysis.parlay.probability.adjusted * 100).toFixed(1)}% win probability and +${parlayAnalysis.parlay.metrics.evPercent.toFixed(1)}% EV from ${primarySportsbook}`,
     strategic_insights: [
+      `All bets from ${primarySportsbook} - one-stop betting convenience`,
       `Parlay EV: +${parlayAnalysis.parlay.metrics.evPercent.toFixed(1)}% expected value`,
       `Kelly Stake: ${(parlayAnalysis.parlay.metrics.kellyFractional * 100).toFixed(2)}% of bankroll`,
       `Win Probability: ${(parlayAnalysis.parlay.probability.adjusted * 100).toFixed(1)}% (adjusted for correlation)`,
-      `SmartScore: ${parlayAnalysis.parlay.metrics.smartScore.toFixed(0)}/100`
+      "No conflicting bets - clean parlay structure"
     ],
     advanced_metrics: {
       expected_roi: `${parlayAnalysis.parlay.metrics.evPercent.toFixed(1)}%`,
@@ -1169,7 +1200,8 @@ async function generateValidatedFallbackParlay(availableBets, preferences, sport
     smart_score: parlayAnalysis.parlay.metrics.smartScore,
     ai_enhanced: false,
     odds_optimized: true,
-    sportsbooks_used: "Premium sportsbooks"
+    sportsbooks_used: `Single book: ${primarySportsbook}`,
+    convenience_factor: "High - all bets from one sportsbook"
   };
 }
 
