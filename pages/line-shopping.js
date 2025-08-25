@@ -10,13 +10,11 @@ import {
   RefreshCw,
   Filter,
   ChevronRight,
-  DollarSign,
-  Activity
+  DollarSign
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Paywall from '../components/Paywall';
-import LineMovementChart from '../components/LineMovementChart';
 import { PremiumContext } from './_app';
 
 export default function LineShopping() {
@@ -29,12 +27,6 @@ export default function LineShopping() {
   const [timeFilter, setTimeFilter] = useState('7d');
   const [loading, setLoading] = useState(false);
   const [lines, setLines] = useState([]);
-  const [lineMovementModal, setLineMovementModal] = useState({
-    isOpen: false,
-    sport: null,
-    gameId: null,
-    gameInfo: null
-  });
   const [availableTeams, setAvailableTeams] = useState([]);
   const [availableGames, setAvailableGames] = useState([]);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -187,8 +179,7 @@ export default function LineShopping() {
           odds: line.american_odds || 0,
           americanOdds: line.american_odds || 0,
           value: line.expected_value || 0,
-          deviation: line.pinnacle_deviation || 0,
-          movement: line.line_movement || 0
+          deviation: line.pinnacle_deviation || 0
         });
       });
       
@@ -414,24 +405,6 @@ export default function LineShopping() {
                               <span>+{group.books[0].value.toFixed(1)}% EV</span>
                             </div>
                           )}
-                          <button
-                            onClick={() => {
-                              const gameTeams = group.game.split(' @ ');
-                              setLineMovementModal({
-                                isOpen: true,
-                                sport: selectedSport,
-                                gameId: group.game_id || group.game.replace(' @ ', '_').replace(/ /g, '_').toLowerCase(),
-                                gameInfo: {
-                                  away_team: gameTeams.length >= 2 ? gameTeams[0] : group.game,
-                                  home_team: gameTeams.length >= 2 ? gameTeams[1] : 'vs TBD'
-                                }
-                              });
-                            }}
-                            className="px-2 py-1 bg-[#1F2937] hover:bg-[#374151] border border-[#374151] rounded text-[#9CA3AF] hover:text-[#F4C430] text-xs transition-colors flex items-center gap-1"
-                          >
-                            <Activity className="w-3 h-3" />
-                            <span className="hidden sm:inline">Movement</span>
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -463,11 +436,6 @@ export default function LineShopping() {
                             }`}>
                               {formatOdds(book.americanOdds)}
                             </span>
-                            {book.movement && (
-                              <Activity className={`w-3 h-3 ${
-                                book.movement > 0 ? 'text-green-400' : 'text-red-400'
-                              }`} />
-                            )}
                           </div>
                         </div>
                       ))}
@@ -505,16 +473,6 @@ export default function LineShopping() {
         />
       )}
 
-      {/* Line Movement Chart Modal */}
-      <LineMovementChart
-        isOpen={lineMovementModal.isOpen}
-        onClose={() => setLineMovementModal({ isOpen: false, sport: null, gameId: null, gameInfo: null })}
-        sport={lineMovementModal.sport}
-        gameId={lineMovementModal.gameId}
-        gameInfo={lineMovementModal.gameInfo}
-        market="h2h"
-        hours={24}
-      />
     </>
   );
 }
