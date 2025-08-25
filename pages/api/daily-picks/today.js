@@ -13,10 +13,26 @@ export default async function handler(req, res) {
 
     // Test Supabase connection first
     if (!supabase) {
-      return res.status(500).json({
+      console.error('Supabase client not initialized');
+      return res.status(200).json({
         success: false,
-        message: 'Database connection not available',
-        error: 'Supabase client not initialized'
+        message: 'Database connection not configured. Daily picks are temporarily unavailable.',
+        error: 'SUPABASE_NOT_CONFIGURED'
+      });
+    }
+
+    // Test if we can connect to the database
+    const { error: testError } = await supabase
+      .from('daily_recos')
+      .select('count')
+      .limit(1);
+    
+    if (testError) {
+      console.error('Database connection test failed:', testError);
+      return res.status(200).json({
+        success: false,
+        message: 'Unable to connect to database. Daily picks are temporarily unavailable.',
+        error: testError.message
       });
     }
 
@@ -35,18 +51,29 @@ export default async function handler(req, res) {
 
     if (recoError) {
       console.error('Database error:', recoError);
-      return res.status(500).json({
+      // Check if it's a "no data found" error
+      if (recoError.code === 'PGRST116') {
+        return res.status(200).json({
+          success: false,
+          message: 'No picks published for today yet. Check back later.',
+          date: today,
+          error: 'NO_DATA'
+        });
+      }
+      return res.status(200).json({
         success: false,
-        message: 'Database connection error',
-        error: recoError.message
+        message: 'Database query error',
+        error: recoError.message,
+        code: recoError.code
       });
     }
 
     if (!dailyReco) {
-      return res.status(404).json({
+      return res.status(200).json({
         success: false,
         message: 'No picks published for today yet. Check back later.',
-        date: today
+        date: today,
+        error: 'NO_DATA'
       });
     }
 
@@ -113,10 +140,11 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error fetching daily picks:', error);
-    return res.status(500).json({
+    return res.status(200).json({
       success: false,
-      error: 'Failed to fetch picks',
-      message: error.message
+      message: 'An error occurred while fetching picks',
+      error: error.message || 'Unknown error',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
