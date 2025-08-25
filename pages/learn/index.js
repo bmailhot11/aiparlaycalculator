@@ -83,7 +83,51 @@ export default function LearnSection() {
   const categories = [
     { name: 'Basics', count: 1, color: 'bg-blue-500' },
     { name: 'Strategy', count: 1, color: 'bg-green-500' },
-    { name: 'Advanced', count: 2, color: 'bg-purple-500' }
+    { name: 'Advanced', count: 2, color: 'bg-purple-500' },
+    { name: 'League Guides', count: 4, color: 'bg-[#F4C430]' }
+  ];
+
+  const leagueGuides = [
+    {
+      slug: 'mlb-betting-guide',
+      league: 'MLB',
+      title: 'MLB Betting Lines Explained',
+      subtitle: 'How to Read and Beat the Numbers',
+      description: 'Master baseball betting with 162 games of opportunity. Learn moneylines, run lines, totals, and advanced strategies.',
+      readTime: '12 min read',
+      icon: '⚾',
+      featured: true
+    },
+    {
+      slug: 'nfl-betting-guide',
+      league: 'NFL',
+      title: 'NFL Betting Strategy Guide',
+      subtitle: 'Point Spreads & Totals Mastery',
+      description: 'Navigate point spreads, totals, and props in America\'s most bet sport.',
+      readTime: '10 min read',
+      icon: '🏈',
+      comingSoon: true
+    },
+    {
+      slug: 'nba-betting-guide',
+      league: 'NBA',
+      title: 'NBA Betting Fundamentals',
+      subtitle: 'High-Scoring Opportunities',
+      description: 'Fast-paced action means more betting markets and live betting opportunities.',
+      readTime: '9 min read',
+      icon: '🏀',
+      comingSoon: true
+    },
+    {
+      slug: 'nhl-betting-guide',
+      league: 'NHL',
+      title: 'NHL Betting Insights',
+      subtitle: 'Puck Lines & Goal Totals',
+      description: 'Low-scoring games create unique betting opportunities and strategies.',
+      readTime: '8 min read',
+      icon: '🏒',
+      comingSoon: true
+    }
   ];
 
   return (
@@ -245,6 +289,116 @@ export default function LearnSection() {
               </motion.div>
             ))}
           </div>
+
+          {/* League Guides Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="mt-16"
+          >
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#F4C430]/10 rounded-full text-[#F4C430] text-sm mb-4">
+                <Target className="w-4 h-4" />
+                <span>League-Specific Guides</span>
+              </div>
+              <h2 className="text-3xl font-bold text-[#E5E7EB] mb-3">
+                Master Every Major League
+              </h2>
+              <p className="text-[#9CA3AF] max-w-2xl mx-auto">
+                Each sport has unique betting markets, strategies, and opportunities. 
+                Learn the nuances that separate profitable bettors from the crowd.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {leagueGuides.map((guide, index) => (
+                <motion.div
+                  key={guide.slug}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  {guide.comingSoon ? (
+                    <div className="bg-[#141C28] rounded-lg border border-[#1F2937] p-6 opacity-60">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                          <div className="text-4xl">{guide.icon}</div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[#F4C430] text-sm font-bold">
+                                {guide.league}
+                              </span>
+                              <span className="text-[#6B7280] text-xs">
+                                Coming Soon
+                              </span>
+                            </div>
+                            <h3 className="text-[#9CA3AF] font-semibold text-lg">
+                              {guide.title}
+                            </h3>
+                          </div>
+                        </div>
+                        <div className="text-[#6B7280] text-xs">
+                          {guide.readTime}
+                        </div>
+                      </div>
+                      
+                      <p className="text-[#6B7280] text-sm mb-3">
+                        {guide.subtitle}
+                      </p>
+                      <p className="text-[#6B7280] text-sm">
+                        {guide.description}
+                      </p>
+                    </div>
+                  ) : (
+                    <Link href={`/learn/${guide.slug}`}>
+                      <div className={`bg-[#141C28] rounded-lg border border-[#1F2937] p-6 hover:border-[#F4C430]/50 transition-all cursor-pointer group ${
+                        guide.featured ? 'ring-2 ring-[#F4C430]/20' : ''
+                      }`}>
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-4">
+                            <div className="text-4xl group-hover:scale-110 transition-transform">
+                              {guide.icon}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[#F4C430] text-sm font-bold">
+                                  {guide.league}
+                                </span>
+                                {guide.featured && (
+                                  <span className="px-2 py-0.5 bg-[#F4C430] text-[#0B0F14] text-xs font-medium rounded">
+                                    New
+                                  </span>
+                                )}
+                              </div>
+                              <h3 className="text-[#E5E7EB] font-semibold text-lg group-hover:text-[#F4C430] transition-colors">
+                                {guide.title}
+                              </h3>
+                            </div>
+                          </div>
+                          <div className="text-[#6B7280] text-xs">
+                            {guide.readTime}
+                          </div>
+                        </div>
+                        
+                        <p className="text-[#F4C430] text-sm mb-3 font-medium">
+                          {guide.subtitle}
+                        </p>
+                        <p className="text-[#9CA3AF] text-sm mb-4">
+                          {guide.description}
+                        </p>
+                        
+                        <div className="flex items-center text-[#F4C430] text-sm font-medium">
+                          Read Guide
+                          <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </div>
+                    </Link>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
 
           {/* CTA Section */}
           <motion.div

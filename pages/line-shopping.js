@@ -16,6 +16,7 @@ import {
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Paywall from '../components/Paywall';
+import LineMovementChart from '../components/LineMovementChart';
 import { PremiumContext } from './_app';
 
 export default function LineShopping() {
@@ -28,6 +29,12 @@ export default function LineShopping() {
   const [timeFilter, setTimeFilter] = useState('7d');
   const [loading, setLoading] = useState(false);
   const [lines, setLines] = useState([]);
+  const [lineMovementModal, setLineMovementModal] = useState({
+    isOpen: false,
+    sport: null,
+    gameId: null,
+    gameInfo: null
+  });
   const [availableTeams, setAvailableTeams] = useState([]);
   const [availableGames, setAvailableGames] = useState([]);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -365,12 +372,29 @@ export default function LineShopping() {
                             {group.market} • {group.selection}
                           </p>
                         </div>
-                        {group.books[0]?.value > 0 && (
-                          <div className="flex items-center gap-1 text-green-400 text-xs">
-                            <TrendingUp className="w-3 h-3" />
-                            <span>+{group.books[0].value.toFixed(1)}% EV</span>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-3">
+                          {group.books[0]?.value > 0 && (
+                            <div className="flex items-center gap-1 text-green-400 text-xs">
+                              <TrendingUp className="w-3 h-3" />
+                              <span>+{group.books[0].value.toFixed(1)}% EV</span>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => setLineMovementModal({
+                              isOpen: true,
+                              sport: selectedSport,
+                              gameId: group.game_id || group.game.replace(' @ ', '_').replace(' ', '_').toLowerCase(),
+                              gameInfo: {
+                                away_team: group.game.split(' @ ')[0],
+                                home_team: group.game.split(' @ ')[1]
+                              }
+                            })}
+                            className="px-2 py-1 bg-[#1F2937] hover:bg-[#374151] border border-[#374151] rounded text-[#9CA3AF] hover:text-[#F4C430] text-xs transition-colors flex items-center gap-1"
+                          >
+                            <Activity className="w-3 h-3" />
+                            <span className="hidden sm:inline">Movement</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -442,6 +466,17 @@ export default function LineShopping() {
           onClose={() => setShowPaywall(false)}
         />
       )}
+
+      {/* Line Movement Chart Modal */}
+      <LineMovementChart
+        isOpen={lineMovementModal.isOpen}
+        onClose={() => setLineMovementModal({ isOpen: false, sport: null, gameId: null, gameInfo: null })}
+        sport={lineMovementModal.sport}
+        gameId={lineMovementModal.gameId}
+        gameInfo={lineMovementModal.gameInfo}
+        market="h2h"
+        hours={24}
+      />
     </>
   );
 }
