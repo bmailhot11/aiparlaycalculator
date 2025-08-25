@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { sport, team, player, market } = req.query;
+  const { sport, team, game, market, minEdge, timeFilter, getTeams } = req.query;
 
   if (!sport) {
     return res.status(400).json({
@@ -16,10 +16,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log(`🛒 [LineShopping] Fetching data for ${sport}`);
+    console.log(`🛒 [LineShopping] Fetching data for ${sport}`, { team, game, market, minEdge, timeFilter, getTeams });
+    
+    // If just requesting teams/games list
+    if (getTeams === 'true') {
+      const teamsData = await fetchAvailableTeamsAndGames(sport);
+      return res.status(200).json(teamsData);
+    }
     
     // Get line shopping data
-    const lineShoppingData = await fetchLineShoppingData(sport, { team, player, market });
+    const lineShoppingData = await fetchLineShoppingData(sport, { team, game, market, minEdge, timeFilter });
     
     return res.status(200).json(lineShoppingData);
     
@@ -33,6 +39,52 @@ export default async function handler(req, res) {
   }
 }
 
+// Get available teams and games for a sport
+async function fetchAvailableTeamsAndGames(sport) {
+  try {
+    const upcomingEvents = await eventsCache.cacheUpcomingEvents(sport);
+    
+    if (!upcomingEvents || upcomingEvents.length === 0) {
+      return {
+        success: false,
+        message: `No upcoming events for ${sport}`,
+        teams: [],
+        games: []
+      };
+    }
+
+    const teams = new Set();
+    const games = [];
+    
+    upcomingEvents.forEach(event => {
+      if (event.home_team && event.away_team) {
+        teams.add(event.home_team);
+        teams.add(event.away_team);
+        games.push({
+          id: `${event.away_team} @ ${event.home_team}`,
+          label: `${event.away_team} @ ${event.home_team}`,
+          date: event.commence_time
+        });
+      }
+    });
+
+    return {
+      success: true,
+      teams: Array.from(teams).sort(),
+      games: games.sort((a, b) => new Date(a.date) - new Date(b.date))
+    };
+    
+  } catch (error) {
+    console.error('Error fetching teams:', error);
+    return {
+      success: false,
+      message: error.message,
+      teams: [],
+      games: []
+    };
+  }
+}
+
 async function fetchLineShoppingData(sport, filters = {}) {
   try {
     // Step 1: Get upcoming events for the sport
@@ -42,9 +94,7 @@ async function fetchLineShoppingData(sport, filters = {}) {
       return {
         success: false,
         message: `No upcoming events for ${sport}`,
-        lines: [],
-        teams: [],
-        players: []
+        lines: []
       };
     }
 
@@ -62,19 +112,37 @@ async function fetchLineShoppingData(sport, filters = {}) {
     // Step 4: Add Pinnacle deviation calculations
     const linesWithDeviations = await calculatePinnacleDeviations(allLines);
     
-    // Step 5: Extract teams and players for filters
+    // Step 5: Filter by minimum edge if specified
+    let filteredLines = linesWithDeviations;
+    if (filters.minEdge && parseFloat(filters.minEdge) > 0) {
+      const minEdgeThreshold = parseFloat(filters.minEdge);
+      filteredLines = linesWithDeviations.filter(line => {
+        const edge = line.pinnacle_deviation || line.edge_percent || 0;
+        return Math.abs(edge) >= minEdgeThreshold;
+      });
+    }
+    
+    // Step 6: Extract teams and players for filters
     const teams = extractUniqueTeams(oddsData);
-    const players = extractUniquePlayers(linesWithDeviations, filters.team);
+    const players = extractUniquePlayers(filteredLines, filters.team);
 
-    console.log(`✅ [LineShopping] Processed ${linesWithDeviations.length} lines for ${sport}`);
+    console.log(`✅ [LineShopping] Processed ${linesWithDeviations.length} total lines, ${filteredLines.length} after filters for ${sport}`);
 
     return {
       success: true,
-      lines: linesWithDeviations,
+      lines: filteredLines,
       teams: teams.sort(),
       players: players.sort(),
-      total_lines: linesWithDeviations.length,
-      sportsbooks: [...new Set(linesWithDeviations.map(line => line.sportsbook))],
+      total_lines: filteredLines.length,
+      total_available: linesWithDeviations.length,
+      sportsbooks: [...new Set(filteredLines.map(line => line.sportsbook))],
+      filters_applied: {
+        team: filters.team,
+        game: filters.game,
+        market: filters.market,
+        minEdge: filters.minEdge,
+        timeFilter: filters.timeFilter
+      },
       last_updated: new Date().toISOString()
     };
 
@@ -122,9 +190,36 @@ async function extractAndProcessLines(oddsData, sport, filters) {
   for (const game of oddsData) {
     if (!game.bookmakers) continue;
     
+    // Filter by specific game if specified
+    if (filters.game) {
+      const gameId = `${game.away_team} @ ${game.home_team}`;
+      if (gameId !== filters.game) {
+        continue;
+      }
+    }
+    
     // Filter by team if specified
     if (filters.team) {
       if (!game.home_team.includes(filters.team) && !game.away_team.includes(filters.team)) {
+        continue;
+      }
+    }
+
+    // Filter by time if specified
+    if (filters.timeFilter && filters.timeFilter !== 'all') {
+      const gameTime = new Date(game.commence_time);
+      const now = new Date();
+      const hoursFromNow = Math.abs(gameTime - now) / 36e5; // Convert to hours
+      
+      let maxHours;
+      switch (filters.timeFilter) {
+        case '1d': maxHours = 24; break;
+        case '3d': maxHours = 72; break;
+        case '7d': maxHours = 168; break;
+        default: maxHours = Infinity;
+      }
+      
+      if (hoursFromNow > maxHours) {
         continue;
       }
     }

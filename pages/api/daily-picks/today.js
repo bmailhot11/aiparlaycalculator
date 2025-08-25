@@ -39,12 +39,7 @@ export default async function handler(req, res) {
     // Get today's recommendation
     const { data: dailyReco, error: recoError } = await supabase
       .from('daily_recos')
-      .select(`
-        *,
-        single_bet:single_bet_id (*),
-        parlay_2:parlay_2_id (*),
-        parlay_4:parlay_4_id (*)
-      `)
+      .select('*')
       .eq('reco_date', today)
       .eq('status', 'published')
       .single();
@@ -97,42 +92,60 @@ export default async function handler(req, res) {
       status: 'active'
     };
 
-    // Get single bet legs
+    // Get single bet data and legs
     if (dailyReco.single_bet_id) {
+      const { data: singleBet } = await supabase
+        .from('reco_bets')
+        .select('*')
+        .eq('id', dailyReco.single_bet_id)
+        .single();
+        
       const { data: singleLegs } = await supabase
         .from('reco_bet_legs')
         .select('*')
         .eq('reco_bet_id', dailyReco.single_bet_id)
         .order('id');
 
-      if (singleLegs && singleLegs.length > 0) {
-        picks.single = formatPick(dailyReco.single_bet, singleLegs);
+      if (singleBet && singleLegs && singleLegs.length > 0) {
+        picks.single = formatPick(singleBet, singleLegs);
       }
     }
 
-    // Get 2-leg parlay
+    // Get 2-leg parlay data and legs
     if (dailyReco.parlay_2_id) {
+      const { data: parlay2Bet } = await supabase
+        .from('reco_bets')
+        .select('*')
+        .eq('id', dailyReco.parlay_2_id)
+        .single();
+        
       const { data: parlay2Legs } = await supabase
         .from('reco_bet_legs')
         .select('*')
         .eq('reco_bet_id', dailyReco.parlay_2_id)
         .order('id');
 
-      if (parlay2Legs && parlay2Legs.length > 0) {
-        picks.parlay2 = formatPick(dailyReco.parlay_2, parlay2Legs);
+      if (parlay2Bet && parlay2Legs && parlay2Legs.length > 0) {
+        picks.parlay2 = formatPick(parlay2Bet, parlay2Legs);
       }
     }
 
-    // Get 4-leg parlay  
+    // Get 4-leg parlay data and legs
     if (dailyReco.parlay_4_id) {
+      const { data: parlay4Bet } = await supabase
+        .from('reco_bets')
+        .select('*')
+        .eq('id', dailyReco.parlay_4_id)
+        .single();
+        
       const { data: parlay4Legs } = await supabase
         .from('reco_bet_legs')
         .select('*')
         .eq('reco_bet_id', dailyReco.parlay_4_id)
         .order('id');
 
-      if (parlay4Legs && parlay4Legs.length > 0) {
-        picks.parlay4 = formatPick(dailyReco.parlay_4, parlay4Legs);
+      if (parlay4Bet && parlay4Legs && parlay4Legs.length > 0) {
+        picks.parlay4 = formatPick(parlay4Bet, parlay4Legs);
       }
     }
 
@@ -164,8 +177,10 @@ function formatPick(bet, legs) {
       marketType: leg.market_type,
       edgePercentage: leg.edge_percentage
     })),
+    totalOdds: bet.combined_odds,
     combinedOdds: bet.combined_odds,
     estimatedPayout: bet.estimated_payout,
+    potentialPayout: bet.estimated_payout,
     edgePercentage: bet.edge_percentage,
     impliedProbability: calculateImpliedProbability(bet.combined_odds)
   };

@@ -21,10 +21,15 @@ import { PremiumContext } from './_app';
 export default function LineShopping() {
   const { isPremium } = useContext(PremiumContext);
   const [selectedSport, setSelectedSport] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTeam, setSelectedTeam] = useState('');
+  const [selectedGame, setSelectedGame] = useState('');
   const [marketType, setMarketType] = useState('all');
+  const [edgeFilter, setEdgeFilter] = useState('0');
+  const [timeFilter, setTimeFilter] = useState('7d');
   const [loading, setLoading] = useState(false);
   const [lines, setLines] = useState([]);
+  const [availableTeams, setAvailableTeams] = useState([]);
+  const [availableGames, setAvailableGames] = useState([]);
   const [showPaywall, setShowPaywall] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
 
@@ -46,6 +51,37 @@ export default function LineShopping() {
     { value: 'props', label: 'Props' }
   ];
 
+  const timeFilters = [
+    { value: '1d', label: 'Today' },
+    { value: '3d', label: 'Next 3 Days' },
+    { value: '7d', label: 'This Week' },
+    { value: 'all', label: 'All Games' }
+  ];
+
+  const edgeFilters = [
+    { value: '0', label: 'All Lines' },
+    { value: '2', label: '2%+ Edge' },
+    { value: '5', label: '5%+ Edge' },
+    { value: '10', label: '10%+ Edge' }
+  ];
+
+  // Fetch available teams when sport changes
+  const fetchTeams = async (sport) => {
+    if (!sport) return;
+    
+    try {
+      const response = await fetch(`/api/line-shopping?sport=${sport}&getTeams=true`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setAvailableTeams(data.teams || []);
+        setAvailableGames(data.games || []);
+      }
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+    }
+  };
+
   // Fetch line shopping data
   const fetchLines = async () => {
     if (!isPremium) {
@@ -53,14 +89,17 @@ export default function LineShopping() {
       return;
     }
 
-    if (!selectedSport || !searchQuery) return;
+    if (!selectedSport) return;
     
     setLoading(true);
     try {
       const params = new URLSearchParams({
         sport: selectedSport,
-        search: searchQuery,
-        ...(marketType !== 'all' && { market: marketType })
+        ...(selectedTeam && { team: selectedTeam }),
+        ...(selectedGame && { game: selectedGame }),
+        ...(marketType !== 'all' && { market: marketType }),
+        ...(edgeFilter !== '0' && { minEdge: edgeFilter }),
+        ...(timeFilter !== 'all' && { timeFilter })
       });
 
       const response = await fetch(`/api/line-shopping?${params}`);
@@ -76,6 +115,16 @@ export default function LineShopping() {
       setLoading(false);
     }
   };
+
+  // Load teams when sport changes
+  useEffect(() => {
+    if (selectedSport) {
+      fetchTeams(selectedSport);
+      setSelectedTeam('');
+      setSelectedGame('');
+      setLines([]);
+    }
+  }, [selectedSport]);
 
   const handleSearch = () => {
     if (!selectedSport) {

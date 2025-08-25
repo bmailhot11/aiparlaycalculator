@@ -33,12 +33,19 @@ export default async function handler(req, res) {
   // Support both old and new formats
   const config = preferences || { sport, riskLevel, legs: 3 };
   
+  // Handle multi-sport selection
+  if (config.sports && Array.isArray(config.sports) && config.sports.length > 0) {
+    // Multi-sport parlay
+    config.sport = 'Mixed';
+    config.selectedSports = config.sports;
+  }
+  
   // Ensure includePlayerProps is properly handled
   if (config.includePlayerProps === undefined && preferences?.includePlayerProps !== undefined) {
     config.includePlayerProps = preferences.includePlayerProps;
   }
   
-  if (!config.sport) {
+  if (!config.sport && !config.selectedSports) {
     return res.status(400).json({ 
       success: false, 
       message: 'Sport selection required' 
@@ -47,9 +54,12 @@ export default async function handler(req, res) {
 
   try {
     console.log(`🎯 Generating ${config.sport} parlay with ${config.legs || 3} legs...`);
+    if (config.selectedSports) {
+      console.log(`📊 Multi-sport parlay with: ${config.selectedSports.join(', ')}`);
+    }
 
-    // Step 1: Get ONLY the selected sport's data using cached events approach
-    const sportData = await fetchSportSpecificOddsOptimized(config.sport);
+    // Step 1: Get data for selected sport(s)
+    const sportData = await fetchSportSpecificOddsOptimized(config.sport, config.selectedSports);
     
     if (!sportData || sportData.length === 0) {
       return res.status(400).json({
@@ -126,8 +136,42 @@ function getSportSpecificMarkets(sportKey, useFullMarkets = true) {
 }
 
 // NEW: Optimized fetch using cached events approach
-async function fetchSportSpecificOddsOptimized(sport) {
+async function fetchSportSpecificOddsOptimized(sport, selectedSports = null) {
   try {
+    // Handle multi-sport selection
+    if (sport === 'Mixed' && selectedSports && selectedSports.length > 0) {
+      console.log(`🚀 [Multi-Sport Parlay] Fetching data for: ${selectedSports.join(', ')}`);
+      
+      let allGames = [];
+      for (const selectedSport of selectedSports) {
+        try {
+          const sportEvents = await eventsCache.cacheUpcomingEvents(selectedSport);
+          if (sportEvents && sportEvents.length > 0) {
+            const soccerSports = ['Soccer', 'MLS', 'UEFA'];
+            const markets = soccerSports.includes(selectedSport) ? 'h2h' : 'h2h,spreads,totals';
+            const oddsData = await eventsCache.getOddsForEvents(sportEvents, markets, true);
+            
+            if (oddsData && oddsData.length > 0) {
+              allGames.push(...oddsData);
+              console.log(`✅ Added ${oddsData.length} games from ${selectedSport}`);
+            }
+          }
+        } catch (error) {
+          console.log(`⚠️ Could not fetch ${selectedSport}: ${error.message}`);
+        }
+      }
+      
+      console.log(`✅ [Multi-Sport Parlay] Total: ${allGames.length} games across ${selectedSports.length} sports`);
+      
+      if (allGames.length === 0) {
+        // Fallback to original multi-sport fetch
+        return await fetchSportSpecificOdds('Mixed');
+      }
+      
+      return allGames;
+    }
+    
+    // Single sport logic
     console.log(`🚀 [${sport} Parlay] Using optimized cached events approach`);
     
     // Get cached events first (1-hour cache)
@@ -155,12 +199,12 @@ async function fetchSportSpecificOddsOptimized(sport) {
   } catch (error) {
     console.log(`❌ [${sport} Parlay] Cached approach failed, falling back:`, error.message);
     // Fallback to original method
-    return await fetchSportSpecificOdds(sport);
+    return await fetchSportSpecificOdds(sport, selectedSports);
   }
 }
 
 // FALLBACK: Original fetch method
-async function fetchSportSpecificOdds(sport) {
+async function fetchSportSpecificOdds(sport, selectedSports = null) {
   const API_KEY = process.env.ODDS_API_KEY;
   
   if (!API_KEY) {
@@ -191,10 +235,23 @@ async function fetchSportSpecificOdds(sport) {
     'Mixed': ['americanfootball_nfl_preseason', 'baseball_mlb', 'soccer_epl', 'soccer_usa_mls', 'tennis_atp'] // Mixed gets sports likely in season
   };
 
-  const sportKeys = sportMapping[sport];
-  
-  if (!sportKeys) {
-    throw new Error(`Sport ${sport} not supported`);
+  // Handle multi-sport selection
+  let sportKeys;
+  if (sport === 'Mixed' && selectedSports && selectedSports.length > 0) {
+    sportKeys = [];
+    for (const selectedSport of selectedSports) {
+      if (sportMapping[selectedSport]) {
+        sportKeys.push(...sportMapping[selectedSport]);
+      }
+    }
+    if (sportKeys.length === 0) {
+      throw new Error(`None of the selected sports are supported`);
+    }
+  } else {
+    sportKeys = sportMapping[sport];
+    if (!sportKeys) {
+      throw new Error(`Sport ${sport} not supported`);
+    }
   }
 
   let allGames = [];
@@ -874,13 +931,12 @@ function filterBetsByRiskLevel(bets, riskLevel) {
     impliedProbability: calculateImpliedProbability(bet.decimal_odds)
   }));
 
-  // Filter out negative EV bets unless specifically requested
+  // Don't filter out any bets - we'll prioritize by EV in sorting
   const positiveEVBets = betsWithEV.filter(bet => bet.expectedValue > 0);
-  
-  // If we have enough positive EV bets, use only those
-  const betsToFilter = positiveEVBets.length >= 10 ? positiveEVBets : betsWithEV;
-  
   console.log(`🎯 Found ${positiveEVBets.length} positive EV bets out of ${betsWithEV.length} total bets`);
+  
+  // Use all bets that match risk level
+  const betsToFilter = betsWithEV;
   
   const filteredBets = betsToFilter.filter(bet => {
     const odds = parseOdds(bet.odds);
@@ -1156,11 +1212,9 @@ async function generateValidatedFallbackParlay(availableBets, preferences, sport
     };
   }
   
-  // Check quality gates
+  // Check quality gates - but don't fail if EV is low, just warn
   if (!parlayAnalysis.parlay.qualityGates.parlayEVAcceptable) {
-    console.log('Fallback parlay does not meet EV threshold, trying alternative selection');
-    // Try different combination or throw error
-    throw new Error('Unable to generate parlay with sufficient positive EV');
+    console.log('⚠️ Warning: Parlay has lower EV than ideal, but proceeding with best available selections');
   }
   
   // Final validation check for conflicts

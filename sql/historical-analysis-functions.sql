@@ -24,7 +24,7 @@ BEGIN
     SELECT 
       rb.home_team as team,
       COUNT(*) as games,
-      SUM(CASE WHEN rb.result = 'win' THEN 1 ELSE 0 END) as wins,
+      SUM(CASE WHEN rb.result = 'win' THEN 1 ELSE 0 END) as win_count,
       AVG(rb.decimal_odds) as avg_odds,
       -- Calculate ROI: (Total Payout - Total Stakes) / Total Stakes
       (SUM(CASE WHEN rb.result = 'win' THEN rb.decimal_odds ELSE 0 END) - COUNT(*)) / COUNT(*) as roi,
@@ -46,7 +46,7 @@ BEGIN
     SELECT 
       rb.away_team as team,
       COUNT(*) as games,
-      SUM(CASE WHEN rb.result = 'win' THEN 1 ELSE 0 END) as wins,
+      SUM(CASE WHEN rb.result = 'win' THEN 1 ELSE 0 END) as win_count,
       AVG(rb.decimal_odds) as avg_odds,
       (SUM(CASE WHEN rb.result = 'win' THEN rb.decimal_odds ELSE 0 END) - COUNT(*)) / COUNT(*) as roi,
       AVG(CASE WHEN od.closing_odds IS NOT NULL 
@@ -64,7 +64,7 @@ BEGIN
     SELECT 
       team,
       SUM(games) as total_games,
-      SUM(wins) as total_wins,
+      SUM(win_count) as total_wins,
       AVG(avg_odds) as weighted_avg_odds,
       AVG(roi) as avg_roi,
       AVG(avg_line_movement) as avg_movement
