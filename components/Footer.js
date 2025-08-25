@@ -10,9 +10,9 @@ export default function Footer() {
       { label: 'Pricing', href: '/pricing' }
     ],
     Product: [
-      { label: 'Positive EV Lines', href: '/positive-ev' },
       { label: 'AI Parlays', href: '/ai-parlay' },
       { label: 'Arbitrage', href: '/arbitrage' },
+      { label: 'Line Shopping', href: '/line-shopping' },
       { label: 'Daily Picks', href: '/premium/today' },
       { label: 'Track Record', href: '/results' }
     ],
