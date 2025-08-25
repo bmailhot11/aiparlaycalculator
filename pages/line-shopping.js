@@ -46,8 +46,7 @@ export default function LineShopping() {
     { value: 'all', label: 'All' },
     { value: 'h2h', label: 'ML' },
     { value: 'spreads', label: 'Spread' },
-    { value: 'totals', label: 'Total' },
-    { value: 'props', label: 'Props' }
+    { value: 'totals', label: 'Total' }
   ];
 
   const timeFilters = [
@@ -163,13 +162,14 @@ export default function LineShopping() {
           return;
         }
         
-        const key = `${line.game}_${line.market_type}_${line.selection}`;
+        const key = `${line.game}_${line.market_type}_${line.selection}_${line.point || 'no_point'}`;
         if (!groups[key]) {
           groups[key] = {
             game: line.game,
             game_id: line.game_id,
             market: line.market_display || line.market_type,
             selection: line.selection,
+            point: line.point,
             books: []
           };
         }
@@ -395,7 +395,7 @@ export default function LineShopping() {
                             {group.game}
                           </h3>
                           <p className="text-[#6B7280] text-xs mt-1">
-                            {group.market} • {group.selection}
+                            {group.market} • {group.selection}{group.point ? ` ${group.point}` : ''}
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
