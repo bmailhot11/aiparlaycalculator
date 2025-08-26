@@ -69,6 +69,16 @@ export default function LearnSection() {
       featured: false
     },
     {
+      slug: 'how-to-use-ai-for-sports-betting',
+      title: 'How to Use AI for Sports Betting',
+      subtitle: 'Complete Step-by-Step Guide',
+      description: 'Master the 8-step workflow: from odds conversion to CLV tracking. Includes AI prompts, formulas, and responsible betting practices.',
+      readTime: '15 min read',
+      category: 'Advanced',
+      icon: <Brain className="w-5 h-5" />,
+      featured: true
+    },
+    {
       slug: 'bankroll-management',
       title: 'Bankroll Management 101',
       subtitle: 'Protect Your Money',
@@ -83,7 +93,7 @@ export default function LearnSection() {
   const categories = [
     { name: 'Basics', count: 1, color: 'bg-blue-500' },
     { name: 'Strategy', count: 1, color: 'bg-green-500' },
-    { name: 'Advanced', count: 2, color: 'bg-purple-500' },
+    { name: 'Advanced', count: 3, color: 'bg-purple-500' },
     { name: 'League Guides', count: 4, color: 'bg-[#F4C430]' }
   ];
 
