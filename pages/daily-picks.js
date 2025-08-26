@@ -32,6 +32,7 @@ export default function DailyPicks() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [yesterdaysPicks, setYesterdaysPicks] = useState(null);
   const [activeTab, setActiveTab] = useState('today');
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     if (!isPremium) {
@@ -56,16 +57,48 @@ export default function DailyPicks() {
       const data = await response.json();
       
       if (!data.success) {
-        throw new Error(data.message || 'API returned unsuccessful response');
+        // Check if it's because no picks are published
+        if (data.error === 'NO_DATA' || data.message?.includes('No picks published')) {
+          setError('No picks published for today yet. Daily picks are typically published at 11 AM CT.');
+        } else {
+          throw new Error(data.message || 'API returned unsuccessful response');
+        }
+      } else {
+        setPicks(data);
+        setError(null);
       }
-      
-      setPicks(data);
-      setError(null);
     } catch (error) {
       console.error('Error fetching daily picks:', error);
       setError(`Failed to load picks: ${error.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const publishTodaysPicks = async () => {
+    setPublishing(true);
+    try {
+      const response = await fetch('/api/daily-picks/publish', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('Daily picks published successfully!');
+        // Refresh the page to show new picks
+        await fetchDailyPicks();
+      } else {
+        alert(`Failed to publish: ${result.message || result.error}`);
+      }
+    } catch (error) {
+      console.error('Error publishing picks:', error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -402,6 +435,17 @@ export default function DailyPicks() {
             <div className="text-center py-12">
               <X className="w-12 h-12 text-red-400 mx-auto mb-4" />
               <p className="text-red-400">{error}</p>
+              
+              {/* Admin publish button - temporary for testing */}
+              {error.includes('No picks published') && (
+                <button
+                  onClick={publishTodaysPicks}
+                  disabled={publishing}
+                  className="mt-4 px-6 py-2 bg-[#F4C430] text-[#0B0F14] rounded-lg font-semibold hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {publishing ? 'Publishing...' : 'Publish Today\'s Picks (Admin)'}
+                </button>
+              )}
             </div>
           )}
         </main>

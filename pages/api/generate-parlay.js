@@ -213,11 +213,24 @@ async function fetchSportSpecificOdds(sport, selectedSports = null) {
   
   // API key configured and ready
 
-  // Map user-friendly sport names to API sport keys (CONSISTENT WITH EV FETCHER)  
+  // Map user-friendly sport names to API sport keys - Updated for current seasons
+  const currentMonth = new Date().getMonth(); // 0-11
   const sportMapping = {
-    'NFL': ['americanfootball_nfl_preseason', 'americanfootball_nfl'], // Try preseason first in August
-    'NBA': ['basketball_nba', 'basketball_nba_preseason'], 
-    'NHL': ['icehockey_nhl', 'icehockey_nhl_preseason'],
+    // NFL regular season runs Sep-Jan (months 8-0), preseason Jul-Aug (months 6-7)
+    'NFL': currentMonth >= 6 && currentMonth <= 7 
+      ? ['americanfootball_nfl_preseason', 'americanfootball_nfl'] 
+      : ['americanfootball_nfl', 'americanfootball_nfl_preseason'],
+    
+    // NBA regular season Oct-Apr (months 9-3), preseason Oct (month 9)
+    'NBA': currentMonth === 9 
+      ? ['basketball_nba_preseason', 'basketball_nba']
+      : ['basketball_nba', 'basketball_nba_preseason'],
+    
+    // NHL regular season Oct-Apr (months 9-3), preseason Sep-Oct (months 8-9)
+    'NHL': currentMonth >= 8 && currentMonth <= 9
+      ? ['icehockey_nhl_preseason', 'icehockey_nhl']
+      : ['icehockey_nhl', 'icehockey_nhl_preseason'],
+    
     'MLB': ['baseball_mlb'],
     'NCAAF': ['americanfootball_ncaaf'],
     'NCAAB': ['basketball_ncaab'],
@@ -226,13 +239,16 @@ async function fetchSportSpecificOdds(sport, selectedSports = null) {
     'Boxing': ['boxing_boxing'],
     'MLS': ['soccer_usa_mls'],
     'UEFA': ['soccer_uefa_champs_league', 'soccer_epl', 'soccer_uefa_europa_league', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_germany_bundesliga', 'soccer_france_ligue_one'],
-    'Soccer': ['soccer_epl', 'soccer_usa_mls', 'soccer_uefa_champs_league', 'soccer_uefa_europa_league', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_germany_bundesliga', 'soccer_france_ligue_one'], // Legacy support
+    'Soccer': ['soccer_epl', 'soccer_usa_mls', 'soccer_uefa_champs_league', 'soccer_uefa_europa_league', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_germany_bundesliga', 'soccer_france_ligue_one'],
     'EPL': ['soccer_epl'],
     'Tennis': ['tennis_atp', 'tennis_wta'],
     'Golf': ['golf_pga'],
     'Cricket': ['cricket_big_bash'],
     'AFL': ['aussierules_afl'],
-    'Mixed': ['americanfootball_nfl_preseason', 'baseball_mlb', 'soccer_epl', 'soccer_usa_mls', 'tennis_atp'] // Mixed gets sports likely in season
+    // Mixed: Prioritize sports currently in season
+    'Mixed': currentMonth >= 8 && currentMonth <= 1 
+      ? ['americanfootball_nfl', 'basketball_nba', 'icehockey_nhl', 'soccer_epl', 'soccer_usa_mls']
+      : ['baseball_mlb', 'soccer_epl', 'soccer_usa_mls', 'tennis_atp', 'golf_pga']
   };
 
   // Handle multi-sport selection
@@ -575,6 +591,32 @@ async function generateParlayWithRealOdds(preferences, sportData) {
     topBets = optimizedBets.slice(0, 10);
   }
 
+  // CRITICAL FIX: Ensure we only show ONE bet per game to the AI
+  const gamesSeen = new Set();
+  const uniqueGameBets = [];
+  
+  for (const bet of topBets) {
+    if (!gamesSeen.has(bet.game)) {
+      gamesSeen.add(bet.game);
+      uniqueGameBets.push(bet);
+    }
+  }
+  
+  console.log(`🎯 Filtered from ${topBets.length} bets to ${uniqueGameBets.length} unique games for AI`);
+  
+  // If we don't have enough unique games, get more from optimizedBets
+  if (uniqueGameBets.length < preferences.legs) {
+    for (const bet of optimizedBets) {
+      if (uniqueGameBets.length >= Math.max(preferences.legs * 2, 10)) break;
+      if (!gamesSeen.has(bet.game)) {
+        gamesSeen.add(bet.game);
+        uniqueGameBets.push(bet);
+      }
+    }
+  }
+  
+  topBets = uniqueGameBets;
+
   try {
     const parlayResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -612,8 +654,10 @@ Return ONLY valid JSON with no explanations outside the JSON structure.`
 
 CONTEXT: ${new Date().toLocaleDateString()} - Generate a fresh parlay strategy that differs from typical patterns. Consider current market conditions and exploit specific inefficiencies.
 
-Available bets (sorted by EV, all positive expected value):
+Available bets (ONE BET PER GAME ONLY - already filtered to prevent same-game selections):
 ${formatBetsForAI(topBets)}
+
+IMPORTANT: Each line above represents a DIFFERENT GAME. You MUST select bets from DIFFERENT lines to ensure no same-game parlays.
 
 ANALYSIS GUIDELINES:
 - Risk Level "${preferences.riskLevel}": ${getRiskLevelGuidance(preferences.riskLevel)}
@@ -905,7 +949,7 @@ function formatBetsForAI(bets) {
   return bets.map((bet, index) => {
     const ev = bet.expectedValue || calculateExpectedValue(bet);
     const evPercentage = (ev * 100).toFixed(1);
-    return `${index + 1}. ${bet.game} | ${bet.selection} ${bet.odds} @ ${bet.sportsbook} (EV: +${evPercentage}%)`;
+    return `GAME ${index + 1}: ${bet.game} | ${bet.market_type} | ${bet.selection} ${bet.odds} @ ${bet.sportsbook} (EV: +${evPercentage}%)`;
   }).join('\n');
 }
 

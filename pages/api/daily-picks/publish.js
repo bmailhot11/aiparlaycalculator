@@ -32,7 +32,14 @@ export default async function handler(req, res) {
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayDate = yesterday.toISOString().split('T')[0];
       
-      const gradingResponse = await fetch(`${process.env.VERCEL_URL || req.headers.host ? `https://${req.headers.host}` : 'https://aiparlaycalculator-3yw4fy17r-benmailhots-projects.vercel.app'}/api/daily-picks/grade-bets`, {
+      // Determine the correct base URL for API calls
+      const baseUrl = process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}`
+        : req.headers.host 
+          ? `https://${req.headers.host}`
+          : 'http://localhost:3001';
+      
+      const gradingResponse = await fetch(`${baseUrl}/api/daily-picks/grade-bets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: yesterdayDate })
@@ -160,8 +167,13 @@ async function fetchSportOdds(sport) {
     const sportKey = sportMap[sport];
     if (!sportKey) return [];
 
+    // Determine the correct base URL for API calls
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXTAUTH_URL || 'http://localhost:3001';
+    
     // Use existing live-odds API
-    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/api/live-odds`, {
+    const response = await fetch(`${baseUrl}/api/live-odds`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sport: sportKey })
