@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
 import { apiFetch } from '../utils/api';
 
@@ -229,13 +228,6 @@ export default function Home() {
       <div className="min-h-screen bg-[#0B0F14]">
         <Header />
         
-        {/* Paywall Overlay */}
-        {showPaywall && (
-          <Paywall 
-            feature="bet slip analysis" 
-            usageLimit="1 bet slip per day"
-          />
-        )}
 
         {/* 1) Hero Section */}
         <section className="relative py-12 sm:py-20 px-4 sm:px-6 lg:px-8">
