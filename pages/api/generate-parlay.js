@@ -585,9 +585,10 @@ async function generateParlayWithRealOdds(preferences, sportData) {
 
 CORE REQUIREMENTS:
 - Select exactly ${preferences.legs} legs with positive expected value
-- Each leg must be from a DIFFERENT game (no same-game parlays)  
+- CRITICAL: Each leg MUST be from a COMPLETELY DIFFERENT game (absolutely no same-game parlays allowed)
+- Only ONE bet per game - you cannot have multiple bets from the same matchup
 - ALL LEGS MUST BE FROM THE SAME SPORTSBOOK (${selectedSportsbook}) for user convenience
-- Never select conflicting bets (over/under same game, opposing moneylines, etc.)
+- Never select conflicting or correlated bets from the same game
 ${preferences.includePlayerProps ? `- Include at least ${Math.ceil(preferences.legs * 0.5)} player props (market_type starting with "player_")` : ''}
 
 STRATEGY VARIATIONS (rotate between these approaches):
@@ -1153,19 +1154,25 @@ async function generateValidatedFallbackParlay(availableBets, preferences, sport
   // Select best non-correlated legs from single sportsbook
   const selectedBets = [];
   const usedGames = new Set();
+  const usedGameNames = new Set(); // Track by game name too to be extra safe
   
   for (const bet of sortedBets) {
     if (selectedBets.length >= legs) break;
-    if (!usedGames.has(bet.game_id)) {
+    
+    // Check both game_id and game name to ensure no duplicates
+    if (!usedGames.has(bet.game_id) && !usedGameNames.has(bet.game)) {
       // Additional conflict check before adding
       const tempBets = [...selectedBets, bet];
       if (!hasConflictingBets(tempBets)) {
         selectedBets.push(bet);
         usedGames.add(bet.game_id);
+        usedGameNames.add(bet.game); // Also track by game name
         console.log(`✅ Added ${bet.selection} from ${bet.game} (${bet.sportsbook})`);
       } else {
         console.log(`⚠️ Skipped ${bet.selection} from ${bet.game} due to conflict`);
       }
+    } else {
+      console.log(`⚠️ Skipped ${bet.selection} from ${bet.game} - game already used`);
     }
   }
   
@@ -1291,6 +1298,8 @@ function hasConflictingBets(legs) {
   
   for (const leg of legs) {
     const gameKey = leg.game;
+    // Use market_type if available, fallback to bet_type for compatibility
+    const betType = leg.market_type || leg.bet_type;
     
     if (!gameConflicts.has(gameKey)) {
       gameConflicts.set(gameKey, []);
@@ -1299,21 +1308,32 @@ function hasConflictingBets(legs) {
     const existingBets = gameConflicts.get(gameKey);
     
     for (const existingBet of existingBets) {
+      const existingBetType = existingBet.market_type || existingBet.bet_type;
+      
       // Check for over/under conflicts on totals - MUST BE SAME GAME
-      if (leg.bet_type === existingBet.bet_type && leg.bet_type === 'totals' && leg.game === existingBet.game) {
+      if (betType === 'totals' && existingBetType === 'totals' && leg.game === existingBet.game) {
         const isCurrentOver = leg.selection.toLowerCase().includes('over');
         const isCurrentUnder = leg.selection.toLowerCase().includes('under');
         const isExistingOver = existingBet.selection.toLowerCase().includes('over');
         const isExistingUnder = existingBet.selection.toLowerCase().includes('under');
         
         if ((isCurrentOver && isExistingUnder) || (isCurrentUnder && isExistingOver)) {
-          console.log(`⚠️ Conflict detected: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection} (SAME GAME)`);
+          console.log(`⚠️ Conflict detected: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection} (SAME GAME TOTALS)`);
           return true;
+        }
+        
+        // Also check if it's the same total bet (e.g., two "Over 45.5" bets)
+        if ((isCurrentOver && isExistingOver) || (isCurrentUnder && isExistingUnder)) {
+          // Check if the point values are the same
+          if (leg.point === existingBet.point) {
+            console.log(`⚠️ Duplicate detected: ${leg.game} - ${leg.selection} is duplicate of ${existingBet.selection}`);
+            return true;
+          }
         }
       }
       
       // Check for opposing moneyline bets
-      if (leg.bet_type === existingBet.bet_type && leg.bet_type === 'h2h') {
+      if (betType === 'h2h' && existingBetType === 'h2h' && leg.game === existingBet.game) {
         const gameTeams = leg.game.split(' @ ');
         if (gameTeams.length === 2) {
           const [awayTeam, homeTeam] = gameTeams;
@@ -1323,14 +1343,14 @@ function hasConflictingBets(legs) {
           if (currentTeamInSelection && existingTeamInSelection && 
               ((leg.selection.includes(awayTeam) && existingBet.selection.includes(homeTeam)) ||
                (leg.selection.includes(homeTeam) && existingBet.selection.includes(awayTeam)))) {
-            console.log(`⚠️ Conflict detected: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection}`);
+            console.log(`⚠️ Conflict detected: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection} (OPPOSING MONEYLINES)`);
             return true;
           }
         }
       }
       
       // Check for opposing spread bets
-      if (leg.bet_type === existingBet.bet_type && leg.bet_type === 'spreads') {
+      if (betType === 'spreads' && existingBetType === 'spreads' && leg.game === existingBet.game) {
         const gameTeams = leg.game.split(' @ ');
         if (gameTeams.length === 2) {
           const [awayTeam, homeTeam] = gameTeams;
@@ -1340,16 +1360,25 @@ function hasConflictingBets(legs) {
           if (currentTeamInSelection && existingTeamInSelection && 
               ((leg.selection.includes(awayTeam) && existingBet.selection.includes(homeTeam)) ||
                (leg.selection.includes(homeTeam) && existingBet.selection.includes(awayTeam)))) {
-            console.log(`⚠️ Conflict detected: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection}`);
+            console.log(`⚠️ Conflict detected: ${leg.game} - ${leg.selection} conflicts with ${existingBet.selection} (OPPOSING SPREADS)`);
             return true;
           }
         }
+      }
+      
+      // IMPORTANT: Prevent multiple bets from the same game
+      // A parlay should only have ONE bet per game to avoid correlation issues
+      if (leg.game === existingBet.game) {
+        console.log(`⚠️ Multiple bets from same game detected: ${leg.game} - Already have ${existingBet.selection}, trying to add ${leg.selection}`);
+        return true;
       }
     }
     
     gameConflicts.get(gameKey).push({
       selection: leg.selection,
-      bet_type: leg.bet_type
+      bet_type: betType,
+      market_type: betType,
+      point: leg.point
     });
   }
   

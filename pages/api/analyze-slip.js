@@ -1,6 +1,14 @@
 import openai from '../../lib/openai';
 import { generateImprovedSlipImage } from '../../utils/generateImprovedSlipImage';
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb', // Increase body size limit for image uploads
+    },
+  },
+};
+
 export default async function handler(req, res) {
   // Environment Variables Check
   console.log('🔍 API Environment Check:');

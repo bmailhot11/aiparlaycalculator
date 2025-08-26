@@ -170,16 +170,30 @@ export default function Home() {
     setIsAnalyzing(true);
     
     try {
-      // Create FormData to send image for OCR processing
-      const formData = new FormData();
-      formData.append('image', uploadedFile);
-      formData.append('userId', currentUser?.id || '');
-      formData.append('username', currentUser?.username || '');
-
-      // Call the existing analyze-slip API that uses OCR
+      // Convert image file to base64
+      const reader = new FileReader();
+      
+      const processImage = () => new Promise((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(uploadedFile);
+      });
+      
+      const base64Result = await processImage();
+      // Extract base64 data (remove the data:image/...;base64, prefix)
+      const base64String = base64Result.split(',')[1];
+      
+      // Call the analyze-slip API with base64 image
       const response = await apiFetch('/api/analyze-slip', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageBase64: base64String,
+          userId: currentUser?.id || '',
+          username: currentUser?.username || ''
+        }),
       });
 
       const result = await response.json();
@@ -224,6 +238,9 @@ export default function Home() {
       } else {
         throw new Error(result.message || 'Failed to analyze bet slip');
       }
+    } catch (error) {
+      console.error('Error analyzing bet slip:', error);
+      alert(error.message || 'Failed to analyze bet slip. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
