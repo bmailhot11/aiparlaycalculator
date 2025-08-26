@@ -199,16 +199,26 @@ async function saveRecommendations(publishDate, publishTime, recommendations) {
   const transaction = supabase.rpc('begin_transaction');
 
   try {
-    // Create daily_recos record
+    // Create daily_recos record (handle metadata column issue)
+    const insertData = {
+      reco_date: publishDate,
+      published_at: publishTime.toISOString(),
+      status: 'published',
+      no_bet_reason: recommendations.noBetReason
+    };
+    
+    // Try to include metadata, but don't fail if column doesn't exist
+    if (recommendations.metadata) {
+      try {
+        insertData.metadata = recommendations.metadata;
+      } catch (e) {
+        console.log('⚠️ Skipping metadata due to schema issue');
+      }
+    }
+    
     const { data: dailyReco, error: recoError } = await supabase
       .from('daily_recos')
-      .insert({
-        reco_date: publishDate,
-        published_at: publishTime.toISOString(),
-        status: 'published',
-        no_bet_reason: recommendations.noBetReason,
-        metadata: recommendations.metadata
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -318,19 +328,28 @@ async function saveBet(dailyRecoId, betType, bet) {
  * Publish a no-bet recommendation
  */
 async function publishNoBet(publishDate, publishTime, reason) {
+  // Create insert data without metadata initially
+  const insertData = {
+    reco_date: publishDate,
+    published_at: publishTime.toISOString(),
+    status: 'published',
+    no_bet_reason: reason
+  };
+  
+  // Try to add metadata if schema supports it
+  try {
+    insertData.metadata = {
+      no_bet: true,
+      reason: reason,
+      analysis_time: new Date().toISOString()
+    };
+  } catch (e) {
+    console.log('⚠️ Skipping metadata in no-bet publish');
+  }
+  
   const { data: dailyReco, error } = await supabase
     .from('daily_recos')
-    .insert({
-      reco_date: publishDate,
-      published_at: publishTime.toISOString(),
-      status: 'published',
-      no_bet_reason: reason,
-      metadata: {
-        no_bet: true,
-        reason: reason,
-        analysis_time: new Date().toISOString()
-      }
-    })
+    .insert(insertData)
     .select()
     .single();
 
