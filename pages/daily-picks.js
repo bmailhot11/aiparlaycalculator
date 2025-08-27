@@ -78,24 +78,37 @@ export default function DailyPicks() {
   const publishTodaysPicks = async () => {
     setPublishing(true);
     try {
-      const response = await fetch('/api/daily-picks/publish', {
+      // Try the real generator first (uses actual Supabase odds data)
+      let response = await fetch('/api/daily-picks/generate-real', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         }
       });
       
-      const result = await response.json();
+      let result = await response.json();
+      
+      // If real generator fails, fall back to simple generator
+      if (!result.success) {
+        console.log('Real generator failed, trying simple generator...');
+        response = await fetch('/api/daily-picks/generate-simple', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        result = await response.json();
+      }
       
       if (result.success) {
-        alert('Daily picks published successfully!');
-        // Refresh the page to show new picks
+        alert('Daily picks generated and saved successfully!');
+        // Now fetch the saved picks from database
         await fetchDailyPicks();
       } else {
-        alert(`Failed to publish: ${result.message || result.error}`);
+        alert(`Failed to generate: ${result.message || result.error}`);
       }
     } catch (error) {
-      console.error('Error publishing picks:', error);
+      console.error('Error generating picks:', error);
       alert(`Error: ${error.message}`);
     } finally {
       setPublishing(false);
@@ -443,7 +456,7 @@ export default function DailyPicks() {
                   disabled={publishing}
                   className="mt-4 px-6 py-2 bg-[#F4C430] text-[#0B0F14] rounded-lg font-semibold hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {publishing ? 'Publishing...' : 'Publish Today\'s Picks (Admin)'}
+                  {publishing ? 'Generating...' : 'Generate Today\'s Picks'}
                 </button>
               )}
             </div>
