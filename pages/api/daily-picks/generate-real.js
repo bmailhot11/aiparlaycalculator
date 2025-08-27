@@ -1,7 +1,8 @@
-// Real Daily Picks Generator using Supabase Odds Data
-// This generates picks based on actual edge calculations from your database
+// Real Daily Picks Generator using Events Cache Data
+// This generates picks based on actual odds data from the same source as line shopping/arbitrage
 
 import { supabase } from '../../../utils/supabaseClient';
+const eventsCache = require('../../../lib/events-cache.js');
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -59,116 +60,47 @@ async function findBestOpportunities() {
   const opportunities = [];
   
   try {
-    console.log('📊 Fetching best odds from mv_current_best_odds...');
+    console.log('📊 Using same data source as line shopping and arbitrage...');
     
-    // Get current best odds from materialized view
-    const { data: bestOdds, error } = await supabase
-      .from('mv_current_best_odds')
-      .select('*')
-      .order('odds_american', { ascending: false })
-      .limit(100);
+    // Use the exact same approach as your working functions
+    const sportsToCheck = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF'];
     
-    if (error) {
-      console.error('❌ Error fetching best odds:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        details: error.details
-      });
-      return [];
-    }
-    
-    console.log(`✅ Fetched ${bestOdds?.length || 0} odds from mv_current_best_odds`);
-    
-    if (!bestOdds || bestOdds.length === 0) {
-      console.log('⚠️ No odds data found in mv_current_best_odds');
-      console.log('This could mean:');
-      console.log('  1. The materialized view is empty');
-      console.log('  2. The view needs to be refreshed');
-      console.log('  3. No recent odds data has been collected');
-      
-      // Try checking other potential odds tables as fallback
-      console.log('🔍 Checking for alternative odds tables...');
-      const alternativeTables = ['odds_history', 'live_odds', 'current_odds'];
-      
-      for (const tableName of alternativeTables) {
-        try {
-          const { data, error, count } = await supabase
-            .from(tableName)
-            .select('*', { count: 'exact' })
-            .limit(1);
-          
-          console.log(`  ${tableName}: ${error ? 'ERROR - ' + error.message : `Found ${count || 0} records`}`);
-          
-          if (data && data.length > 0) {
-            console.log(`  Sample record from ${tableName}:`, JSON.stringify(data[0], null, 2));
-          }
-        } catch (e) {
-          console.log(`  ${tableName}: Table doesn't exist or access denied`);
-        }
-      }
-      
-      return [];
-    }
-    
-    // Group by game and market to find edges
-    const gameMarkets = {};
-    
-    bestOdds.forEach(odd => {
-      const key = `${odd.game_id}_${odd.market_id}`;
-      if (!gameMarkets[key]) {
-        gameMarkets[key] = [];
-      }
-      gameMarkets[key].push(odd);
-    });
-    
-    console.log(`📈 Grouped into ${Object.keys(gameMarkets).length} unique game/market combinations`);
-    
-    // Calculate edges for each market
-    let marketsAnalyzed = 0;
-    let edgesFound = 0;
-    
-    for (const [key, marketOdds] of Object.entries(gameMarkets)) {
-      if (marketOdds.length < 2) continue; // Need at least 2 outcomes for a market
-      
-      marketsAnalyzed++;
-      
-      // Calculate no-vig fair odds
-      const fairOdds = calculateNoVigOdds(marketOdds);
-      
-      // Find positive edge opportunities
-      marketOdds.forEach(odd => {
-        const fairOdd = fairOdds[odd.outcome_name];
-        if (!fairOdd) return;
+    for (const sport of sportsToCheck) {
+      try {
+        console.log(`🏈 Checking ${sport} for opportunities...`);
         
-        const edge = calculateEdge(odd.odds_american, fairOdd);
+        // Step 1: Get upcoming events (same as line shopping/arbitrage)
+        const upcomingEvents = await eventsCache.cacheUpcomingEvents(sport);
         
-        if (edge > 2) { // Minimum 2% edge threshold
-          edgesFound++;
-          console.log(`  ✨ Found edge: ${odd.outcome_name} @ ${odd.odds_american} (${edge.toFixed(2)}% edge)`);
-          
-          opportunities.push({
-            gameId: odd.game_id,
-            sport: odd.sport || 'NBA',
-            homeTeam: extractTeamFromOutcome(odd.outcome_name, 'home'),
-            awayTeam: extractTeamFromOutcome(odd.outcome_name, 'away'),
-            commenceTime: odd.ts || new Date().toISOString(),
-            marketType: odd.market_id,
-            selection: odd.outcome_name,
-            bestOdds: odd.odds_american,
-            bestSportsbook: odd.book_id,
-            decimalOdds: odd.odds_decimal || americanToDecimal(odd.odds_american),
-            fairOdds: fairOdd,
-            edgePercentage: edge,
-            rank: odd.rank || 1
-          });
+        if (!upcomingEvents || upcomingEvents.length === 0) {
+          console.log(`  No events found for ${sport}`);
+          continue;
         }
-      });
+        
+        console.log(`  ✅ Found ${upcomingEvents.length} upcoming events for ${sport}`);
+        
+        // Step 2: Get odds for these events (same as line shopping/arbitrage)
+        const oddsData = await eventsCache.getOddsForEvents(upcomingEvents, 'h2h,spreads,totals', true);
+        
+        if (!oddsData || oddsData.length === 0) {
+          console.log(`  No odds data found for ${sport}`);
+          continue;
+        }
+        
+        console.log(`  ✅ Got odds for ${oddsData.length} games in ${sport}`);
+        
+        // Step 3: Find edges in the odds data
+        const sportOpportunities = findEdgesInOddsData(oddsData, sport);
+        opportunities.push(...sportOpportunities);
+        
+        console.log(`  ✨ Found ${sportOpportunities.length} edge opportunities in ${sport}`);
+        
+      } catch (error) {
+        console.error(`❌ Error processing ${sport}:`, error.message);
+      }
     }
     
-    console.log(`📊 Analysis complete: ${marketsAnalyzed} markets analyzed, ${edgesFound} edges found`);
-    
-    // Also check AI generated bets for additional opportunities
+    // Also check AI generated bets as additional source
     console.log('🤖 Checking AI generated bets for additional opportunities...');
     const { data: aiBets, error: aiError } = await supabase
       .from('ai_generated_bets')
@@ -182,52 +114,115 @@ async function findBestOpportunities() {
       console.log('⚠️ Error fetching AI bets:', aiError.message);
     } else {
       console.log(`✅ Found ${aiBets?.length || 0} high-confidence AI bets`);
-    }
-    
-    if (aiBets && aiBets.length > 0) {
-      aiBets.forEach(bet => {
-        if (bet.recommended_legs && Array.isArray(bet.recommended_legs)) {
-          bet.recommended_legs.forEach(leg => {
-            if (leg.odds && (bet.expected_value > 0 || bet.confidence_score > 0.8)) {
-              opportunities.push({
-                gameId: `ai_${bet.id}_${leg.leg_index || 0}`,
-                sport: leg.league || leg.sport || 'NBA',
-                homeTeam: leg.home_team || extractHomeTeam(leg.matchup || leg.game),
-                awayTeam: leg.away_team || extractAwayTeam(leg.matchup || leg.game),
-                commenceTime: leg.commence_time || new Date().toISOString(),
-                marketType: leg.market || leg.bet_type || 'spread',
-                selection: leg.selection,
-                bestOdds: parseAmericanOdds(leg.odds),
-                bestSportsbook: leg.sportsbook || 'AI Recommended',
-                decimalOdds: leg.decimal_odds || americanToDecimal(leg.odds),
-                edgePercentage: bet.expected_value || 3,
-                confidence: bet.confidence_score,
-                source: 'ai_generated'
-              });
-            }
-          });
-        }
-      });
+      
+      if (aiBets && aiBets.length > 0) {
+        aiBets.forEach(bet => {
+          if (bet.recommended_legs && Array.isArray(bet.recommended_legs)) {
+            bet.recommended_legs.forEach(leg => {
+              if (leg.odds && (bet.expected_value > 0 || bet.confidence_score > 0.8)) {
+                opportunities.push({
+                  gameId: `ai_${bet.id}_${leg.leg_index || 0}`,
+                  sport: leg.league || leg.sport || 'NBA',
+                  homeTeam: leg.home_team || extractHomeTeam(leg.matchup || leg.game),
+                  awayTeam: leg.away_team || extractAwayTeam(leg.matchup || leg.game),
+                  commenceTime: leg.commence_time || new Date().toISOString(),
+                  marketType: leg.market || leg.bet_type || 'spread',
+                  selection: leg.selection,
+                  bestOdds: parseAmericanOdds(leg.odds),
+                  bestSportsbook: leg.sportsbook || 'AI Recommended',
+                  decimalOdds: leg.decimal_odds || americanToDecimal(leg.odds),
+                  edgePercentage: bet.expected_value || 3,
+                  confidence: bet.confidence_score,
+                  source: 'ai_generated'
+                });
+              }
+            });
+          }
+        });
+      }
     }
     
     // Sort by edge percentage
     opportunities.sort((a, b) => b.edgePercentage - a.edgePercentage);
     
-    // Remove duplicates (same game, same market)
-    const unique = new Map();
-    opportunities.forEach(opp => {
-      const key = `${opp.gameId}_${opp.marketType}_${opp.selection}`;
-      if (!unique.has(key) || unique.get(key).edgePercentage < opp.edgePercentage) {
-        unique.set(key, opp);
-      }
-    });
-    
-    return Array.from(unique.values());
+    console.log(`🎯 Total opportunities found: ${opportunities.length}`);
+    return opportunities;
     
   } catch (error) {
     console.error('Error finding opportunities:', error);
     return [];
   }
+}
+
+// New function to find edges in odds data (same structure as your working APIs)
+function findEdgesInOddsData(oddsData, sport) {
+  const opportunities = [];
+  
+  for (const game of oddsData) {
+    if (!game.bookmakers || game.bookmakers.length < 2) continue;
+    
+    // Process each market
+    for (const bookmaker of game.bookmakers) {
+      if (!bookmaker.markets) continue;
+      
+      for (const market of bookmaker.markets) {
+        if (!market.outcomes) continue;
+        
+        // Calculate no-vig fair odds for this market
+        const fairOdds = calculateNoVigMarket(market.outcomes);
+        
+        // Find edges in outcomes
+        market.outcomes.forEach(outcome => {
+          const fairOdd = fairOdds[outcome.name];
+          if (!fairOdd) return;
+          
+          const edge = calculateEdge(outcome.price, fairOdd);
+          
+          if (edge > 2) { // Minimum 2% edge
+            opportunities.push({
+              gameId: game.id,
+              sport: sport,
+              homeTeam: game.home_team,
+              awayTeam: game.away_team,
+              commenceTime: game.commence_time,
+              marketType: market.key,
+              selection: outcome.name,
+              bestOdds: outcome.price,
+              bestSportsbook: bookmaker.title,
+              decimalOdds: americanToDecimal(outcome.price),
+              fairOdds: fairOdd,
+              edgePercentage: edge
+            });
+          }
+        });
+      }
+    }
+  }
+  
+  return opportunities;
+}
+
+function calculateNoVigMarket(outcomes) {
+  const fairOdds = {};
+  
+  if (!outcomes || outcomes.length < 2) return fairOdds;
+  
+  // Calculate total implied probability
+  let totalImplied = 0;
+  outcomes.forEach(outcome => {
+    const implied = 1 / americanToDecimal(outcome.price);
+    totalImplied += implied;
+  });
+  
+  // Remove vig and calculate fair odds
+  outcomes.forEach(outcome => {
+    const implied = 1 / americanToDecimal(outcome.price);
+    const fairImplied = implied / totalImplied;
+    const fairDecimal = 1 / fairImplied;
+    fairOdds[outcome.name] = decimalToAmerican(fairDecimal);
+  });
+  
+  return fairOdds;
 }
 
 function calculateNoVigOdds(marketOdds) {
