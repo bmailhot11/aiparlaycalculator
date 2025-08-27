@@ -272,13 +272,38 @@ export default function ArbitragePage() {
         }));
         
         setArbitrageData(transformedData);
+        
+        // Show notification based on results
+        if (transformedData.length === 0) {
+          setNotification({ 
+            type: 'info', 
+            message: `No arbitrage opportunities found. Checked ${data.total_games_checked || 0} games across ${data.books_checked || 'multiple'} sportsbooks.` 
+          });
+          setTimeout(() => setNotification(null), 4000);
+        } else {
+          setNotification({ 
+            type: 'success', 
+            message: `Found ${transformedData.length} arbitrage opportunities!` 
+          });
+          setTimeout(() => setNotification(null), 3000);
+        }
       } else {
         console.log('No arbitrage data available');
         setArbitrageData([]);
+        setNotification({ 
+          type: 'info', 
+          message: 'No arbitrage opportunities available at this time. Try again later.' 
+        });
+        setTimeout(() => setNotification(null), 3000);
       }
     } catch (error) {
       console.error('Error fetching arbitrage data:', error);
       setArbitrageData([]);
+      setNotification({ 
+        type: 'error', 
+        message: 'Error fetching arbitrage data. Please try again.' 
+      });
+      setTimeout(() => setNotification(null), 3000);
     } finally {
       setIsLoading(false);
     }
@@ -437,7 +462,7 @@ export default function ArbitragePage() {
                 <button 
                   onClick={handleFindArbitrages}
                   disabled={isLoading}
-                  className="btn btn-primary w-full"
+                  className="w-full bg-[#F4C430] text-[#0B0F14] px-6 py-3 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <>
