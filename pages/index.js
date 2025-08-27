@@ -249,17 +249,9 @@ export default function Home() {
 
               {/* Primary CTAs */}
               <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center mb-6 sm:mb-8 px-4 sm:px-0">
-                <button 
-                  className="w-full sm:w-auto bg-[#F4C430] text-[#0B0F14] px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg hover:bg-[#e6b829] transition-colors touch-manipulation"
-                  data-event="cta_edges_click"
-                  disabled
-                >
-                  See +EV Edges (Coming Soon)
-                </button>
-                
                 <Link href="/analyze-slip" className="w-full sm:w-auto">
                   <button 
-                    className="w-full sm:w-auto border border-[#F4C430] text-[#F4C430] px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg hover:bg-[#F4C430]/10 transition-colors touch-manipulation"
+                    className="w-full sm:w-auto bg-[#F4C430] text-[#0B0F14] px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg hover:bg-[#e6b829] transition-colors touch-manipulation"
                     data-event="cta_analyze_slip_click"
                   >
                     Analyze my bet slip
@@ -450,7 +442,7 @@ export default function Home() {
             </motion.div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {/* +EV Finder */}
+              {/* Arbitrage Finder */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -458,13 +450,15 @@ export default function Home() {
                 className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 hover:border-[#F4C430]/50 transition-colors"
               >
                 <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-[#F4C430] mb-3 sm:mb-4" />
-                <h3 className="text-base sm:text-lg font-semibold text-[#E5E7EB] mb-2">+EV Finder</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-[#E5E7EB] mb-2">Arbitrage Finder</h3>
                 <p className="text-[#9CA3AF] text-sm mb-3 sm:mb-4">
-                  See which lines look underpriced right now.
+                  Find guaranteed profit opportunities across books.
                 </p>
-                <button className="bg-gray-400 text-gray-700 px-4 py-2 rounded font-medium text-sm transition-colors touch-manipulation w-full sm:w-auto" disabled>
-                  Coming Soon
-                </button>
+                <Link href="/arbitrage">
+                  <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded font-medium text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full sm:w-auto">
+                    Open
+                  </button>
+                </Link>
               </motion.div>
 
               {/* Line Shopping */}
@@ -487,30 +481,12 @@ export default function Home() {
                 </Link>
               </motion.div>
 
-              {/* No-Vig Calculator */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2 }}
-                className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 hover:border-[#F4C430]/50 transition-colors"
-              >
-                <Calculator className="w-6 h-6 sm:w-8 sm:h-8 text-[#F4C430] mb-3 sm:mb-4" />
-                <h3 className="text-base sm:text-lg font-semibold text-[#E5E7EB] mb-2">No-Vig Calculator</h3>
-                <p className="text-[#9CA3AF] text-sm mb-3 sm:mb-4">
-                  Turn listed odds into fair odds (house edge removed).
-                </p>
-                <button className="bg-gray-400 text-gray-700 px-4 py-2 rounded font-medium text-sm transition-colors touch-manipulation w-full sm:w-auto" disabled>
-                  Coming Soon
-                </button>
-              </motion.div>
-
               {/* Kelly Calculator */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: 0.3 }}
+                transition={{ delay: 0.2 }}
                 className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 hover:border-[#F4C430]/50 transition-colors"
               >
                 <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-[#F4C430] mb-3 sm:mb-4" />
@@ -525,30 +501,12 @@ export default function Home() {
                 </Link>
               </motion.div>
 
-              {/* Odds Converter */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.4 }}
-                className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 hover:border-[#F4C430]/50 transition-colors"
-              >
-                <RotateCcw className="w-6 h-6 sm:w-8 sm:h-8 text-[#F4C430] mb-3 sm:mb-4" />
-                <h3 className="text-base sm:text-lg font-semibold text-[#E5E7EB] mb-2">Odds Converter</h3>
-                <p className="text-[#9CA3AF] text-sm mb-3 sm:mb-4">
-                  American ↔ Decimal ↔ Fractional + implied probability.
-                </p>
-                <button className="bg-gray-400 text-gray-700 px-4 py-2 rounded font-medium text-sm transition-colors touch-manipulation w-full sm:w-auto" disabled>
-                  Coming Soon
-                </button>
-              </motion.div>
-
               {/* Analyze Parlay / Bet Slip */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 0.3 }}
                 className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 hover:border-[#F4C430]/50 transition-colors"
               >
                 <Upload className="w-6 h-6 sm:w-8 sm:h-8 text-[#F4C430] mb-3 sm:mb-4" />
@@ -584,11 +542,8 @@ export default function Home() {
               </p>
               
               <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
-                <button className="w-full sm:w-auto bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors touch-manipulation" disabled>
-                  Track Record (Coming Soon)
-                </button>
                 <Link href="/learn/how-to-use-ai-for-sports-betting" className="w-full sm:w-auto">
-                  <button className="w-full sm:w-auto border border-[#F4C430] text-[#F4C430] px-6 py-3 rounded-lg font-semibold hover:bg-[#F4C430]/10 transition-colors touch-manipulation">
+                  <button className="w-full sm:w-auto bg-[#F4C430] text-[#0B0F14] px-6 py-3 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors touch-manipulation">
                     Our Math & Method
                   </button>
                 </Link>
