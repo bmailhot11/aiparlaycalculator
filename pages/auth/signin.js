@@ -15,7 +15,8 @@ import {
   CheckCircle, 
   XCircle, 
   Loader2,
-  Chrome
+  Chrome,
+  Crown
 } from 'lucide-react';
 
 export default function SignIn() {
@@ -360,6 +361,19 @@ export default function SignIn() {
                 </Link>
               </div>
             )}
+
+            {/* Premium upgrade option */}
+            <div className="mt-6 pt-6 border-t border-[#374151]">
+              <div className="text-center">
+                <p className="text-[#9CA3AF] text-sm mb-3">
+                  Want unlimited access to all features?
+                </p>
+                <Link href="/pricing" className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#F4C430] to-[#e6b829] text-[#0B0F14] font-semibold text-sm rounded-lg hover:opacity-90 transition-opacity">
+                  <Crown className="w-4 h-4" />
+                  Go Premium - $9.99/mo
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
