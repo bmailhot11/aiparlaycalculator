@@ -223,7 +223,7 @@ export default function Home() {
         
 
         {/* 1) Hero Section */}
-        <section className="relative py-12 sm:py-20 px-4 sm:px-6 lg:px-8">
+        <section className="relative py-8 sm:py-20 px-2 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -231,7 +231,7 @@ export default function Home() {
               transition={{ duration: 0.6 }}
               className="text-center max-w-4xl mx-auto mb-8 sm:mb-12"
             >
-              <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-[#E5E7EB] mb-4 sm:mb-6 leading-tight">
+              <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold text-[#E5E7EB] mb-4 sm:mb-6 leading-tight px-2">
                 Use our AI for sports betting to increase your odds and find the best opportunities for you
               </h1>
               
@@ -241,14 +241,14 @@ export default function Home() {
               </p>
 
               {/* Tools grid */}
-              <div className="max-w-5xl mx-auto mt-8 sm:mt-12">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <div className="max-w-5xl mx-auto mt-6 sm:mt-12 px-2 sm:px-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                   {/* Arbitrage Finder */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 hover:border-[#F4C430]/50 transition-colors"
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
                     <TrendingUp className="w-6 h-6 text-[#F4C430] mb-3" />
                     <h3 className="text-base font-semibold text-[#E5E7EB] mb-2">Arbitrage Finder</h3>
@@ -268,7 +268,7 @@ export default function Home() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.1 }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 hover:border-[#F4C430]/50 transition-colors"
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
                     <Target className="w-6 h-6 text-[#F4C430] mb-3" />
                     <h3 className="text-base font-semibold text-[#E5E7EB] mb-2">Line Shopping</h3>
@@ -288,7 +288,7 @@ export default function Home() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.2 }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 hover:border-[#F4C430]/50 transition-colors"
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
                     <DollarSign className="w-6 h-6 text-[#F4C430] mb-3" />
                     <h3 className="text-base font-semibold text-[#E5E7EB] mb-2">Kelly Calculator</h3>
@@ -308,7 +308,7 @@ export default function Home() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.3 }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 hover:border-[#F4C430]/50 transition-colors"
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
                     <Upload className="w-6 h-6 text-[#F4C430] mb-3" />
                     <h3 className="text-base font-semibold text-[#E5E7EB] mb-2">Analyze Bet Slip</h3>
@@ -325,10 +325,10 @@ export default function Home() {
               </div>
 
               {/* Secondary CTA */}
-              <div className="mb-8 sm:mb-12 flex justify-center">
+              <div className="mt-6 mb-8 sm:mb-12 flex justify-center px-2">
                 <Link href="/learn/how-to-use-ai-for-sports-betting">
                   <button 
-                    className="inline-flex items-center bg-transparent border border-[#F4C430] text-[#F4C430] px-4 py-2 rounded-lg font-medium text-sm hover:bg-[#F4C430] hover:text-[#0B0F14] transition-colors"
+                    className="inline-flex items-center bg-transparent border border-[#F4C430] text-[#F4C430] px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm hover:bg-[#F4C430] hover:text-[#0B0F14] transition-colors"
                     data-event="cta_ai_article_click"
                   >
                     How AI helps (2-minute read)
