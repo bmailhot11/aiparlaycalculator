@@ -86,6 +86,28 @@ async function findBestOpportunities() {
       console.log('  1. The materialized view is empty');
       console.log('  2. The view needs to be refreshed');
       console.log('  3. No recent odds data has been collected');
+      
+      // Try checking other potential odds tables as fallback
+      console.log('🔍 Checking for alternative odds tables...');
+      const alternativeTables = ['odds_history', 'live_odds', 'current_odds'];
+      
+      for (const tableName of alternativeTables) {
+        try {
+          const { data, error, count } = await supabase
+            .from(tableName)
+            .select('*', { count: 'exact' })
+            .limit(1);
+          
+          console.log(`  ${tableName}: ${error ? 'ERROR - ' + error.message : `Found ${count || 0} records`}`);
+          
+          if (data && data.length > 0) {
+            console.log(`  Sample record from ${tableName}:`, JSON.stringify(data[0], null, 2));
+          }
+        } catch (e) {
+          console.log(`  ${tableName}: Table doesn't exist or access denied`);
+        }
+      }
+      
       return [];
     }
     
