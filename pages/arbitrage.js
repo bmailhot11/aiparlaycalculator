@@ -20,8 +20,6 @@ export default function ArbitragePage() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [arbitrageData, setArbitrageData] = useState([]);
-  const [selectedSport, setSelectedSport] = useState('ALL');
-  const [scanAllSports, setScanAllSports] = useState(true);
   const [showPaywall, setShowPaywall] = useState(false);
   const [notification, setNotification] = useState(null);
 
@@ -223,16 +221,23 @@ export default function ArbitragePage() {
     setIsLoading(true);
     
     try {
+      // Set a longer timeout for scanning all sports
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
       const response = await apiFetch('/api/arbitrage/find-opportunities', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sport: scanAllSports || selectedSport === 'ALL' ? null : selectedSport,
-          includeAllSports: scanAllSports || selectedSport === 'ALL'
+          sport: null,
+          includeAllSports: true
         }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       const data = await response.json();
       
@@ -298,11 +303,17 @@ export default function ArbitragePage() {
     } catch (error) {
       console.error('Error fetching arbitrage data:', error);
       setArbitrageData([]);
+      
+      let errorMessage = 'Error fetching arbitrage data. Please try again.';
+      if (error.name === 'AbortError') {
+        errorMessage = 'Search timed out after 30 seconds. The dataset is large, please try again.';
+      }
+      
       setNotification({ 
         type: 'error', 
-        message: 'Error fetching arbitrage data. Please try again.' 
+        message: errorMessage 
       });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 4000);
     } finally {
       setIsLoading(false);
     }
@@ -415,50 +426,14 @@ export default function ArbitragePage() {
             transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
             className="card max-w-[800px] mx-auto"
           >
-            {/* Simple Sport Selection */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
+            {/* Arbitrage Finder */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 mb-6">
                 <Target className="w-5 h-5 text-[#F4C430]" />
                 <h3 className="text-[#E5E7EB] font-semibold">Find Arbitrage Opportunities</h3>
               </div>
               
-              {/* Sport Selection */}
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6">
-                {['NFL', 'NBA', 'NHL', 'MLB', 'MMA'].map(sport => (
-                  <button
-                    key={sport}
-                    onClick={() => setSelectedSport(sport)}
-                    className={`py-2 px-2 rounded-lg font-medium transition-all text-xs sm:text-sm ${
-                      selectedSport === sport
-                        ? 'bg-[#F4C430] text-[#0B0F14]'
-                        : 'bg-[#1F2937] text-[#9CA3AF] hover:bg-[#253044]'
-                    }`}
-                  >
-                    {sport}
-                  </button>
-                ))}
-              </div>
-              
-              {/* Single CTA Button */}
-              <div className="flex flex-col gap-3">
-                {/* All Sports Toggle */}
-                <div className="flex items-center justify-between p-3 bg-[#0F172A] rounded border border-[#1F2937]">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="scanAllSports"
-                      checked={scanAllSports}
-                      onChange={(e) => setScanAllSports(e.target.checked)}
-                      className="rounded border-[#1F2937] bg-[#0F172A] text-[#F4C430] focus:ring-[#F4C430]"
-                    />
-                    <label htmlFor="scanAllSports" className="text-[#E5E7EB] font-medium">
-                      Scan All Sports & Leagues
-                    </label>
-                  </div>
-                  <span className="text-[#6B7280] text-xs">16+ leagues</span>
-                </div>
-
-                <button 
+              <button 
                   onClick={handleFindArbitrages}
                   disabled={isLoading}
                   className="w-full bg-[#F4C430] text-[#0B0F14] px-6 py-3 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -466,16 +441,19 @@ export default function ArbitragePage() {
                   {isLoading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-[#0B0F14] border-t-transparent rounded-full animate-spin mr-2" />
-                      {scanAllSports ? 'Scanning All Sports...' : `Scanning ${selectedSport}...`}
+                      Scanning All Sports & Leagues...
                     </>
                   ) : (
                     <>
                       <Target className="w-4 h-4 mr-2" />
-                      {scanAllSports ? 'Find Arbitrage (All Sports)' : `Find ${selectedSport} Arbitrage`}
+                      Find Arbitrage Opportunities
                     </>
                   )}
                 </button>
-              </div>
+              
+              <p className="text-[#6B7280] text-sm text-center">
+                Scanning all available sports and leagues for guaranteed profit opportunities
+              </p>
               
               {/* Premium Note */}
               <p className="text-[#6B7280] text-xs text-center">
