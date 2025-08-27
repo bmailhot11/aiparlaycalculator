@@ -178,7 +178,7 @@ function findEdgesInOddsData(oddsData, sport) {
           
           const edge = calculateEdge(outcome.price, fairOdd);
           
-          if (edge > 2) { // Minimum 2% edge
+          if (edge > 1) { // Minimum 1% edge (lowered threshold for testing)
             opportunities.push({
               gameId: game.id,
               sport: sport,
