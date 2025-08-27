@@ -239,7 +239,13 @@ export default function ArbitragePage() {
       
       clearTimeout(timeoutId);
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('Error parsing JSON response:', jsonError);
+        throw new Error('Invalid response from server');
+      }
       
       console.log('Arbitrage response:', data);
       
@@ -249,31 +255,39 @@ export default function ArbitragePage() {
         const opportunities = data.opportunities || [];
         
         // Transform API data to match frontend expectations
-        const transformedData = opportunities.map(opp => ({
-          id: opp.id,
-          sport: opp.sport,
-          game: opp.matchup,
-          market: opp.market_display || opp.market_type,
-          commence_time: opp.commence_time,
-          book1: {
-            name: opp.legs?.[0]?.sportsbook || opp.book1?.name,
-            odds: opp.legs?.[0]?.american_odds || opp.book1?.odds,
-            bet: opp.legs?.[0]?.selection || opp.book1?.bet,
-            decimal: opp.legs?.[0]?.decimal_odds || opp.book1?.decimal
-          },
-          book2: {
-            name: opp.legs?.[1]?.sportsbook || opp.book2?.name,
-            odds: opp.legs?.[1]?.american_odds || opp.book2?.odds,
-            bet: opp.legs?.[1]?.selection || opp.book2?.bet,
-            decimal: opp.legs?.[1]?.decimal_odds || opp.book2?.decimal
-          },
-          profit: opp.profit_percentage || opp.guaranteed_profit || opp.profit,
-          profit_percentage: opp.profit_percentage,
-          total_implied_prob: opp.total_implied_prob,
-          stake: opp.investment_needed || 100,
-          stake_distribution: opp.stake_distribution,
-          last_updated: opp.timestamp || new Date().toISOString()
-        }));
+        const transformedData = opportunities.map(opp => {
+          try {
+            return {
+              id: opp.id || `arb_${Date.now()}`,
+              sport: opp.sport || 'Unknown',
+              game: opp.matchup || opp.game || 'Unknown Match',
+              market: opp.market_display || opp.market_type || 'Unknown Market',
+              commence_time: opp.commence_time,
+              legs: opp.legs || [], // Include all legs for display
+              book1: {
+                name: opp.legs?.[0]?.sportsbook || 'Unknown Book',
+                odds: opp.legs?.[0]?.american_odds || 100,
+                bet: opp.legs?.[0]?.selection || 'Unknown Selection',
+                decimal: opp.legs?.[0]?.decimal_odds || '2.00'
+              },
+              book2: {
+                name: opp.legs?.[1]?.sportsbook || 'Unknown Book',
+                odds: opp.legs?.[1]?.american_odds || 100,
+                bet: opp.legs?.[1]?.selection || 'Unknown Selection',  
+                decimal: opp.legs?.[1]?.decimal_odds || '2.00'
+              },
+              profit: parseFloat(opp.profit_percentage) || parseFloat(opp.guaranteed_profit) || 0,
+              profit_percentage: parseFloat(opp.profit_percentage) || 0,
+              total_implied_prob: opp.total_implied_prob || '100%',
+              stake: opp.investment_needed || 100,
+              stake_distribution: opp.stake_distribution || [],
+              last_updated: opp.timestamp || new Date().toISOString()
+            };
+          } catch (error) {
+            console.error('Error transforming arbitrage opportunity:', error, opp);
+            return null;
+          }
+        }).filter(Boolean); // Remove any null entries from transformation errors
         
         setArbitrageData(transformedData);
         
