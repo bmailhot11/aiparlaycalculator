@@ -2,6 +2,7 @@ import { useState, useContext, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   Upload, 
   TrendingUp, 
@@ -25,12 +26,8 @@ import { apiFetch } from '../utils/api';
 
 export default function Home() {
   const { isPremium } = useContext(PremiumContext);
+  const { user, loading: authLoading } = useAuth();
   const [currentUser, setCurrentUser] = useState(null);
-  const [liveStats, setLiveStats] = useState({
-    edgesToday: null,
-    avgEdge: null,
-    booksScanned: null
-  });
   const [currentEdge, setCurrentEdge] = useState(null);
 
   // Load user data and fetch live stats
@@ -38,38 +35,22 @@ export default function Home() {
     // Prevent hydration issues by checking if we're in browser
     if (typeof window === 'undefined') return;
     
-    const savedUser = localStorage.getItem('betchekr_user');
-    if (savedUser) {
-      try {
-        setCurrentUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error('Error loading user:', error);
-        localStorage.removeItem('betchekr_user');
-      }
+    // Use real Supabase auth instead of localStorage
+    if (user) {
+      setCurrentUser({
+        email: user.email,
+        displayName: user.user_metadata?.display_name || user.user_metadata?.full_name || user.email,
+        isPremium: false // Can be updated later based on subscription
+      });
+    } else {
+      setCurrentUser(null);
     }
     
 
-    // Fetch live stats (with graceful fallbacks)
-    fetchLiveStats();
+    // Fetch current edge (with graceful fallbacks)
     fetchCurrentEdge();
-  }, [isPremium]);
+  }, [user, isPremium]);
 
-  const fetchLiveStats = async () => {
-    try {
-      // Try to fetch from existing endpoints
-      const response = await fetch('/api/daily-picks/track-record?period=1d');
-      if (response.ok) {
-        const data = await response.json();
-        setLiveStats({
-          edgesToday: data.totalPicks || 0,
-          avgEdge: data.avgEdge || 0,
-          booksScanned: 15 // Static for now
-        });
-      }
-    } catch (error) {
-      // Keep default null values for graceful fallback
-    }
-  };
 
   const fetchCurrentEdge = async () => {
     try {
@@ -169,9 +150,9 @@ export default function Home() {
   const Tooltip = ({ children, content }) => (
     <span className="group relative cursor-help border-b border-dotted border-[#F4C430]">
       {children}
-      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-[#1F2937] text-[#E5E7EB] text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap">
+      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-[#1F2937] text-[#E5E7EB] text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap block">
         {content}
-      </div>
+      </span>
     </span>
   );
 
@@ -259,58 +240,103 @@ export default function Home() {
                 and show where the value is so you bet smarter and win bigger.
               </p>
 
-              {/* Primary CTAs */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center mb-6 sm:mb-8 px-4 sm:px-0">
-                <Link href="/analyze-slip" className="w-full sm:w-auto">
-                  <button 
-                    className="w-full sm:w-auto bg-[#F4C430] text-[#0B0F14] px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg hover:bg-[#e6b829] transition-colors touch-manipulation"
-                    data-event="cta_analyze_slip_click"
+              {/* Tools grid */}
+              <div className="max-w-5xl mx-auto mt-8 sm:mt-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                  {/* Arbitrage Finder */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
-                    Analyze my bet slip
+                    <TrendingUp className="w-6 h-6 text-[#F4C430] mb-3" />
+                    <h3 className="text-base font-semibold text-[#E5E7EB] mb-2">Arbitrage Finder</h3>
+                    <p className="text-[#9CA3AF] text-sm mb-3">
+                      Find guaranteed profit opportunities across books.
+                    </p>
+                    <Link href="/arbitrage">
+                      <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded font-medium text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
+                        Open
+                      </button>
+                    </Link>
+                  </motion.div>
+
+                  {/* Line Shopping */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 hover:border-[#F4C430]/50 transition-colors"
+                  >
+                    <Target className="w-6 h-6 text-[#F4C430] mb-3" />
+                    <h3 className="text-base font-semibold text-[#E5E7EB] mb-2">Line Shopping</h3>
+                    <p className="text-[#9CA3AF] text-sm mb-3">
+                      Find the best price across books before you bet.
+                    </p>
+                    <Link href="/line-shopping">
+                      <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded font-medium text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
+                        Open
+                      </button>
+                    </Link>
+                  </motion.div>
+
+                  {/* Kelly Calculator */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 hover:border-[#F4C430]/50 transition-colors"
+                  >
+                    <DollarSign className="w-6 h-6 text-[#F4C430] mb-3" />
+                    <h3 className="text-base font-semibold text-[#E5E7EB] mb-2">Kelly Calculator</h3>
+                    <p className="text-[#9CA3AF] text-sm mb-3">
+                      Size your bet sensibly to manage risk.
+                    </p>
+                    <Link href="/kelly-calculator">
+                      <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded font-medium text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
+                        Open
+                      </button>
+                    </Link>
+                  </motion.div>
+
+                  {/* Analyze Parlay / Bet Slip */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.3 }}
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 hover:border-[#F4C430]/50 transition-colors"
+                  >
+                    <Upload className="w-6 h-6 text-[#F4C430] mb-3" />
+                    <h3 className="text-base font-semibold text-[#E5E7EB] mb-2">Analyze Bet Slip</h3>
+                    <p className="text-[#9CA3AF] text-sm mb-3">
+                      Upload your slip; we check if the price is fair.
+                    </p>
+                    <Link href="/analyze-slip">
+                      <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded font-medium text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
+                        Open
+                      </button>
+                    </Link>
+                  </motion.div>
+                </div>
+              </div>
+
+              {/* Secondary CTA */}
+              <div className="mb-8 sm:mb-12 flex justify-center">
+                <Link href="/learn/how-to-use-ai-for-sports-betting">
+                  <button 
+                    className="inline-flex items-center bg-transparent border border-[#F4C430] text-[#F4C430] px-4 py-2 rounded-lg font-medium text-sm hover:bg-[#F4C430] hover:text-[#0B0F14] transition-colors"
+                    data-event="cta_ai_article_click"
+                  >
+                    How AI helps (2-minute read)
+                    <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 ml-2" />
                   </button>
                 </Link>
               </div>
 
-              {/* Secondary CTA */}
-              <div className="mb-8 sm:mb-12">
-                <Link href="/learn/how-to-use-ai-for-sports-betting">
-                  <span 
-                    className="inline-flex items-center text-[#F4C430] hover:text-[#e6b829] transition-colors text-sm sm:text-base"
-                    data-event="cta_ai_article_click"
-                  >
-                    How AI helps (2-minute read)
-                    <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-                  </span>
-                </Link>
-              </div>
-
-              {/* Trust Bar */}
-              <div className="grid grid-cols-3 gap-4 sm:flex sm:flex-row sm:justify-center sm:gap-8 md:gap-12 text-center">
-                <div className="flex flex-col">
-                  <span className="text-lg sm:text-xl md:text-2xl font-bold text-[#F4C430]">
-                    {liveStats.edgesToday !== null ? liveStats.edgesToday : '—'}
-                  </span>
-                  <span className="text-xs sm:text-sm text-[#6B7280] leading-tight" aria-label={liveStats.edgesToday === null ? "stat unavailable" : undefined}>
-                    Live edges today
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-lg sm:text-xl md:text-2xl font-bold text-[#F4C430]">
-                    {liveStats.avgEdge !== null ? `${liveStats.avgEdge}%` : '—'}
-                  </span>
-                  <span className="text-xs sm:text-sm text-[#6B7280] leading-tight" aria-label={liveStats.avgEdge === null ? "stat unavailable" : undefined}>
-                    Avg edge on bets
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-lg sm:text-xl md:text-2xl font-bold text-[#F4C430]">
-                    {liveStats.booksScanned !== null ? liveStats.booksScanned : '—'}
-                  </span>
-                  <span className="text-xs sm:text-sm text-[#6B7280] leading-tight" aria-label={liveStats.booksScanned === null ? "stat unavailable" : undefined}>
-                    Books scanned
-                  </span>
-                </div>
-              </div>
             </motion.div>
           </div>
         </section>
@@ -341,7 +367,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 2) Edge of the Moment (Optional Ticker) */}
+
+        {/* 3) Edge of the Moment (Optional Ticker) */}
         {currentEdge && (
           <section className="py-6 px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
@@ -439,105 +466,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 4) Tools grid */}
-        <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 bg-[#0A0E13]">
-          <div className="max-w-7xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-center mb-8 sm:mb-12"
-            >
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#E5E7EB] mb-4 sm:mb-6">
-                Tools you can use today
-              </h2>
-            </motion.div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {/* Arbitrage Finder */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 hover:border-[#F4C430]/50 transition-colors"
-              >
-                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-[#F4C430] mb-3 sm:mb-4" />
-                <h3 className="text-base sm:text-lg font-semibold text-[#E5E7EB] mb-2">Arbitrage Finder</h3>
-                <p className="text-[#9CA3AF] text-sm mb-3 sm:mb-4">
-                  Find guaranteed profit opportunities across books.
-                </p>
-                <Link href="/arbitrage">
-                  <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded font-medium text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full sm:w-auto">
-                    Open
-                  </button>
-                </Link>
-              </motion.div>
-
-              {/* Line Shopping */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.1 }}
-                className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 hover:border-[#F4C430]/50 transition-colors"
-              >
-                <Target className="w-6 h-6 sm:w-8 sm:h-8 text-[#F4C430] mb-3 sm:mb-4" />
-                <h3 className="text-base sm:text-lg font-semibold text-[#E5E7EB] mb-2">Line Shopping</h3>
-                <p className="text-[#9CA3AF] text-sm mb-3 sm:mb-4">
-                  Find the best price across books before you bet.
-                </p>
-                <Link href="/line-shopping">
-                  <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded font-medium text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full sm:w-auto">
-                    Open
-                  </button>
-                </Link>
-              </motion.div>
-
-              {/* Kelly Calculator */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2 }}
-                className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 hover:border-[#F4C430]/50 transition-colors"
-              >
-                <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-[#F4C430] mb-3 sm:mb-4" />
-                <h3 className="text-base sm:text-lg font-semibold text-[#E5E7EB] mb-2">Kelly Calculator</h3>
-                <p className="text-[#9CA3AF] text-sm mb-3 sm:mb-4">
-                  Size your bet sensibly to manage risk.
-                </p>
-                <Link href="/kelly-calculator">
-                  <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded font-medium text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full sm:w-auto">
-                    Open
-                  </button>
-                </Link>
-              </motion.div>
-
-              {/* Analyze Parlay / Bet Slip */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.3 }}
-                className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 hover:border-[#F4C430]/50 transition-colors"
-              >
-                <Upload className="w-6 h-6 sm:w-8 sm:h-8 text-[#F4C430] mb-3 sm:mb-4" />
-                <h3 className="text-base sm:text-lg font-semibold text-[#E5E7EB] mb-2">Analyze Parlay / Bet Slip</h3>
-                <p className="text-[#9CA3AF] text-sm mb-3 sm:mb-4">
-                  Upload your slip; we check if the price is fair.
-                </p>
-                <Link href="/analyze-slip">
-                  <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded font-medium text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full sm:w-auto">
-                    Open
-                  </button>
-                </Link>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-
-        {/* 5) Proof section */}
+        {/* 4) Proof section */}
         <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
             <motion.div
