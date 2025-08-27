@@ -13,9 +13,11 @@ import Footer from '../components/Footer';
 import { apiFetch } from '../utils/api';
 import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function ArbitragePage() {
   const { isPremium } = useContext(PremiumContext);
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [arbitrageData, setArbitrageData] = useState([]);
   const [selectedSport, setSelectedSport] = useState('ALL');
@@ -52,14 +54,21 @@ export default function ArbitragePage() {
     }
     
     for (const game of oddsData) {
-      if (!game.bookmakers || game.bookmakers.length < 2) {
-        console.log('Skipping game - insufficient bookmakers:', game.away_team, game.home_team);
+      // Enhanced validation
+      if (!game || !game.bookmakers || !Array.isArray(game.bookmakers) || game.bookmakers.length < 2) {
+        console.log('Skipping game - insufficient bookmakers:', game?.away_team, game?.home_team);
+        continue;
+      }
+
+      if (!game.away_team || !game.home_team) {
+        console.log('Skipping game - missing team information');
         continue;
       }
       
-      // Find H2H markets
+      // Find H2H markets with validation
       const h2hBooks = game.bookmakers.filter(book => 
-        book.markets?.some(market => market.key === 'h2h')
+        book && book.markets && Array.isArray(book.markets) && 
+        book.markets.some(market => market && market.key === 'h2h')
       );
       
       if (h2hBooks.length < 2) continue;
@@ -67,10 +76,19 @@ export default function ArbitragePage() {
       // Get all H2H odds for this game
       const allOdds = [];
       h2hBooks.forEach(book => {
-        const h2hMarket = book.markets.find(m => m.key === 'h2h');
-        if (h2hMarket?.outcomes) {
+        const h2hMarket = book.markets.find(m => m && m.key === 'h2h');
+        if (h2hMarket?.outcomes && Array.isArray(h2hMarket.outcomes)) {
           h2hMarket.outcomes.forEach(outcome => {
-            const decimal = outcome.price > 0 ? (outcome.price / 100) + 1 : (100 / Math.abs(outcome.price)) + 1;
+            if (!outcome || typeof outcome.price !== 'number' || !outcome.name) {
+              return; // Skip invalid outcomes
+            }
+            
+            const decimal = convertAmericanToDecimal(outcome.price);
+            if (decimal <= 1) {
+              console.log(`Invalid decimal odds: ${decimal} for ${outcome.name}`);
+              return;
+            }
+            
             allOdds.push({
               book: book.title,
               team: outcome.name,
@@ -82,44 +100,55 @@ export default function ArbitragePage() {
         }
       });
       
-      // Find arbitrage opportunities
-      const teams = [...new Set(allOdds.map(o => o.team))];
+      // Find arbitrage opportunities with enhanced validation
+      const teams = [...new Set(allOdds.map(o => o.team).filter(team => team))];
       if (teams.length >= 2) {
         // Get best odds for each team
         const bestOdds = teams.map(team => {
-          const teamOdds = allOdds.filter(o => o.team === team);
+          const teamOdds = allOdds.filter(o => o.team === team && o.decimal > 1);
+          if (teamOdds.length === 0) return null;
+          
           return teamOdds.reduce((best, current) => 
             current.decimal > best.decimal ? current : best
           );
-        });
+        }).filter(odds => odds !== null);
         
         if (bestOdds.length >= 2) {
           // Calculate if arbitrage exists
           const totalImplied = bestOdds.reduce((sum, odd) => sum + (1/odd.decimal), 0);
           
-          if (totalImplied < 1) {
+          if (totalImplied < 1 && totalImplied > 0) {
             // Arbitrage opportunity found!
             const profit = (1 - totalImplied) * 100;
             const totalStake = 100;
             
-            arbitrages.push({
-              id: arbitrages.length + 1,
-              sport: game.sport || 'Unknown',
-              game: `${game.away_team} vs ${game.home_team}`,
-              market: 'Moneyline',
-              book1: { 
-                name: bestOdds[0].book, 
-                odds: bestOdds[0].odds > 0 ? `+${bestOdds[0].odds}` : `${bestOdds[0].odds}`, 
-                bet: bestOdds[0].team 
-              },
-              book2: { 
-                name: bestOdds[1].book, 
-                odds: bestOdds[1].odds > 0 ? `+${bestOdds[1].odds}` : `${bestOdds[1].odds}`, 
-                bet: bestOdds[1].team 
-              },
-              profit: profit.toFixed(1),
-              stake: totalStake
-            });
+            // Additional validation - ensure profit is reasonable
+            if (profit > 0 && profit < 50) { // Cap at 50% to avoid unrealistic opportunities
+              arbitrages.push({
+                id: `arb_${game.id || Date.now()}_${arbitrages.length}`,
+                sport: game.sport || 'Unknown',
+                game: `${game.away_team} vs ${game.home_team}`,
+                market: 'Moneyline',
+                commence_time: game.commence_time,
+                book1: { 
+                  name: bestOdds[0].book, 
+                  odds: bestOdds[0].odds > 0 ? `+${bestOdds[0].odds}` : `${bestOdds[0].odds}`, 
+                  bet: bestOdds[0].team,
+                  decimal: bestOdds[0].decimal
+                },
+                book2: { 
+                  name: bestOdds[1].book, 
+                  odds: bestOdds[1].odds > 0 ? `+${bestOdds[1].odds}` : `${bestOdds[1].odds}`, 
+                  bet: bestOdds[1].team,
+                  decimal: bestOdds[1].decimal
+                },
+                profit: profit.toFixed(2),
+                profit_percentage: profit.toFixed(2),
+                total_implied_prob: (totalImplied * 100).toFixed(2),
+                stake: totalStake,
+                last_updated: new Date().toISOString()
+              });
+            }
           }
         }
       }
@@ -128,19 +157,39 @@ export default function ArbitragePage() {
     return arbitrages;
   };
 
+  const convertAmericanToDecimal = (americanOdds) => {
+    const odds = parseInt(americanOdds.toString().replace('+', ''));
+    return odds > 0 ? (odds / 100) + 1 : (100 / Math.abs(odds)) + 1;
+  };
+
   const handleCalculateStakes = (arbitrage) => {
     const totalStake = parseFloat(arbitrage.stake) || 100;
-    const book1Decimal = arbitrage.book1.odds.startsWith('+') ? 
-      (parseInt(arbitrage.book1.odds.slice(1)) / 100) + 1 : 
-      (100 / Math.abs(parseInt(arbitrage.book1.odds))) + 1;
-    const book2Decimal = arbitrage.book2.odds.startsWith('+') ? 
-      (parseInt(arbitrage.book2.odds.slice(1)) / 100) + 1 : 
-      (100 / Math.abs(parseInt(arbitrage.book2.odds))) + 1;
     
-    const book1Stake = totalStake / (1 + (book1Decimal / book2Decimal));
-    const book2Stake = totalStake - book1Stake;
+    if (!arbitrage.book1?.odds || !arbitrage.book2?.odds) {
+      alert('Error: Invalid odds data. Please refresh and try again.');
+      return;
+    }
     
-    alert(`Optimal Stakes:\n${arbitrage.book1.name}: $${book1Stake.toFixed(2)}\n${arbitrage.book2.name}: $${book2Stake.toFixed(2)}\nTotal: $${totalStake}\nProfit: $${arbitrage.profit}`);
+    const book1Decimal = convertAmericanToDecimal(arbitrage.book1.odds);
+    const book2Decimal = convertAmericanToDecimal(arbitrage.book2.odds);
+    
+    // Correct arbitrage stake calculation formula
+    const totalImplied = (1 / book1Decimal) + (1 / book2Decimal);
+    
+    if (totalImplied >= 1) {
+      alert('Error: No arbitrage opportunity exists with these odds.');
+      return;
+    }
+    
+    const book1Stake = totalStake * (1 / book1Decimal) / totalImplied;
+    const book2Stake = totalStake * (1 / book2Decimal) / totalImplied;
+    
+    // Calculate guaranteed profit
+    const profit1 = (book1Stake * book1Decimal) - totalStake;
+    const profit2 = (book2Stake * book2Decimal) - totalStake;
+    const guaranteedProfit = Math.min(profit1, profit2);
+    
+    alert(`Optimal Stakes:\n${arbitrage.book1.name}: $${book1Stake.toFixed(2)}\n${arbitrage.book2.name}: $${book2Stake.toFixed(2)}\nTotal: $${totalStake.toFixed(2)}\nGuaranteed Profit: $${guaranteedProfit.toFixed(2)} (${((guaranteedProfit/totalStake)*100).toFixed(2)}%)`);
   };
 
   const handlePlaceBets = (arbitrage) => {
@@ -148,11 +197,17 @@ export default function ArbitragePage() {
   };
 
   const handleFindArbitrages = async () => {
-    // Show paywall for free users
-    if (!isPremium) {
-      setShowPaywall(true);
+    // Check if user is authenticated and has premium access
+    if (!user) {
+      alert('Please sign in to access arbitrage opportunities.');
       return;
     }
+    
+    // For now, allow all authenticated users - premium validation can be added later
+    // if (!isPremium) {
+    //   setShowPaywall(true);
+    //   return;
+    // }
     
     setIsLoading(true);
     
@@ -174,7 +229,37 @@ export default function ArbitragePage() {
       
       if (response.ok && data.success) {
         console.log(`Found ${data.opportunities.length} arbitrage opportunities from ${data.total_games_checked} games`);
-        setArbitrageData(data.opportunities || []);
+        // Use real API data with proper structure, fallback to mock data if needed
+        const opportunities = data.opportunities || [];
+        
+        // Transform API data to match frontend expectations
+        const transformedData = opportunities.map(opp => ({
+          id: opp.id,
+          sport: opp.sport,
+          game: opp.matchup,
+          market: opp.market_display || opp.market_type,
+          commence_time: opp.commence_time,
+          book1: {
+            name: opp.legs?.[0]?.sportsbook || opp.book1?.name,
+            odds: opp.legs?.[0]?.american_odds || opp.book1?.odds,
+            bet: opp.legs?.[0]?.selection || opp.book1?.bet,
+            decimal: opp.legs?.[0]?.decimal_odds || opp.book1?.decimal
+          },
+          book2: {
+            name: opp.legs?.[1]?.sportsbook || opp.book2?.name,
+            odds: opp.legs?.[1]?.american_odds || opp.book2?.odds,
+            bet: opp.legs?.[1]?.selection || opp.book2?.bet,
+            decimal: opp.legs?.[1]?.decimal_odds || opp.book2?.decimal
+          },
+          profit: opp.profit_percentage || opp.guaranteed_profit || opp.profit,
+          profit_percentage: opp.profit_percentage,
+          total_implied_prob: opp.total_implied_prob,
+          stake: opp.investment_needed || 100,
+          stake_distribution: opp.stake_distribution,
+          last_updated: opp.timestamp || new Date().toISOString()
+        }));
+        
+        setArbitrageData(transformedData);
       } else {
         console.log('No arbitrage data available');
         setArbitrageData([]);
@@ -188,14 +273,20 @@ export default function ArbitragePage() {
   };
 
   const handleNotifyMe = async (arbitrage) => {
-    if (!isPremium) {
-      setShowPaywall(true);
+    if (!user) {
+      alert('Please sign in to set up notifications.');
       return;
     }
+    
+    // Premium check can be added here later
+    // if (!isPremium) {
+    //   setShowPaywall(true);
+    //   return;
+    // }
 
     try {
-      // Get user email from premium context or prompt
-      const userEmail = prompt('Enter your email address to receive this arbitrage alert:');
+      // Get user email from auth context or prompt
+      const userEmail = user?.email || prompt('Enter your email address to receive this arbitrage alert:');
       if (!userEmail) return;
 
       console.log('Sending arbitrage notification...');

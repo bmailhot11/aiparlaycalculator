@@ -396,7 +396,8 @@ function findTotalsArbitrage(game) {
 
 // Helper functions
 function convertToDecimal(americanOdds) {
-  return americanOdds > 0 ? (americanOdds / 100) + 1 : (100 / Math.abs(americanOdds)) + 1;
+  const odds = parseInt(americanOdds.toString().replace('+', ''));
+  return odds > 0 ? (odds / 100) + 1 : (100 / Math.abs(odds)) + 1;
 }
 
 function calculateOptimalStakes(bestOdds, totalStake) {

@@ -35,6 +35,9 @@ export default function Home() {
 
   // Load user data and fetch live stats
   useEffect(() => {
+    // Prevent hydration issues by checking if we're in browser
+    if (typeof window === 'undefined') return;
+    
     const savedUser = localStorage.getItem('betchekr_user');
     if (savedUser) {
       try {
@@ -71,7 +74,16 @@ export default function Home() {
   const fetchCurrentEdge = async () => {
     try {
       // Try to get a recent edge from line shopping or arbitrage
-      const response = await fetch('/api/arbitrage/find-opportunities?limit=1');
+      const response = await fetch('/api/arbitrage/find-opportunities', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sport: 'NBA',
+          includeAllSports: false
+        })
+      });
       if (response.ok) {
         const data = await response.json();
         if (data.opportunities && data.opportunities.length > 0) {
