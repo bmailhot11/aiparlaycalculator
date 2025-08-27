@@ -17,7 +17,9 @@ import {
   BookOpen,
   Check,
   AlertTriangle,
-  ExternalLink
+  ExternalLink,
+  Crown,
+  Star
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -323,6 +325,21 @@ export default function Home() {
                   </motion.div>
                 </div>
               </div>
+
+              {/* Premium CTA */}
+              {!isPremium && (
+                <div className="mt-8 sm:mt-10 flex justify-center px-2">
+                  <Link href="/pricing">
+                    <button className="group relative inline-flex items-center bg-gradient-to-r from-[#F4C430] to-[#e6b829] text-[#0B0F14] px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base hover:shadow-2xl hover:shadow-[#F4C430]/20 transform hover:-translate-y-0.5 transition-all duration-200">
+                      <Crown className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                      <span>Go Premium - Only $9.99/mo</span>
+                      <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+                        SAVE 50%
+                      </div>
+                    </button>
+                  </Link>
+                </div>
+              )}
 
               {/* Secondary CTA */}
               <div className="mt-6 mb-8 sm:mb-12 flex justify-center px-2">
