@@ -225,7 +225,7 @@ export default function Home() {
         
 
         {/* 1) Hero Section */}
-        <section className="relative py-8 sm:py-20 px-2 sm:px-6 lg:px-8">
+        <section className="relative py-6 sm:py-20 px-0 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -233,32 +233,32 @@ export default function Home() {
               transition={{ duration: 0.6 }}
               className="text-center max-w-4xl mx-auto mb-8 sm:mb-12"
             >
-              <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold text-[#E5E7EB] mb-4 sm:mb-6 leading-tight px-2">
+              <h1 className="text-[1.5rem] leading-[1.3] sm:text-4xl md:text-6xl font-bold text-[#E5E7EB] mb-3 sm:mb-6 px-3 sm:px-2">
                 Use our AI for sports betting to increase your odds and find the best opportunities for you
               </h1>
               
-              <p className="text-[#9CA3AF] text-base sm:text-lg md:text-xl leading-relaxed mb-6 sm:mb-8 max-w-3xl mx-auto px-2 sm:px-0">
+              <p className="text-[#9CA3AF] text-sm sm:text-lg md:text-xl leading-relaxed mb-4 sm:mb-8 max-w-3xl mx-auto px-4 sm:px-0">
                 We compare sportsbook prices, remove the house edge (<Tooltip content="The bookmaker's built-in profit margin">vig</Tooltip>), 
                 and show where the value is so you bet smarter and win bigger.
               </p>
 
               {/* Tools grid */}
-              <div className="max-w-5xl mx-auto mt-6 sm:mt-12 px-2 sm:px-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+              <div className="max-w-5xl mx-auto mt-4 sm:mt-12 px-3 sm:px-4">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-6">
                   {/* Arbitrage Finder */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
-                    <TrendingUp className="w-6 h-6 text-[#F4C430] mb-3" />
-                    <h3 className="text-base font-semibold text-[#E5E7EB] mb-2">Arbitrage Finder</h3>
-                    <p className="text-[#9CA3AF] text-sm mb-3">
+                    <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
+                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">Arbitrage</h3>
+                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
                       Find guaranteed profit opportunities across books.
                     </p>
                     <Link href="/arbitrage">
-                      <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded font-medium text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
+                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
                         Open
                       </button>
                     </Link>
@@ -270,15 +270,15 @@ export default function Home() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.1 }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
-                    <Target className="w-6 h-6 text-[#F4C430] mb-3" />
-                    <h3 className="text-base font-semibold text-[#E5E7EB] mb-2">Line Shopping</h3>
-                    <p className="text-[#9CA3AF] text-sm mb-3">
+                    <Target className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
+                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">Line Shop</h3>
+                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
                       Find the best price across books before you bet.
                     </p>
                     <Link href="/line-shopping">
-                      <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded font-medium text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
+                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
                         Open
                       </button>
                     </Link>
@@ -290,15 +290,15 @@ export default function Home() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.2 }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
-                    <DollarSign className="w-6 h-6 text-[#F4C430] mb-3" />
-                    <h3 className="text-base font-semibold text-[#E5E7EB] mb-2">Kelly Calculator</h3>
-                    <p className="text-[#9CA3AF] text-sm mb-3">
+                    <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
+                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">Kelly Calc</h3>
+                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
                       Size your bet sensibly to manage risk.
                     </p>
                     <Link href="/kelly-calculator">
-                      <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded font-medium text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
+                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
                         Open
                       </button>
                     </Link>
@@ -310,15 +310,15 @@ export default function Home() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.3 }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
-                    <Upload className="w-6 h-6 text-[#F4C430] mb-3" />
-                    <h3 className="text-base font-semibold text-[#E5E7EB] mb-2">Analyze Bet Slip</h3>
-                    <p className="text-[#9CA3AF] text-sm mb-3">
+                    <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
+                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">Analyze Slip</h3>
+                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
                       Upload your slip; we check if the price is fair.
                     </p>
                     <Link href="/analyze-slip">
-                      <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded font-medium text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
+                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
                         Open
                       </button>
                     </Link>
@@ -328,13 +328,13 @@ export default function Home() {
 
               {/* Premium CTA */}
               {!isPremium && (
-                <div className="mt-8 sm:mt-10 flex justify-center px-2">
+                <div className="mt-6 sm:mt-10 flex justify-center px-3">
                   <Link href="/pricing">
-                    <button className="group relative inline-flex items-center bg-gradient-to-r from-[#F4C430] to-[#e6b829] text-[#0B0F14] px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base hover:shadow-2xl hover:shadow-[#F4C430]/20 transform hover:-translate-y-0.5 transition-all duration-200">
-                      <Crown className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                      <span>Go Premium - Only $9.99/mo</span>
-                      <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
-                        SAVE 50%
+                    <button className="group relative inline-flex items-center bg-gradient-to-r from-[#F4C430] to-[#e6b829] text-[#0B0F14] px-4 sm:px-8 py-2.5 sm:py-4 rounded-xl font-bold text-[13px] sm:text-base hover:shadow-2xl hover:shadow-[#F4C430]/20 transform hover:-translate-y-0.5 transition-all duration-200">
+                      <Crown className="w-4 h-4 sm:w-6 sm:h-6 mr-1.5 sm:mr-2" />
+                      <span>Go Premium - $9.99/mo</span>
+                      <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-semibold">
+                        50% OFF
                       </div>
                     </button>
                   </Link>
@@ -359,14 +359,14 @@ export default function Home() {
         </section>
 
         {/* Answer-box Summary */}
-        <section className="py-8 px-4 sm:px-6 lg:px-8 border-b border-[#1F2937]">
+        <section className="py-6 sm:py-8 px-3 sm:px-6 lg:px-8 border-b border-[#1F2937]">
           <div className="max-w-4xl mx-auto">
-            <div className="bg-[#141C28] rounded-lg p-6 border border-[#1F2937]">
-              <p className="text-[#9CA3AF] mb-4">
+            <div className="bg-[#141C28] rounded-lg p-4 sm:p-6 border border-[#1F2937]">
+              <p className="text-[#9CA3AF] text-sm sm:text-base mb-3 sm:mb-4">
                 BetChekr helps you find value in betting lines. We compare sportsbook prices to fair odds (vig removed) 
                 and highlight <Tooltip content="Bets with positive expected value">+EV</Tooltip> opportunities.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-green-400" />
                   <span className="text-[#E5E7EB]">Find better prices</span>
@@ -415,7 +415,7 @@ export default function Home() {
         )}
 
         {/* 3) How it works */}
-        <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <section className="py-12 sm:py-20 px-3 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -423,12 +423,12 @@ export default function Home() {
               viewport={{ once: true }}
               className="text-center mb-12"
             >
-              <h2 className="text-3xl md:text-4xl font-bold text-[#E5E7EB] mb-6">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#E5E7EB] mb-4 sm:mb-6">
                 How BetChekr helps
               </h2>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
               {/* Step 1 */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
