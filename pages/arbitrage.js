@@ -214,11 +214,12 @@ export default function ArbitragePage() {
       return;
     }
     
-    // Check premium access for authenticated users
-    if (!isPremium) {
-      setShowPaywall(true);
-      return;
-    }
+    // Temporarily allow all authenticated users to use arbitrage
+    // Premium check disabled for testing
+    // if (!isPremium) {
+    //   setShowPaywall(true);
+    //   return;
+    // }
     
     setIsLoading(true);
     
