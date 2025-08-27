@@ -197,17 +197,17 @@ export default function ArbitragePage() {
   };
 
   const handleFindArbitrages = async () => {
-    // Check if user is authenticated and has premium access
+    // Check if user is authenticated first
     if (!user) {
-      alert('Please sign in to access arbitrage opportunities.');
+      setShowPaywall(true);
       return;
     }
     
-    // For now, allow all authenticated users - premium validation can be added later
-    // if (!isPremium) {
-    //   setShowPaywall(true);
-    //   return;
-    // }
+    // Check premium access for authenticated users
+    if (!isPremium) {
+      setShowPaywall(true);
+      return;
+    }
     
     setIsLoading(true);
     
