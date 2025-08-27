@@ -1,25 +1,26 @@
 import { useState, useContext, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Menu, X, Crown, User, Check } from 'lucide-react';
+import { Menu, X, Crown, User, Check, LogOut, Settings } from 'lucide-react';
 import { PremiumContext } from '../pages/_app';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isPremium } = useContext(PremiumContext);
+  const { user, signOut, loading } = useAuth();
   const router = useRouter();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userEmail, setUserEmail] = useState(null);
-  
-  useEffect(() => {
-    // Check if user is logged in (has premium subscription)
-    const savedEmail = localStorage.getItem('betchekr_user_email');
-    if (savedEmail) {
-      setIsLoggedIn(true);
-      setUserEmail(savedEmail);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setUserMenuOpen(false);
+      router.push('/');
+    } catch (error) {
+      console.error('Sign out error:', error);
     }
-  }, [isPremium]);
+  };
   
   const navLinks = [
     { href: '/line-shopping', label: 'Line Shopping' },
@@ -88,7 +89,7 @@ export default function Header() {
             )}
 
             {/* User Menu / Sign In */}
-            {isLoggedIn ? (
+            {user ? (
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -99,21 +100,31 @@ export default function Header() {
                 </button>
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-lg bg-[#0F172A] border border-[#1F2937] py-1">
-                    <button className="block w-full text-left px-4 py-2 text-sm text-[#9CA3AF] hover:bg-[#141C28] hover:text-[#F4C430]">
+                    <div className="px-4 py-2 text-xs text-[#6B7280] border-b border-[#1F2937]">
+                      {user.email}
+                    </div>
+                    <Link 
+                      href="/profile" 
+                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-[#9CA3AF] hover:bg-[#141C28] hover:text-[#F4C430] transition-colors"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <Settings className="w-4 h-4" />
                       Profile
-                    </button>
-                    <button className="block w-full text-left px-4 py-2 text-sm text-[#9CA3AF] hover:bg-[#141C28] hover:text-[#F4C430]">
-                      Settings
-                    </button>
+                    </Link>
                     <hr className="my-1 border-[#1F2937]" />
-                    <button className="block w-full text-left px-4 py-2 text-sm text-[#9CA3AF] hover:bg-[#141C28] hover:text-[#F4C430]">
+                    <button 
+                      onClick={handleSignOut}
+                      className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-[#9CA3AF] hover:bg-[#141C28] hover:text-red-400 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
                       Sign out
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              <Link href="/pricing" className="hidden sm:block text-sm font-medium text-[#9CA3AF] hover:text-[#F4C430] transition-colors">
+              <Link href="/auth/signin" className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#9CA3AF] hover:text-[#F4C430] border border-[#374151] rounded-lg hover:border-[#F4C430] transition-colors">
+                <User className="w-4 h-4" />
                 Sign in
               </Link>
             )}

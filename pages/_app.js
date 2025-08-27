@@ -1,6 +1,7 @@
 import { createContext, useState, useEffect } from 'react';
 import Head from 'next/head';
 import '../styles/globals.css';
+import { AuthProvider } from '../contexts/AuthContext';
 
 // Premium Context
 const PremiumContext = createContext({
@@ -183,9 +184,11 @@ function MyApp({ Component, pageProps }) {
         <link rel="apple-touch-icon" href="/betchekr_owl_logo.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
-      <PremiumContext.Provider value={premiumContextValue}>
-        <Component {...pageProps} />
-      </PremiumContext.Provider>
+      <AuthProvider>
+        <PremiumContext.Provider value={premiumContextValue}>
+          <Component {...pageProps} />
+        </PremiumContext.Provider>
+      </AuthProvider>
     </>
   );
 }
