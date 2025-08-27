@@ -261,9 +261,13 @@ export default function ArbitragePage() {
               id: opp.id || `arb_${Date.now()}`,
               sport: opp.sport || 'Unknown',
               game: opp.matchup || opp.game || 'Unknown Match',
+              matchup: opp.matchup || opp.game || 'Unknown Match', // For render compatibility
               market: opp.market_display || opp.market_type || 'Unknown Market',
+              market_display: opp.market_display || opp.market_type || 'Unknown Market', // For render compatibility
               commence_time: opp.commence_time,
               legs: opp.legs || [], // Include all legs for display
+              guaranteed_profit: parseFloat(opp.guaranteed_profit) || 0, // For render compatibility
+              investment_needed: opp.investment_needed || 100, // For render compatibility
               book1: {
                 name: opp.legs?.[0]?.sportsbook || 'Unknown Book',
                 odds: opp.legs?.[0]?.american_odds || 100,
@@ -500,14 +504,14 @@ export default function ArbitragePage() {
                         </div>
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                          {arb.legs.map((leg, index) => (
+                          {(arb.legs || []).map((leg, index) => (
                             <div key={index} className="p-3 bg-[#0F172A] rounded border border-[#1F2937]">
                               <div className="flex items-center justify-between mb-1">
-                                <span className="text-[#D1D5DB] font-medium text-sm">{leg.sportsbook}</span>
-                                <span className="text-[#F4C430] font-semibold">{leg.american_odds > 0 ? '+' : ''}{leg.american_odds}</span>
+                                <span className="text-[#D1D5DB] font-medium text-sm">{leg?.sportsbook || 'Unknown Book'}</span>
+                                <span className="text-[#F4C430] font-semibold">{(leg?.american_odds || 0) > 0 ? '+' : ''}{leg?.american_odds || 0}</span>
                               </div>
-                              <p className="text-[#9CA3AF] text-xs break-words">{leg.selection}</p>
-                              <p className="text-[#6B7280] text-xs">Decimal: {leg.decimal_odds} • Implied: {leg.implied_prob}</p>
+                              <p className="text-[#9CA3AF] text-xs break-words">{leg?.selection || 'Unknown Selection'}</p>
+                              <p className="text-[#6B7280] text-xs">Decimal: {leg?.decimal_odds || '2.00'} • Implied: {leg?.implied_prob || '50%'}</p>
                             </div>
                           ))}
                         </div>
@@ -516,10 +520,10 @@ export default function ArbitragePage() {
                         <div className="bg-[#0F172A] rounded p-3 mb-4">
                           <h5 className="text-[#E5E7EB] font-medium text-sm mb-2">💸 Optimal Stakes (${arb.investment_needed} total)</h5>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {arb.stake_distribution.map((stake, index) => (
+                            {(arb.stake_distribution || []).map((stake, index) => (
                               <div key={index} className="flex justify-between text-sm">
-                                <span className="text-[#9CA3AF]">{stake.sportsbook}:</span>
-                                <span className="text-[#F4C430] font-medium">{stake.stake} → {stake.payout}</span>
+                                <span className="text-[#9CA3AF]">{stake?.sportsbook || 'Book'}:</span>
+                                <span className="text-[#F4C430] font-medium">{stake?.stake || '$0'} → {stake?.payout || '$0'}</span>
                               </div>
                             ))}
                           </div>
