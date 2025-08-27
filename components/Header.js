@@ -178,8 +178,8 @@ export default function Header() {
                 Premium
               </div>
             )}
-            {!isLoggedIn && (
-              <Link href="/pricing" className="block w-full text-center px-4 py-3 text-sm font-medium text-[#9CA3AF] hover:text-[#F4C430] transition-colors">
+            {!user && (
+              <Link href="/auth/signin" className="block w-full text-center px-4 py-3 text-sm font-medium text-[#9CA3AF] hover:text-[#F4C430] transition-colors">
                 Sign in
               </Link>
             )}
