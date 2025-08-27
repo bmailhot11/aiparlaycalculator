@@ -23,6 +23,7 @@ export default function ArbitragePage() {
   const [selectedSport, setSelectedSport] = useState('ALL');
   const [scanAllSports, setScanAllSports] = useState(true);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [notification, setNotification] = useState(null);
 
   // Hero background images (sports-related)
   const backgroundImages = [
@@ -166,7 +167,8 @@ export default function ArbitragePage() {
     const totalStake = parseFloat(arbitrage.stake) || 100;
     
     if (!arbitrage.book1?.odds || !arbitrage.book2?.odds) {
-      alert('Error: Invalid odds data. Please refresh and try again.');
+      setNotification({ type: 'error', message: 'Invalid odds data. Please refresh and try again.' });
+      setTimeout(() => setNotification(null), 3000);
       return;
     }
     
@@ -177,7 +179,8 @@ export default function ArbitragePage() {
     const totalImplied = (1 / book1Decimal) + (1 / book2Decimal);
     
     if (totalImplied >= 1) {
-      alert('Error: No arbitrage opportunity exists with these odds.');
+      setNotification({ type: 'error', message: 'No arbitrage opportunity exists with these odds.' });
+      setTimeout(() => setNotification(null), 3000);
       return;
     }
     
@@ -189,11 +192,19 @@ export default function ArbitragePage() {
     const profit2 = (book2Stake * book2Decimal) - totalStake;
     const guaranteedProfit = Math.min(profit1, profit2);
     
-    alert(`Optimal Stakes:\n${arbitrage.book1.name}: $${book1Stake.toFixed(2)}\n${arbitrage.book2.name}: $${book2Stake.toFixed(2)}\nTotal: $${totalStake.toFixed(2)}\nGuaranteed Profit: $${guaranteedProfit.toFixed(2)} (${((guaranteedProfit/totalStake)*100).toFixed(2)}%)`);
+    setNotification({ 
+      type: 'success', 
+      message: `Optimal Stakes - ${arbitrage.book1.name}: $${book1Stake.toFixed(2)}, ${arbitrage.book2.name}: $${book2Stake.toFixed(2)}. Guaranteed Profit: $${guaranteedProfit.toFixed(2)} (${((guaranteedProfit/totalStake)*100).toFixed(2)}%)` 
+    });
+    setTimeout(() => setNotification(null), 5000);
   };
 
   const handlePlaceBets = (arbitrage) => {
-    alert(`This feature would redirect you to:\n\n1. ${arbitrage.book1.name} to bet on ${arbitrage.book1.bet}\n2. ${arbitrage.book2.name} to bet on ${arbitrage.book2.bet}\n\nPlease place bets manually on each sportsbook.`);
+    setNotification({ 
+      type: 'info', 
+      message: `Place bets manually: 1. ${arbitrage.book1.name} - ${arbitrage.book1.bet}, 2. ${arbitrage.book2.name} - ${arbitrage.book2.bet}` 
+    });
+    setTimeout(() => setNotification(null), 5000);
   };
 
   const handleFindArbitrages = async () => {
@@ -274,7 +285,7 @@ export default function ArbitragePage() {
 
   const handleNotifyMe = async (arbitrage) => {
     if (!user) {
-      alert('Please sign in to set up notifications.');
+      setShowPaywall(true);
       return;
     }
     
@@ -286,7 +297,7 @@ export default function ArbitragePage() {
 
     try {
       // Get user email from auth context or prompt
-      const userEmail = user?.email || prompt('Enter your email address to receive this arbitrage alert:');
+      const userEmail = user?.email;
       if (!userEmail) return;
 
       console.log('Sending arbitrage notification...');
@@ -306,19 +317,32 @@ export default function ArbitragePage() {
       const data = await response.json();
       
       if (response.ok && data.success) {
-        alert('✅ Arbitrage alert sent to your email successfully!');
+        setNotification({ type: 'success', message: 'Arbitrage alert sent to your email successfully!' });
+        setTimeout(() => setNotification(null), 3000);
       } else {
-        alert('❌ Failed to send alert: ' + (data.error || 'Unknown error'));
+        setNotification({ type: 'error', message: 'Failed to send alert: ' + (data.error || 'Unknown error') });
+        setTimeout(() => setNotification(null), 3000);
       }
     } catch (error) {
       console.error('Error sending notification:', error);
-      alert('❌ Error sending notification. Please try again.');
+      setNotification({ type: 'error', message: 'Error sending notification. Please try again.' });
+      setTimeout(() => setNotification(null), 3000);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#0B0F14]">
       <Header />
+      
+      {/* Notification Toast */}
+      {notification && (
+        <div className={`fixed top-20 right-4 z-50 max-w-md p-4 rounded-lg shadow-lg transition-opacity ${
+          notification.type === 'success' ? 'bg-green-600' : 
+          notification.type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+        } text-white`}>
+          <p className="text-sm">{notification.message}</p>
+        </div>
+      )}
       
       {/* Paywall Overlay */}
       {showPaywall && (
