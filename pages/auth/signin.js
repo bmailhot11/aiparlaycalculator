@@ -37,6 +37,11 @@ export default function SignIn() {
   const router = useRouter();
 
   useEffect(() => {
+    // Check if mode is signup from URL query
+    if (router.query.mode === 'signup') {
+      setIsSignUp(true);
+    }
+    
     // If user is already signed in, redirect
     if (user) {
       // Check for stored redirect from premium button

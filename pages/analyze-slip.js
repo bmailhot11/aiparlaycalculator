@@ -8,46 +8,39 @@ import {
   AlertTriangle,
   CheckCircle,
   Info,
-  Image as ImageIcon
+  Image as ImageIcon,
+  UserPlus
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import GradientBG from '../components/theme/GradientBG';
 import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
+import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../utils/api';
 
 export default function AnalyzeSlip() {
   const { isPremium } = useContext(PremiumContext);
+  const { user } = useAuth();
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
   const [usageData, setUsageData] = useState({ uploads: 0 });
   const [showPaywall, setShowPaywall] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Load user data on component mount
+  // Check user authentication and load usage data
   useEffect(() => {
-    const savedUser = localStorage.getItem('betchekr_user');
-    if (savedUser) {
-      try {
-        setCurrentUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error('Error loading user:', error);
-        localStorage.removeItem('betchekr_user');
-      }
-    }
-    
-    if (!isPremium) {
+    if (!isPremium && user) {
       checkUsage();
     }
-  }, [isPremium]);
+  }, [isPremium, user]);
 
   const checkUsage = async () => {
+    if (!user) return;
+    
     try {
-      const userIdentifier = currentUser?.id || `anon_${Date.now()}`;
-      const response = await apiFetch(`/api/check-usage?userIdentifier=${userIdentifier}`);
+      const response = await apiFetch(`/api/check-usage?userIdentifier=${user.id}`);
       const data = await response.json();
       
       if (response.ok) {
@@ -175,6 +168,34 @@ export default function AnalyzeSlip() {
             </p>
           </div>
 
+          {/* Authentication Gate */}
+          {!user ? (
+            <div className="bg-[#141C28] border border-[#1F2937] rounded-lg p-8 text-center mb-8">
+              <UserPlus className="w-16 h-16 text-[#F4C430] mx-auto mb-6" />
+              <h2 className="text-2xl font-bold text-[#E5E7EB] mb-4">
+                Create Account to Analyze Bet Slips
+              </h2>
+              <p className="text-[#9CA3AF] text-lg mb-6 max-w-2xl mx-auto">
+                Sign up for a free account to analyze your bet slips and get AI-powered insights. 
+                Free users get 1 analysis per day, premium users get unlimited access.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/auth/signin">
+                  <button className="bg-[#F4C430] text-[#0B0F14] px-6 py-3 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors min-h-[44px] text-sm sm:text-base">
+                    Sign In
+                  </button>
+                </Link>
+                <Link href="/auth/signin?mode=signup">
+                  <button className="border border-[#F4C430] text-[#F4C430] px-6 py-3 rounded-lg font-semibold hover:bg-[#F4C430]/10 transition-colors min-h-[44px] text-sm sm:text-base">
+                    Create Free Account
+                  </button>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Content for authenticated users */}
+
           {/* Info Box */}
           <div className="bg-[#141C28] border border-[#1F2937] rounded-lg p-6 mb-8">
             <div className="flex items-start gap-3">
@@ -297,28 +318,30 @@ export default function AnalyzeSlip() {
             </div>
           </div>
 
-          {/* Tips Section */}
-          <div className="mt-8 bg-[#141C28] border border-[#1F2937] rounded-lg p-6">
-            <h3 className="text-[#E5E7EB] font-semibold mb-4">Tips for Best Results</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-[#9CA3AF]">
-              <div>
-                <h4 className="text-[#F4C430] font-medium mb-2">Image Quality</h4>
-                <ul className="space-y-1">
-                  <li>• Use good lighting</li>
-                  <li>• Keep image sharp and clear</li>
-                  <li>• Avoid glare or shadows</li>
-                </ul>
+              {/* Tips Section */}
+              <div className="mt-8 bg-[#141C28] border border-[#1F2937] rounded-lg p-6">
+                <h3 className="text-[#E5E7EB] font-semibold mb-4">Tips for Best Results</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-[#9CA3AF]">
+                  <div>
+                    <h4 className="text-[#F4C430] font-medium mb-2">Image Quality</h4>
+                    <ul className="space-y-1">
+                      <li>• Use good lighting</li>
+                      <li>• Keep image sharp and clear</li>
+                      <li>• Avoid glare or shadows</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="text-[#F4C430] font-medium mb-2">Bet Slip Content</h4>
+                    <ul className="space-y-1">
+                      <li>• Include all bet details</li>
+                      <li>• Show odds clearly</li>
+                      <li>• Capture stake amount</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h4 className="text-[#F4C430] font-medium mb-2">Bet Slip Content</h4>
-                <ul className="space-y-1">
-                  <li>• Include all bet details</li>
-                  <li>• Show odds clearly</li>
-                  <li>• Capture stake amount</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
 
         <Footer />

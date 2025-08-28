@@ -10,7 +10,8 @@ import {
   Sliders,
   Target,
   TrendingUp,
-  Zap
+  Zap,
+  UserPlus
 } from 'lucide-react';
 import Link from 'next/link';
 import Header from '../components/Header';
@@ -36,7 +37,6 @@ export default function AIParlayPage() {
   const [copied, setCopied] = useState(false);
   const [usageData, setUsageData] = useState({ generations: 0 });
   const [showPaywall, setShowPaywall] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
   const [useEnhancedEV, setUseEnhancedEV] = useState(true); // Use enhanced EV calculations
 
   // Hero background images (sports-related)
@@ -62,25 +62,16 @@ export default function AIParlayPage() {
   const sports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB'];
 
   useEffect(() => {
-    // Load user and check usage
-    const savedUser = localStorage.getItem('betchekr_user');
-    if (savedUser) {
-      try {
-        setCurrentUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error('Error loading user:', error);
-      }
-    }
-    
-    if (!isPremium) {
+    if (!isPremium && user) {
       checkUsage();
     }
-  }, [isPremium]);
+  }, [isPremium, user]);
 
   const checkUsage = async () => {
+    if (!user) return;
+    
     try {
-      const userIdentifier = currentUser?.id || `anon_${Date.now()}`;
-      const response = await apiFetch(`/api/check-usage?userIdentifier=${userIdentifier}`);
+      const response = await apiFetch(`/api/check-usage?userIdentifier=${user.id}`);
       const data = await response.json();
       
       if (response.ok) {
@@ -527,6 +518,56 @@ export default function AIParlayPage() {
           usageLimit="1 parlay per day"
         />
       )}
+
+      {/* Authentication Gate */}
+      {!user ? (
+        <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+          {/* Background Image Grid */}
+          <div className="absolute inset-0 grid grid-cols-4 md:grid-cols-5 gap-2 opacity-20">
+            {backgroundImages.map((_, index) => (
+              <div 
+                key={index}
+                className="relative w-full h-32 md:h-40 bg-[#1F2937] rounded-lg overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F14] to-transparent" />
+              </div>
+            ))}
+          </div>
+          
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-[#0B0F14]/70" />
+          
+          {/* Auth Gate Content */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="relative z-10 max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 text-center"
+          >
+            <UserPlus className="w-16 h-16 mx-auto mb-6 text-[#F4C430]" />
+            <h1 className="text-4xl md:text-5xl font-bold text-[#E5E7EB] mb-6">
+              Create Account to Generate AI Parlays
+            </h1>
+            <p className="text-xl text-[#9CA3AF] max-w-3xl mx-auto mb-8">
+              Sign up for a free account to generate AI-powered parlays with optimal EV calculations. 
+              Free users get 1 parlay per day, premium users get unlimited access.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/auth/signin">
+                <button className="bg-[#F4C430] text-[#0B0F14] px-8 py-4 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors min-h-[44px] text-lg">
+                  Sign In
+                </button>
+              </Link>
+              <Link href="/auth/signin?mode=signup">
+                <button className="border border-[#F4C430] text-[#F4C430] px-8 py-4 rounded-lg font-semibold hover:bg-[#F4C430]/10 transition-colors min-h-[44px] text-lg">
+                  Create Free Account
+                </button>
+              </Link>
+            </div>
+          </motion.div>
+        </section>
+      ) : (
+        <>
       
       {/* Hero Section with Background Collage */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
@@ -877,7 +918,8 @@ export default function AIParlayPage() {
           </motion.div>
         </motion.div>
       </section>
-
+        </>
+      )}
       
         <Footer />
       </GradientBG>
