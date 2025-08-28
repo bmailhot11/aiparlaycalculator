@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import GradientBG from '../components/theme/GradientBG';
 import { PremiumContext } from './_app';
 import { apiFetch } from '../utils/api';
 
@@ -34,7 +33,6 @@ export default function Home() {
   const [currentEdge, setCurrentEdge] = useState(null);
   const [liveArbitrage, setLiveArbitrage] = useState(null);
   const [loadingArbitrage, setLoadingArbitrage] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
 
   // Load user data and fetch live stats
   useEffect(() => {
@@ -56,16 +54,6 @@ export default function Home() {
     // Fetch current edge (with graceful fallbacks)
     fetchCurrentEdge();
   }, [user, isPremium]);
-
-  // Handle scroll for premium header
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
 
   const fetchCurrentEdge = async () => {
@@ -199,14 +187,6 @@ export default function Home() {
     </span>
   );
 
-  // Apply premium theme to homepage
-  useEffect(() => {
-    document.body.classList.add('betchekr-premium');
-    return () => {
-      document.body.classList.remove('betchekr-premium');
-    };
-  }, []);
-
   return (
     <>
       <Head>
@@ -269,27 +249,24 @@ export default function Home() {
         }} />
       </Head>
 
-      <GradientBG>
-        {/* Premium Header */}
-        <header className={`premium-header fixed top-0 w-full z-40 ${isScrolled ? 'scrolled' : ''}`}>
-          <Header />
-        </header>
+      <div className="min-h-screen bg-[#0B0F14]">
+        <Header />
         
 
         {/* 1) Hero Section */}
-        <section className="relative pt-32 pb-20 px-6">
-          <div className="max-w-1240 mx-auto">
+        <section className="relative py-6 sm:py-20 px-0 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
               className="text-center max-w-4xl mx-auto mb-8 sm:mb-12"
             >
-              <h1 className="text-primary mb-6">
+              <h1 className="text-[1.5rem] leading-[1.3] sm:text-4xl md:text-6xl font-bold text-[#E5E7EB] mb-3 sm:mb-6 px-3 sm:px-2">
                 Use our AI for sports betting to increase your odds and find the best opportunities for you
               </h1>
               
-              <p className="body-text mb-8 max-w-3xl mx-auto">
+              <p className="text-[#9CA3AF] text-sm sm:text-lg md:text-xl leading-relaxed mb-4 sm:mb-8 max-w-3xl mx-auto px-4 sm:px-0">
                 We compare sportsbook prices, remove the house edge (<Tooltip content="The bookmaker's built-in profit margin">vig</Tooltip>), 
                 and show where the value is so you bet smarter and win bigger.
               </p>
@@ -302,15 +279,15 @@ export default function Home() {
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="glass-panel p-4 hover:border-premium-accent/50 transition-colors"
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
-                    <TrendingUp className="w-6 h-6 text-premium-accent mb-3" />
-                    <h3 className="text-base font-semibold text-primary mb-2">Arbitrage</h3>
-                    <p className="text-muted text-sm mb-3 hidden sm:block">
+                    <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
+                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">Arbitrage</h3>
+                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
                       Find guaranteed profit opportunities across books.
                     </p>
                     <Link href="/arbitrage">
-                      <button className="btn-primary w-full">
+                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
                         Open
                       </button>
                     </Link>
@@ -322,15 +299,15 @@ export default function Home() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.1 }}
-                    className="glass-panel p-4 hover:border-premium-accent/50 transition-colors"
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
-                    <Target className="w-6 h-6 text-premium-accent mb-3" />
-                    <h3 className="text-base font-semibold text-primary mb-2">Line Shop</h3>
-                    <p className="text-muted text-sm mb-3 hidden sm:block">
+                    <Target className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
+                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">Line Shop</h3>
+                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
                       Find the best price across books before you bet.
                     </p>
                     <Link href="/line-shopping">
-                      <button className="btn-primary w-full">
+                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
                         Open
                       </button>
                     </Link>
@@ -342,15 +319,15 @@ export default function Home() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.2 }}
-                    className="glass-panel p-4 hover:border-premium-accent/50 transition-colors"
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
-                    <DollarSign className="w-6 h-6 text-premium-accent mb-3" />
-                    <h3 className="text-base font-semibold text-primary mb-2">Kelly Calc</h3>
-                    <p className="text-muted text-sm mb-3 hidden sm:block">
+                    <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
+                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">Kelly Calc</h3>
+                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
                       Size your bet sensibly to manage risk.
                     </p>
                     <Link href="/kelly-calculator">
-                      <button className="btn-primary w-full">
+                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
                         Open
                       </button>
                     </Link>
@@ -362,15 +339,15 @@ export default function Home() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.3 }}
-                    className="glass-panel p-4 hover:border-premium-accent/50 transition-colors"
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
-                    <Upload className="w-6 h-6 text-premium-accent mb-3" />
-                    <h3 className="text-base font-semibold text-primary mb-2">Analyze Slip</h3>
-                    <p className="text-muted text-sm mb-3 hidden sm:block">
+                    <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
+                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">Analyze Slip</h3>
+                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
                       Upload your slip; we check if the price is fair.
                     </p>
                     <Link href="/analyze-slip">
-                      <button className="btn-primary w-full">
+                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
                         Open
                       </button>
                     </Link>
@@ -382,7 +359,7 @@ export default function Home() {
               {!isPremium && (
                 <div className="mt-6 sm:mt-10 flex justify-center px-3">
                   <Link href="/pricing">
-                    <button className="btn-primary group relative inline-flex items-center px-8 py-4 rounded-premium-lg font-bold text-base hover:shadow-premium-1 hover:shadow-premium-accent/20 transform hover:-translate-y-0.5 transition-all duration-200">
+                    <button className="group relative inline-flex items-center bg-gradient-to-r from-[#F4C430] to-[#e6b829] text-[#0B0F14] px-4 sm:px-8 py-2.5 sm:py-4 rounded-xl font-bold text-[13px] sm:text-base hover:shadow-2xl hover:shadow-[#F4C430]/20 transform hover:-translate-y-0.5 transition-all duration-200">
                       <Crown className="w-4 h-4 sm:w-6 sm:h-6 mr-1.5 sm:mr-2" />
                       <span>Go Premium - $9.99/mo</span>
                       <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-semibold">
@@ -397,7 +374,7 @@ export default function Home() {
               <div className="mt-6 mb-8 sm:mb-12 flex justify-center px-2">
                 <Link href="/learn/how-to-use-ai-for-sports-betting">
                   <button 
-                    className="btn-secondary inline-flex items-center px-4 py-2 font-medium text-sm"
+                    className="inline-flex items-center bg-transparent border border-[#F4C430] text-[#F4C430] px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm hover:bg-[#F4C430] hover:text-[#0B0F14] transition-colors"
                     data-event="cta_ai_article_click"
                   >
                     How AI helps (2-minute read)
@@ -411,25 +388,25 @@ export default function Home() {
         </section>
 
         {/* Answer-box Summary */}
-        <section className="py-8 px-6">
-          <div className="max-w-1240 mx-auto">
-            <div className="glass-panel p-6">
-              <p className="text-muted mb-4">
+        <section className="py-6 sm:py-8 px-3 sm:px-6 lg:px-8 border-b border-[#1F2937]">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-[#141C28] rounded-lg p-4 sm:p-6 border border-[#1F2937]">
+              <p className="text-[#9CA3AF] text-sm sm:text-base mb-3 sm:mb-4">
                 BetChekr helps you find value in betting lines. We compare sportsbook prices to fair odds (vig removed) 
                 and highlight <Tooltip content="Bets with positive expected value">+EV</Tooltip> opportunities.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-green-400" />
-                  <span className="text-primary">Find better prices</span>
+                  <span className="text-[#E5E7EB]">Find better prices</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-green-400" />
-                  <span className="text-primary">Understand fair odds</span>
+                  <span className="text-[#E5E7EB]">Understand fair odds</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-green-400" />
-                  <span className="text-primary">Size your bets sensibly</span>
+                  <span className="text-[#E5E7EB]">Size your bets sensibly</span>
                 </div>
               </div>
             </div>
@@ -437,18 +414,18 @@ export default function Home() {
         </section>
 
         {/* Live Arbitrage Opportunities */}
-        <section className="py-20 px-6">
-          <div className="max-w-1240 mx-auto">
+        <section className="py-8 sm:py-12 px-3 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               className="text-center mb-6"
             >
-              <h2 className="text-primary mb-4">
+              <h2 className="text-2xl sm:text-3xl font-bold text-[#E5E7EB] mb-2">
                 Live Arbitrage Opportunities
               </h2>
-              <p className="text-muted">
+              <p className="text-[#9CA3AF] text-sm sm:text-base">
                 Positive return opportunities happening right now
               </p>
             </motion.div>
@@ -457,7 +434,7 @@ export default function Home() {
               <div className="text-center">
                 <button
                   onClick={fetchLiveArbitrage}
-                  className="btn-primary inline-flex items-center px-6 py-3 font-semibold"
+                  className="inline-flex items-center px-6 py-3 bg-[#F4C430] text-[#0B0F14] rounded-lg font-semibold hover:bg-[#e6b829] transition-colors"
                 >
                   <TrendingUp className="w-5 h-5 mr-2" />
                   Find Live Arbitrage
@@ -467,9 +444,9 @@ export default function Home() {
 
             {loadingArbitrage && (
               <div className="text-center">
-                <div className="glass-panel px-6 py-3">
-                  <div className="w-5 h-5 border-2 border-premium-accent border-t-transparent rounded-full animate-spin mr-2" />
-                  <span className="text-muted">Scanning all sports...</span>
+                <div className="inline-flex items-center px-6 py-3 bg-[#1F2937] rounded-lg">
+                  <div className="w-5 h-5 border-2 border-[#F4C430] border-t-transparent rounded-full animate-spin mr-2" />
+                  <span className="text-[#9CA3AF]">Scanning all sports...</span>
                 </div>
               </div>
             )}
@@ -482,14 +459,14 @@ export default function Home() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="glass-panel p-4 hover:border-premium-accent/50 transition-colors"
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="text-primary font-semibold text-sm">
+                        <h3 className="text-[#E5E7EB] font-semibold text-sm">
                           {arb.matchup || 'Unknown Match'}
                         </h3>
-                        <p className="text-muted text-xs">
+                        <p className="text-[#6B7280] text-xs">
                           {arb.market_display || 'Market'}
                         </p>
                       </div>
@@ -497,15 +474,15 @@ export default function Home() {
                         <span className="text-green-400 font-bold text-lg">
                           +{parseFloat(arb.profit_percentage || 0).toFixed(2)}%
                         </span>
-                        <p className="text-muted text-xs">Return</p>
+                        <p className="text-[#6B7280] text-xs">Return</p>
                       </div>
                     </div>
                     
                     <div className="space-y-2">
                       {(arb.legs || []).slice(0, 2).map((leg, i) => (
                         <div key={i} className="flex justify-between text-xs">
-                          <span className="text-muted">{leg?.sportsbook}</span>
-                          <span className="text-premium-accent">
+                          <span className="text-[#9CA3AF]">{leg?.sportsbook}</span>
+                          <span className="text-[#F4C430]">
                             {(leg?.american_odds || 0) > 0 ? '+' : ''}{leg?.american_odds}
                           </span>
                         </div>
@@ -513,7 +490,7 @@ export default function Home() {
                     </div>
 
                     <Link href="/arbitrage">
-                      <button className="btn-secondary w-full mt-3 py-2 text-xs font-medium">
+                      <button className="w-full mt-3 bg-[#F4C430]/10 text-[#F4C430] py-2 rounded text-xs font-medium hover:bg-[#F4C430]/20 transition-colors">
                         View Details
                       </button>
                     </Link>
@@ -525,8 +502,8 @@ export default function Home() {
             {liveArbitrage && liveArbitrage.length === 0 && (
               <div className="text-center py-8">
                 <Target className="w-12 h-12 mx-auto mb-3 text-[#6B7280]" />
-                <p className="text-muted">No arbitrage opportunities at the moment</p>
-                <p className="text-muted text-sm mt-1">Check back soon or try again</p>
+                <p className="text-[#9CA3AF]">No arbitrage opportunities at the moment</p>
+                <p className="text-[#6B7280] text-sm mt-1">Check back soon or try again</p>
               </div>
             )}
           </div>
@@ -563,15 +540,15 @@ export default function Home() {
         )}
 
         {/* 3) How it works */}
-        <section className="py-20 px-6">
-          <div className="max-w-1240 mx-auto">
+        <section className="py-12 sm:py-20 px-3 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               className="text-center mb-12"
             >
-              <h2 className="text-primary mb-6">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#E5E7EB] mb-4 sm:mb-6">
                 How BetChekr helps
               </h2>
             </motion.div>
@@ -585,11 +562,11 @@ export default function Home() {
                 transition={{ delay: 0.1 }}
                 className="text-center"
               >
-                <div className="w-12 h-12 bg-premium-accent text-black rounded-full flex items-center justify-center font-bold text-xl mb-4 mx-auto">
+                <div className="w-12 h-12 bg-[#F4C430] text-[#0B0F14] rounded-full flex items-center justify-center font-bold text-xl mb-4 mx-auto">
                   1
                 </div>
-                <h3 className="text-xl font-semibold text-primary mb-3">Prices</h3>
-                <p className="text-muted">
+                <h3 className="text-xl font-semibold text-[#E5E7EB] mb-3">Prices</h3>
+                <p className="text-[#9CA3AF]">
                   We pull the latest odds from multiple sportsbooks.
                 </p>
               </motion.div>
@@ -602,11 +579,11 @@ export default function Home() {
                 transition={{ delay: 0.2 }}
                 className="text-center"
               >
-                <div className="w-12 h-12 bg-premium-accent text-black rounded-full flex items-center justify-center font-bold text-xl mb-4 mx-auto">
+                <div className="w-12 h-12 bg-[#F4C430] text-[#0B0F14] rounded-full flex items-center justify-center font-bold text-xl mb-4 mx-auto">
                   2
                 </div>
-                <h3 className="text-xl font-semibold text-primary mb-3">True value</h3>
-                <p className="text-muted">
+                <h3 className="text-xl font-semibold text-[#E5E7EB] mb-3">True value</h3>
+                <p className="text-[#9CA3AF]">
                   We remove the <Tooltip content="The bookmaker's built-in profit margin">vig</Tooltip> (the book's cut) to estimate fair odds.
                 </p>
               </motion.div>
@@ -619,11 +596,11 @@ export default function Home() {
                 transition={{ delay: 0.3 }}
                 className="text-center"
               >
-                <div className="w-12 h-12 bg-premium-accent text-black rounded-full flex items-center justify-center font-bold text-xl mb-4 mx-auto">
+                <div className="w-12 h-12 bg-[#F4C430] text-[#0B0F14] rounded-full flex items-center justify-center font-bold text-xl mb-4 mx-auto">
                   3
                 </div>
-                <h3 className="text-xl font-semibold text-primary mb-3">Your decision</h3>
-                <p className="text-muted">
+                <h3 className="text-xl font-semibold text-[#E5E7EB] mb-3">Your decision</h3>
+                <p className="text-[#9CA3AF]">
                   We highlight better-value bets (<Tooltip content="Bets with positive expected value">+EV</Tooltip>) and suggest smart staking rules like <Tooltip content="A bet sizing strategy that maximizes long-term growth">Kelly</Tooltip>.
                 </p>
               </motion.div>
@@ -632,8 +609,8 @@ export default function Home() {
         </section>
 
         {/* 4) Proof section */}
-        <section className="py-20 px-6">
-          <div className="max-w-1240 mx-auto text-center">
+        <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -850,7 +827,7 @@ export default function Home() {
         </section>
         
         <Footer />
-      </GradientBG>
+      </div>
     </>
   );
 }

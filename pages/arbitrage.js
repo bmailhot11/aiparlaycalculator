@@ -233,14 +233,14 @@ export default function ArbitragePage() {
     const book1Stake = totalStake * (1 / book1Decimal) / totalImplied;
     const book2Stake = totalStake * (1 / book2Decimal) / totalImplied;
     
-    // Calculate guaranteed profit
+    // Calculate expected return
     const profit1 = (book1Stake * book1Decimal) - totalStake;
     const profit2 = (book2Stake * book2Decimal) - totalStake;
-    const guaranteedProfit = Math.min(profit1, profit2);
+    const expectedReturn = Math.min(profit1, profit2);
     
     setNotification({ 
       type: 'success', 
-      message: `Optimal Stakes - ${arbitrage.book1.name}: $${book1Stake.toFixed(2)}, ${arbitrage.book2.name}: $${book2Stake.toFixed(2)}. Guaranteed Profit: $${guaranteedProfit.toFixed(2)} (${((guaranteedProfit/totalStake)*100).toFixed(2)}%)` 
+      message: `Optimal Stakes - ${arbitrage.book1.name}: $${book1Stake.toFixed(2)}, ${arbitrage.book2.name}: $${book2Stake.toFixed(2)}. Expected Return: $${expectedReturn.toFixed(2)} (${((expectedReturn/totalStake)*100).toFixed(2)}%)` 
     });
     setTimeout(() => setNotification(null), 5000);
   };
@@ -326,7 +326,7 @@ export default function ArbitragePage() {
               market_display: opp.market_display || opp.market_type || 'Unknown Market', // For render compatibility
               commence_time: opp.commence_time,
               legs: opp.legs || [], // Include all legs for display
-              guaranteed_profit: parseFloat(opp.guaranteed_profit) || 0, // For render compatibility
+              expected_return: parseFloat(opp.guaranteed_profit) || 0, // For render compatibility
               investment_needed: opp.investment_needed || 100, // For render compatibility
               book1: {
                 name: opp.legs?.[0]?.sportsbook || 'Unknown Book',
@@ -340,7 +340,7 @@ export default function ArbitragePage() {
                 bet: opp.legs?.[1]?.selection || 'Unknown Selection',  
                 decimal: opp.legs?.[1]?.decimal_odds || '2.00'
               },
-              profit: parseFloat(opp.profit_percentage) || parseFloat(opp.guaranteed_profit) || 0,
+              profit: parseFloat(opp.profit_percentage) || parseFloat(opp.expected_return) || 0,
               profit_percentage: parseFloat(opp.profit_percentage) || 0,
               total_implied_prob: opp.total_implied_prob || '100%',
               stake: opp.investment_needed || 100,
@@ -504,7 +504,6 @@ export default function ArbitragePage() {
           className="relative z-10 max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 text-center"
         >
           <h1 className="mb-6">
-            <Target className="w-16 h-16 mx-auto mb-4 text-[#F4C430]" />
             Find Arbitrage Opportunities
           </h1>
           <p className="text-[#9CA3AF] text-lg max-w-[720px] mx-auto mb-10">
@@ -545,7 +544,7 @@ export default function ArbitragePage() {
               
               <div className="text-center">
                 <p className="text-[#6B7280] text-sm mb-2">
-                  Scanning all available sports and leagues for guaranteed profit opportunities
+                  Scanning all available sports and leagues for positive return opportunities
                 </p>
                 {!isPremium && user && arbitrageUsesLeft !== null && (
                   <p className="text-[#F4C430] text-xs font-medium">
@@ -572,7 +571,7 @@ export default function ArbitragePage() {
                   animate={{ opacity: 1, height: 'auto' }}
                   className="mt-6"
                 >
-                  <h3 className="text-[#E5E7EB] font-semibold mb-4">🎯 Live Arbitrage Opportunities</h3>
+                  <h3 className="text-[#E5E7EB] font-semibold mb-4">Live Arbitrage Opportunities</h3>
                   <div className="space-y-4">
                     {arbitrageData.map((arb) => (
                       <div key={arb.id} className="p-4 bg-[#0B1220] rounded-lg border border-[#1F2937] hover:border-[#F4C430]/30 transition-colors">
@@ -584,8 +583,8 @@ export default function ArbitragePage() {
                           </div>
                           <div className="text-right">
                             <span className="text-green-400 font-semibold text-xl">+{arb.profit_percentage}%</span>
-                            <p className="text-[#6B7280] text-sm">Guaranteed Profit</p>
-                            <p className="text-[#F4C430] text-sm">${arb.guaranteed_profit}</p>
+                            <p className="text-[#6B7280] text-sm">Expected Return</p>
+                            <p className="text-[#F4C430] text-sm">${arb.expected_return}</p>
                           </div>
                         </div>
                         
@@ -604,7 +603,7 @@ export default function ArbitragePage() {
 
                         {/* Stakes Breakdown */}
                         <div className="bg-[#0F172A] rounded p-3 mb-4">
-                          <h5 className="text-[#E5E7EB] font-medium text-sm mb-2">💸 Optimal Stakes (${arb.investment_needed} total)</h5>
+                          <h5 className="text-[#E5E7EB] font-medium text-sm mb-2">Optimal Stakes (${arb.investment_needed} total)</h5>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {(arb.stake_distribution || []).map((stake, index) => (
                               <div key={index} className="flex justify-between text-sm">
@@ -626,7 +625,7 @@ export default function ArbitragePage() {
                           <button 
                             onClick={() => {
                               const stakeInfo = arb.stake_distribution.map(s => `${s.sportsbook}: ${s.stake} on ${s.selection}`).join('\n');
-                              alert(`🎯 Arbitrage Instructions:\n\n${stakeInfo}\n\nTotal Investment: $${arb.investment_needed}\nGuaranteed Profit: $${arb.guaranteed_profit} (${arb.profit_percentage}%)\n\nPlace these bets quickly - odds may change!`);
+                              alert(`🎯 Arbitrage Instructions:\n\n${stakeInfo}\n\nTotal Investment: $${arb.investment_needed}\nExpected Return: $${arb.expected_return} (${arb.profit_percentage}%)\n\nPlace these bets quickly - odds may change!`);
                             }}
                             className="btn btn-primary text-sm flex-1"
                           >

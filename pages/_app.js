@@ -2,6 +2,7 @@ import { createContext, useState, useEffect } from 'react';
 import Head from 'next/head';
 import '../styles/globals.css';
 import { AuthProvider } from '../contexts/AuthContext';
+import SiteTheme from '../components/theme/SiteTheme';
 
 // Premium Context
 const PremiumContext = createContext({
@@ -186,7 +187,9 @@ function MyApp({ Component, pageProps }) {
       </Head>
       <AuthProvider>
         <PremiumContext.Provider value={premiumContextValue}>
-          <Component {...pageProps} />
+          <SiteTheme>
+            <Component {...pageProps} />
+          </SiteTheme>
         </PremiumContext.Provider>
       </AuthProvider>
     </>
