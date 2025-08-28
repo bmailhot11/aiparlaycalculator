@@ -21,17 +21,19 @@ import {
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import GradientBG from '../../components/theme/GradientBG';
 
 export default function HowAIHelpsBettors() {
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>How AI Can Help Bettors (BetChekr AI Explained) | BetChekr Learn</title>
         <meta name="description" content="Learn how AI makes complex betting math simple and accessible for beginners. See how BetChekr uses AI to analyze your bets." />
       </Head>
-
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         <main className="max-w-4xl mx-auto px-4 py-8">
           {/* Breadcrumb */}
@@ -485,7 +487,7 @@ export default function HowAIHelpsBettors() {
         </main>
 
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

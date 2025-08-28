@@ -17,17 +17,19 @@ import {
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import GradientBG from '../../components/theme/GradientBG';
 
 export default function WhatIsExpectedValue() {
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>What Is EV (Expected Value) in Sports Betting? | BetChekr Learn</title>
         <meta name="description" content="Learn what Expected Value (EV) means in sports betting, how to identify +EV bets, and why it's essential for profitable betting." />
       </Head>
-
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         <main className="max-w-4xl mx-auto px-4 py-8">
           {/* Breadcrumb */}
@@ -407,7 +409,7 @@ export default function WhatIsExpectedValue() {
         </main>
 
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import GradientBG from '../../components/theme/GradientBG';
 
 export default function NHLBettingGuide() {
   const fadeIn = {
@@ -12,14 +13,15 @@ export default function NHLBettingGuide() {
   };
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>NHL Betting Guide - Puck Lines & Goal Totals Strategy | BetChekr</title>
         <meta name="description" content="Master NHL betting with our comprehensive guide. Learn puck lines, goal totals, player props, and advanced hockey betting strategies." />
       </Head>
-      
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         <div className="container mx-auto px-6 py-20">
           {/* Back to Learning */}
           <motion.div 
@@ -107,7 +109,7 @@ export default function NHLBettingGuide() {
         </div>
         
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

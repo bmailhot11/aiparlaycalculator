@@ -1,6 +1,7 @@
 // pages/success.js
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import GradientBG from '../components/theme/GradientBG';
 import { Check, Crown, Copy, Home } from 'lucide-react';
 
 export default function Success() {
@@ -102,7 +103,9 @@ export default function Success() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+    <div className="betchekr-premium">
+      <GradientBG>
+        <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-gray-800 rounded-2xl p-8 max-w-md w-full border border-gray-700 text-center">
         {/* Success Icon */}
         <div className="w-16 h-16 mx-auto mb-6 bg-green-600 rounded-full flex items-center justify-center">
@@ -202,7 +205,8 @@ export default function Success() {
             Session: {session_id.slice(-8)}
           </p>
         )}
-      </div>
+        </div>
+      </GradientBG>
     </div>
   );
 }

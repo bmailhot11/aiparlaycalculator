@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { Check, Crown, ArrowRight } from 'lucide-react';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const PRICING_FEATURES = {
   free: [
@@ -24,6 +26,18 @@ const PRICING_FEATURES = {
 };
 
 export default function Pricing() {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const handlePremiumClick = (e) => {
+    e.preventDefault();
+    if (!user) {
+      localStorage.setItem('redirectAfterAuth', '/pricing');
+      router.push('/auth/signin');
+    } else {
+      router.push('/pricing');
+    }
+  };
   return (
     <section className="py-20 px-6">
       <div className="max-w-1240 mx-auto">
@@ -137,12 +151,10 @@ export default function Pricing() {
               ))}
             </ul>
 
-            <Link href="/pricing">
-              <button className="w-full btn-primary py-3 text-base font-semibold inline-flex items-center justify-center gap-2 group">
-                Go Premium
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </button>
-            </Link>
+            <button onClick={handlePremiumClick} className="w-full btn-primary py-3 text-base font-semibold inline-flex items-center justify-center gap-2 group">
+              Go Premium
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </button>
           </motion.div>
         </div>
 

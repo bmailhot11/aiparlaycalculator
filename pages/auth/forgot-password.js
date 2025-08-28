@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { useAuth } from '../../contexts/AuthContext';
+import GradientBG from '../../components/theme/GradientBG';
 import { 
   Mail, 
   ArrowLeft, 
@@ -54,15 +55,17 @@ export default function ForgotPassword() {
   };
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>Reset Password | BetChekr</title>
         <meta name="description" content="Reset your BetChekr account password" />
       </Head>
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
 
-      <Header />
-
-      <div className="min-h-screen bg-[#0B0F14] pt-20 pb-12">
+        <div className="min-h-screen pt-20 pb-12">
         <div className="max-w-md mx-auto px-4 sm:px-6">
           <div className="bg-[#141C28] border border-[#1F2937] rounded-lg p-6 sm:p-8">
             {/* Back to Sign In */}
@@ -185,9 +188,8 @@ export default function ForgotPassword() {
             )}
           </div>
         </div>
-      </div>
-
-      <Footer />
-    </>
+        <Footer />
+      </GradientBG>
+    </div>
   );
 }

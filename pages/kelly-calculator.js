@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import GradientBG from '../components/theme/GradientBG';
 
 export default function KellyCalculator() {
   const [betOdds, setBetOdds] = useState('');
@@ -92,14 +93,15 @@ export default function KellyCalculator() {
   };
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>Kelly Calculator - Optimal Bet Sizing | BetChekr</title>
         <meta name="description" content="Calculate optimal bet size using the Kelly Criterion. Manage risk and maximize long-term growth with smart bankroll management." />
       </Head>
-
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         <div className="max-w-4xl mx-auto px-4 py-8">
           {/* Back Button */}
@@ -316,7 +318,7 @@ export default function KellyCalculator() {
         </div>
 
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

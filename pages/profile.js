@@ -4,6 +4,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import GradientBG from '../components/theme/GradientBG';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   User, 
@@ -130,11 +131,15 @@ export default function Profile() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#0B0F14] flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#F4C430] mx-auto mb-4" />
-          <p className="text-[#E5E7EB]">Loading...</p>
-        </div>
+      <div className="betchekr-premium">
+        <GradientBG>
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-[#F4C430] mx-auto mb-4" />
+              <p className="text-[#E5E7EB]">Loading...</p>
+            </div>
+          </div>
+        </GradientBG>
       </div>
     );
   }
@@ -144,15 +149,16 @@ export default function Profile() {
   }
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>Profile | BetChekr</title>
         <meta name="description" content="Manage your BetChekr account profile and settings" />
       </Head>
-
-      <Header />
-
-      <div className="min-h-screen bg-[#0B0F14] pt-20 pb-12">
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
+        <div className="min-h-screen pt-20 pb-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           {/* Header */}
           <div className="mb-8">
@@ -368,9 +374,9 @@ export default function Profile() {
             </div>
           </div>
         </div>
-      </div>
-
-      <Footer />
-    </>
+        </div>
+        <Footer />
+      </GradientBG>
+    </div>
   );
 }

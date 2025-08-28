@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import GradientBG from '../components/theme/GradientBG';
 import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
 
@@ -203,15 +204,16 @@ export default function LineShopping() {
 
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>Line Shopping - Compare Odds | BetChekr</title>
         <meta name="description" content="Compare betting lines across all major sportsbooks" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
-
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         <main className="max-w-7xl mx-auto px-4 py-8">
           {/* Hero Section */}
@@ -463,16 +465,15 @@ export default function LineShopping() {
         </main>
 
         <Footer />
-      </div>
-
-      {/* Paywall Modal */}
-      {showPaywall && (
-        <Paywall 
-          feature="Line Shopping"
-          onClose={() => setShowPaywall(false)}
-        />
-      )}
-
-    </>
+        
+        {/* Paywall Modal */}
+        {showPaywall && (
+          <Paywall 
+            feature="Line Shopping"
+            onClose={() => setShowPaywall(false)}
+          />
+        )}
+      </GradientBG>
+    </div>
   );
 }

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import GradientBG from '../components/theme/GradientBG';
 import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
 import { generateImprovedSlipImage, downloadImprovedSlip } from '../utils/generateImprovedSlipImage';
@@ -200,31 +201,34 @@ export default function DailyPicks() {
 
   if (!isPremium || showPaywall) {
     return (
-      <>
+      <div className="betchekr-premium">
         <Head>
           <title>Daily Picks - Premium Feature | BetChekr</title>
         </Head>
-        <div className="min-h-screen bg-[#0B0F14]">
-          <Header />
+        <GradientBG>
+          <div className="premium-header sticky top-0 z-50">
+            <Header />
+          </div>
           <Paywall 
             feature="Daily Picks"
             onClose={() => setShowPaywall(false)}
           />
           <Footer />
-        </div>
-      </>
+        </GradientBG>
+      </div>
     );
   }
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>Daily Picks - Expert Betting Analysis | BetChekr</title>
         <meta name="description" content="Expert daily betting picks with mathematical analysis and edge calculations." />
       </Head>
-      
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         <main className="max-w-7xl mx-auto px-4 py-8">
           {/* Hero Section */}
@@ -464,8 +468,8 @@ export default function DailyPicks() {
         </main>
 
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }
 

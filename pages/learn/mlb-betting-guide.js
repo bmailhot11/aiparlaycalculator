@@ -17,6 +17,7 @@ import {
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import LineMovementChart from '../../components/LineMovementChart';
+import GradientBG from '../../components/theme/GradientBG';
 
 export default function MLBBettingGuide() {
   const [showLineMovement, setShowLineMovement] = useState(false);
@@ -76,15 +77,16 @@ export default function MLBBettingGuide() {
   ];
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>MLB Betting Lines Explained: How to Read and Beat the Numbers | BetChekr</title>
         <meta name="description" content="Master MLB betting with this comprehensive guide. Learn moneylines, run lines, totals, and advanced strategies for baseball's 162-game season." />
         <meta name="keywords" content="MLB betting, baseball betting lines, run line, moneyline, totals, over under, baseball strategy" />
       </Head>
-
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         <main className="max-w-4xl mx-auto px-4 py-8">
           {/* Breadcrumb & Back */}
@@ -439,7 +441,7 @@ export default function MLBBettingGuide() {
           market="h2h"
           hours={24}
         />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

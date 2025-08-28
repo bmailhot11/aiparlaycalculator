@@ -1,5 +1,6 @@
 import { useState, useContext, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/router';
 import { 
   Brain,
   AlertCircle,
@@ -14,14 +15,18 @@ import {
 import Link from 'next/link';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import GradientBG from '../components/theme/GradientBG';
 import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
+import { useAuth } from '../contexts/AuthContext';
 import { renderSlipImage, downloadImage, copyImageToClipboard } from '../utils/renderSlipImage';
 import { generateImprovedSlipImage, downloadImprovedSlip } from '../utils/generateImprovedSlipImage';
 import { apiFetch } from '../utils/api';
 
 export default function AIParlayPage() {
   const { isPremium } = useContext(PremiumContext);
+  const { user } = useAuth();
+  const router = useRouter();
   const [selectedSports, setSelectedSports] = useState(['NFL']);
   const [parlaySize, setParlaySize] = useState('3');
   const [riskLevel, setRiskLevel] = useState('medium');
@@ -83,6 +88,16 @@ export default function AIParlayPage() {
       }
     } catch (error) {
       console.error('Error checking usage:', error);
+    }
+  };
+
+  const handlePremiumClick = (e) => {
+    e.preventDefault();
+    if (!user) {
+      localStorage.setItem('redirectAfterAuth', '/pricing');
+      router.push('/auth/signin');
+    } else {
+      router.push('/pricing');
     }
   };
 
@@ -499,8 +514,11 @@ export default function AIParlayPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0F14]">
-      <Header />
+    <div className="betchekr-premium">
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
       
       {/* Paywall Overlay */}
       {showPaywall && (
@@ -658,9 +676,9 @@ export default function AIParlayPage() {
                 <div className="text-center mt-2">
                   <p className="text-[#6B7280] text-xs">
                     Free: {Math.max(0, 1 - usageData.generations)} parlay remaining today | 
-                    <Link href="/pricing" className="text-[#F4C430] hover:underline ml-1">
+                    <button onClick={handlePremiumClick} className="text-[#F4C430] hover:underline ml-1">
                       Upgrade for unlimited
-                    </Link>
+                    </button>
                   </p>
                 </div>
               )}
@@ -861,7 +879,8 @@ export default function AIParlayPage() {
       </section>
 
       
-      <Footer />
+        <Footer />
+      </GradientBG>
     </div>
   );
 }

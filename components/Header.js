@@ -21,6 +21,17 @@ export default function Header() {
       console.error('Sign out error:', error);
     }
   };
+
+  const handlePremiumClick = (e) => {
+    e.preventDefault();
+    if (!user) {
+      // Store intended destination
+      localStorage.setItem('redirectAfterAuth', '/pricing');
+      router.push('/auth/signin');
+    } else {
+      router.push('/pricing');
+    }
+  };
   
   const navLinks = [
     { href: '/line-shopping', label: 'Line Shopping' },
@@ -73,13 +84,13 @@ export default function Header() {
           <div className="flex items-center space-x-4">
             {/* Premium Button */}
             {!isPremium && (
-              <Link 
-                href="/pricing"
+              <button 
+                onClick={handlePremiumClick}
                 className="hidden sm:inline-flex items-center px-5 py-2.5 bg-[#F4C430] text-[#0B0F14] font-semibold text-sm rounded-lg hover:bg-[#e6b829] transition-colors shadow-[0_6px_16px_rgba(244,196,48,0.35)] focus:outline-none focus:ring-2 focus:ring-[#F4C430] focus:ring-offset-2"
               >
                 <Crown className="w-4 h-4 mr-2" />
                 Go Premium
-              </Link>
+              </button>
             )}
             {isPremium && (
               <div className="hidden sm:inline-flex items-center px-5 py-2.5 bg-green-600 text-white font-semibold text-sm rounded-lg">
@@ -164,14 +175,16 @@ export default function Header() {
               </Link>
             ))}
             {!isPremium ? (
-              <Link
-                href="/pricing"
+              <button
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  handlePremiumClick(e);
+                }}
                 className="flex items-center justify-center px-4 py-3 bg-[#F4C430] text-[#0B0F14] font-semibold text-sm rounded-lg hover:bg-[#e6b829] transition-colors mt-4"
-                onClick={() => setMobileMenuOpen(false)}
               >
                 <Crown className="w-4 h-4 mr-2" />
                 Go Premium
-              </Link>
+              </button>
             ) : (
               <div className="flex items-center justify-center px-4 py-3 bg-green-600 text-white font-semibold text-sm rounded-lg mt-4">
                 <Check className="w-4 h-4 mr-2" />

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import GradientBG from '../components/theme/GradientBG';
 import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
 import { apiFetch } from '../utils/api';
@@ -135,14 +136,15 @@ export default function AnalyzeSlip() {
   };
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>Analyze Bet Slip - Upload & Check Your Bets | BetChekr</title>
         <meta name="description" content="Upload your bet slip image and get AI-powered analysis. Check if your bets have positive expected value and get insights on your picks." />
       </Head>
-
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         {/* Paywall Overlay */}
         {showPaywall && (
@@ -320,7 +322,7 @@ export default function AnalyzeSlip() {
         </div>
 
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

@@ -1,19 +1,21 @@
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import GradientBG from '../components/theme/GradientBG';
 import Head from 'next/head';
 
 export default function Terms() {
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>Terms of Service - betchekr</title>
         <meta name="description" content="Terms of Service for betchekr - responsible gambling tools and mathematical analysis." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/betchekr_owl_logo.ico" />
       </Head>
-
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         <main className="container mx-auto px-4 py-12">
           {/* Hero Section */}
@@ -165,7 +167,7 @@ export default function Terms() {
         </main>
 
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

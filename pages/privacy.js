@@ -1,18 +1,19 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import GradientBG from '../components/theme/GradientBG'
 import { ArrowLeft, Shield, Eye, Database, Lock, Mail } from 'lucide-react'
 
 export default function Privacy() {
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>Privacy Policy - AiParlayCalculator</title>
         <meta name="description" content="AiParlayCalculator Privacy Policy - How we collect, use, and protect your personal information." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/betchekr_owl_logo.ico" />
       </Head>
-
-      <div className="min-h-screen bg-gray-900 text-white">
+      <GradientBG>
+        <div className="min-h-screen text-white">
         {/* Header */}
         <header className="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
           <nav className="container mx-auto px-4 flex justify-between items-center py-4">
@@ -268,7 +269,7 @@ export default function Privacy() {
             </Link>
           </div>
         </div>
-      </div>
-    </>
+      </GradientBG>
+    </div>
   )
 }

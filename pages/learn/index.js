@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import GradientBG from '../../components/theme/GradientBG';
 
 export default function LearnSection() {
   const articles = [
@@ -141,14 +142,15 @@ export default function LearnSection() {
   ];
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>Learn Sports Betting - Educational Resources | BetChekr</title>
         <meta name="description" content="Free educational resources to help you understand sports betting odds, strategies, and make smarter betting decisions." />
       </Head>
-
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         <main className="max-w-7xl mx-auto px-4 py-8">
           {/* Hero Section */}
@@ -422,7 +424,7 @@ export default function LearnSection() {
         </main>
 
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

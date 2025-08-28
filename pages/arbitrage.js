@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import GradientBG from '../components/theme/GradientBG';
 import { apiFetch } from '../utils/api';
 import Paywall from '../components/Paywall';
 import { PremiumContext } from './_app';
@@ -458,8 +459,11 @@ export default function ArbitragePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0F14]">
-      <Header />
+    <div className="betchekr-premium">
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
       
       {/* Notification Toast */}
       {notification && (
@@ -656,8 +660,9 @@ export default function ArbitragePage() {
           </motion.div>
         </motion.div>
       </section>
-      
-      <Footer />
+        
+        <Footer />
+      </GradientBG>
     </div>
   );
 }

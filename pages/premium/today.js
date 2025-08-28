@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import GradientBG from '../../components/theme/GradientBG';
 import { PremiumContext } from '../_app';
 
 export default function PremiumTodayPage() {
@@ -82,8 +83,11 @@ export default function PremiumTodayPage() {
 
   if (!isPremium) {
     return (
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
+      <div className="betchekr-premium">
+        <GradientBG>
+          <div className="premium-header sticky top-0 z-50">
+            <Header />
+          </div>
         <div className="pt-20 pb-16">
           <div className="max-w-4xl mx-auto px-4 text-center">
             <motion.div
@@ -103,14 +107,18 @@ export default function PremiumTodayPage() {
             </motion.div>
           </div>
         </div>
-        <Footer />
+          <Footer />
+        </GradientBG>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0F14]">
-      <Header />
+    <div className="betchekr-premium">
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
       
       {/* Hero Section */}
       <section className="pt-20 pb-8">
@@ -238,7 +246,8 @@ export default function PremiumTodayPage() {
         </div>
       </section>
 
-      <Footer />
+        <Footer />
+      </GradientBG>
     </div>
   );
 }

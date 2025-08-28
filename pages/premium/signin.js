@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import GradientBG from '../../components/theme/GradientBG';
 import Head from 'next/head';
 import { Lock, Mail, Key, ArrowRight, CheckCircle, XCircle } from 'lucide-react';
 
@@ -74,16 +75,17 @@ export default function PremiumSignIn() {
   };
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>Premium Sign In - BetChekr</title>
         <meta name="description" content="Sign in to your BetChekr premium account and access advanced betting analysis tools." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/betchekr_owl_logo.ico" />
       </Head>
-
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         <main className="container mx-auto px-4 py-12">
           <div className="max-w-md mx-auto">
@@ -213,7 +215,7 @@ export default function PremiumSignIn() {
         </main>
 
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { supabaseAuth as supabase } from '../../utils/supabaseAuth';
+import GradientBG from '../../components/theme/GradientBG';
 import { 
   Lock, 
   Eye, 
@@ -109,25 +110,31 @@ export default function ResetPassword() {
 
   if (!isValidSession && !message.content) {
     return (
-      <div className="min-h-screen bg-[#0B0F14] flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#F4C430] mx-auto mb-4" />
-          <p className="text-[#E5E7EB]">Validating reset link...</p>
-        </div>
+      <div className="betchekr-premium">
+        <GradientBG>
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-[#F4C430] mx-auto mb-4" />
+              <p className="text-[#E5E7EB]">Validating reset link...</p>
+            </div>
+          </div>
+        </GradientBG>
       </div>
     );
   }
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>Set New Password | BetChekr</title>
         <meta name="description" content="Set your new BetChekr account password" />
       </Head>
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
 
-      <Header />
-
-      <div className="min-h-screen bg-[#0B0F14] pt-20 pb-12">
+        <div className="min-h-screen pt-20 pb-12">
         <div className="max-w-md mx-auto px-4 sm:px-6">
           <div className="bg-[#141C28] border border-[#1F2937] rounded-lg p-6 sm:p-8">
             {/* Header */}
@@ -258,9 +265,8 @@ export default function ResetPassword() {
             )}
           </div>
         </div>
-      </div>
-
-      <Footer />
-    </>
+        <Footer />
+      </GradientBG>
+    </div>
   );
 }

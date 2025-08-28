@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import GradientBG from '../components/theme/GradientBG';
 import { generateImprovedSlipImage, downloadImprovedSlip } from '../utils/generateImprovedSlipImage';
 
 export default function ResultsPage() {
@@ -57,8 +58,11 @@ export default function ResultsPage() {
 
 
   return (
-    <div className="min-h-screen bg-[#0B0F14]">
-      <Header />
+    <div className="betchekr-premium">
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
       
       {/* Hero Section */}
       <section className="pt-20 pb-12">
@@ -184,7 +188,8 @@ export default function ResultsPage() {
         </div>
       </section>
 
-      <Footer />
+        <Footer />
+      </GradientBG>
     </div>
   );
 }

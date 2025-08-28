@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { TrendingUp, Target, ArrowRight } from 'lucide-react';
+import { useAuth } from '../../../contexts/AuthContext';
 import MobileCarousel from './MobileCarousel';
 
 const PREVIEW_CARDS = [
@@ -101,6 +103,8 @@ const PREVIEW_CARDS = [
 ];
 
 export default function Hero({ data }) {
+  const { user } = useAuth();
+  const router = useRouter();
   const [currentCard, setCurrentCard] = useState(0);
   const [isAutoRotating, setIsAutoRotating] = useState(true);
 
@@ -114,6 +118,16 @@ export default function Hero({ data }) {
 
     return () => clearInterval(interval);
   }, [isAutoRotating]);
+
+  const handlePremiumClick = (e) => {
+    e.preventDefault();
+    if (!user) {
+      localStorage.setItem('redirectAfterAuth', '/pricing');
+      router.push('/auth/signin');
+    } else {
+      router.push('/pricing');
+    }
+  };
 
   const currentPreview = PREVIEW_CARDS[currentCard];
   const IconComponent = currentPreview.icon;
@@ -142,12 +156,10 @@ export default function Hero({ data }) {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/pricing">
-                <button className="btn-primary px-8 py-3 text-base font-semibold inline-flex items-center gap-2 group">
-                  Go Premium
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </button>
-              </Link>
+              <button onClick={handlePremiumClick} className="btn-primary px-8 py-3 text-base font-semibold inline-flex items-center gap-2 group">
+                Go Premium
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </button>
               
               <Link href="/arbitrage">
                 <button className="btn-secondary px-8 py-3 text-base font-semibold">

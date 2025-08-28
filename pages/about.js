@@ -1,19 +1,21 @@
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import GradientBG from '../components/theme/GradientBG';
 import Head from 'next/head';
 
 export default function About() {
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>About - betchekr</title>
         <meta name="description" content="Learn about our mission to make sports betting mathematically responsible through AI-powered analysis, without the high costs of traditional betting tools." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/betchekr_owl_logo.ico" />
       </Head>
-
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         <main className="container mx-auto px-4 py-12">
           {/* Hero Section */}
@@ -221,7 +223,7 @@ export default function About() {
         </main>
 
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

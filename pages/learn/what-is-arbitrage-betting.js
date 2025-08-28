@@ -19,17 +19,19 @@ import {
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import GradientBG from '../../components/theme/GradientBG';
 
 export default function WhatIsArbitrageBetting() {
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>What Is Arbitrage Betting? (How Some Made Millions) | BetChekr Learn</title>
         <meta name="description" content="Learn how arbitrage betting works and real stories of people who made millions exploiting sportsbook inefficiencies." />
       </Head>
-
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         <main className="max-w-4xl mx-auto px-4 py-8">
           {/* Breadcrumb */}
@@ -480,7 +482,7 @@ export default function WhatIsArbitrageBetting() {
         </main>
 
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

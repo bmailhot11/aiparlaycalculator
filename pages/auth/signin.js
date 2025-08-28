@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { useAuth } from '../../contexts/AuthContext';
+import GradientBG from '../../components/theme/GradientBG';
 import { 
   Mail, 
   Lock, 
@@ -38,7 +39,15 @@ export default function SignIn() {
   useEffect(() => {
     // If user is already signed in, redirect
     if (user) {
-      const redirectTo = router.query.redirect || '/';
+      // Check for stored redirect from premium button
+      const storedRedirect = localStorage.getItem('redirectAfterAuth');
+      const redirectTo = storedRedirect || router.query.redirect || '/';
+      
+      // Clear stored redirect
+      if (storedRedirect) {
+        localStorage.removeItem('redirectAfterAuth');
+      }
+      
       router.push(redirectTo);
     }
 
@@ -148,15 +157,17 @@ export default function SignIn() {
   };
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>{isSignUp ? 'Create Account' : 'Sign In'} | BetChekr</title>
         <meta name="description" content={isSignUp ? 'Create your BetChekr account' : 'Sign in to your BetChekr account'} />
       </Head>
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
 
-      <Header />
-
-      <div className="min-h-screen bg-[#0B0F14] pt-20 pb-12">
+        <div className="min-h-screen pt-20 pb-12">
         <div className="max-w-md mx-auto px-4 sm:px-6">
           <div className="bg-[#141C28] border border-[#1F2937] rounded-lg p-6 sm:p-8">
             {/* Header */}
@@ -376,9 +387,8 @@ export default function SignIn() {
             </div>
           </div>
         </div>
-      </div>
-
-      <Footer />
-    </>
+        <Footer />
+      </GradientBG>
+    </div>
   );
 }

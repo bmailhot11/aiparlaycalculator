@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import GradientBG from '../components/theme/GradientBG';
 
 export default function AIParlayGuide() {
   const [expandedFaq, setExpandedFaq] = useState(null);
@@ -58,7 +59,7 @@ export default function AIParlayGuide() {
   };
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>How to Win Parlays with AI Sports Betting | Betchekr Guide</title>
         <meta name="description" content="Parlays are fun but hard to win. Learn how sportsbooks profit, what math really says, and how Betchekr's AI helps you build smarter, more profitable parlays." />
@@ -71,9 +72,10 @@ export default function AIParlayGuide() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchema) }}
         />
       </Head>
-
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         {/* Hero Section */}
         <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
@@ -558,7 +560,7 @@ export default function AIParlayGuide() {
         </section>
         
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

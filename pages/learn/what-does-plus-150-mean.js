@@ -15,17 +15,19 @@ import {
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import GradientBG from '../../components/theme/GradientBG';
 
 export default function WhatDoesPlus150Mean() {
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>What Does +150 Mean in Sports Betting? | BetChekr Learn</title>
         <meta name="description" content="Learn how to read American odds like +150, calculate payouts, and understand implied probabilities. Beginner's guide to sports betting odds." />
       </Head>
-
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         <main className="max-w-4xl mx-auto px-4 py-8">
           {/* Breadcrumb */}
@@ -376,7 +378,7 @@ export default function WhatDoesPlus150Mean() {
         </main>
 
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

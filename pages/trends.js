@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import GradientBG from '../components/theme/GradientBG';
 import { TrendingUp, BarChart3, Activity, Database, Home, RefreshCw } from 'lucide-react';
 
 export default function TrendsPage() {
@@ -241,44 +242,45 @@ export default function TrendsPage() {
   };
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>Odds Trends & Historical Data - AiParlayCalculator</title>
         <meta name="description" content="View historical odds data, movement trends, and sportsbook performance analysis." />
       </Head>
-
-      <div className="min-h-screen bg-gray-900">
-        <header className="bg-gray-800 border-b border-gray-700 sticky top-0 z-40">
-          <nav className="container mx-auto px-4 py-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => router.push('/')}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <Home className="w-5 h-5" />
-                </button>
-                <h1 className="text-xl font-bold text-white">Trends & Historical Data</h1>
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <header className="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700">
+            <nav className="container mx-auto px-4 py-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => router.push('/')}
+                    className="text-gray-400 hover:text-white transition-colors"
+                  >
+                    <Home className="w-5 h-5" />
+                  </button>
+                  <h1 className="text-xl font-bold text-white">Trends & Historical Data</h1>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  {lastUpdate && (
+                    <span className="text-sm text-gray-400">
+                      Updated: {lastUpdate.toLocaleTimeString()}
+                    </span>
+                  )}
+                  <button
+                    onClick={fetchTrendsData}
+                    disabled={loading}
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </button>
+                </div>
               </div>
-              
-              <div className="flex items-center gap-4">
-                {lastUpdate && (
-                  <span className="text-sm text-gray-400">
-                    Updated: {lastUpdate.toLocaleTimeString()}
-                  </span>
-                )}
-                <button
-                  onClick={fetchTrendsData}
-                  disabled={loading}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </button>
-              </div>
-            </div>
-          </nav>
-        </header>
+            </nav>
+          </header>
+        </div>
 
         <main className="container mx-auto px-4 py-8">
           <div className="grid lg:grid-cols-4 gap-6">
@@ -350,7 +352,7 @@ export default function TrendsPage() {
             </div>
           </div>
         </main>
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

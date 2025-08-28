@@ -4,18 +4,20 @@ import Link from 'next/link';
 import { ArrowLeft, Brain, TrendingUp, Calculator, DollarSign, Target, AlertTriangle, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import GradientBG from '../../components/theme/GradientBG';
 
 export default function AIBettingGuide() {
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>How to Use AI for Sports Betting (Step-by-Step Guide) | BetChekr</title>
         <meta name="description" content="Complete guide to using AI for sports betting. Learn what AI can and can't do, step-by-step workflow, formulas, and responsible betting practices." />
         <meta name="keywords" content="AI sports betting, sports betting AI, expected value, kelly criterion, CLV, closing line value, bankroll management" />
       </Head>
-
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
         
         <main className="max-w-4xl mx-auto px-4 py-8">
           {/* Back Button */}
@@ -474,7 +476,7 @@ export default function AIBettingGuide() {
         </main>
 
         <Footer />
-      </div>
-    </>
+      </GradientBG>
+    </div>
   );
 }

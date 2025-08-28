@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import GradientBG from '../components/theme/GradientBG';
@@ -11,9 +12,12 @@ import Proof from '../components/home/premium/Proof';
 import Pricing from '../components/home/premium/Pricing';
 import FAQ from '../components/home/premium/FAQ';
 import { fetchLivePreviewData } from '../lib/adapters/premium-data-adapters';
+import { useAuth } from '../contexts/AuthContext';
 import { AlertTriangle, ArrowUp } from 'lucide-react';
 
 export default function Home() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -59,6 +63,16 @@ export default function Home() {
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePremiumClick = (e) => {
+    e.preventDefault();
+    if (!user) {
+      localStorage.setItem('redirectAfterAuth', '/pricing');
+      router.push('/auth/signin');
+    } else {
+      router.push('/pricing');
+    }
   };
 
   if (loading) {
@@ -176,9 +190,9 @@ export default function Home() {
           className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-premium-panel border-t border-premium-border backdrop-blur-md lg:hidden"
         >
           <div className="flex gap-3">
-            <a href="/pricing" className="flex-1 btn-primary py-3 text-center font-semibold">
+            <button onClick={handlePremiumClick} className="flex-1 btn-primary py-3 text-center font-semibold">
               Go Premium
-            </a>
+            </button>
             <a href="/arbitrage" className="flex-1 btn-secondary py-3 text-center font-semibold">
               Try Free
             </a>
