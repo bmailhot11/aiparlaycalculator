@@ -544,7 +544,7 @@ export default function ArbitragePage() {
               <button 
                   onClick={handleFindArbitrages}
                   disabled={isLoading}
-                  className="w-full bg-[#F4C430] text-[#0B0F14] px-6 py-3 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#F4C430] text-[#0B0F14] px-6 py-4 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] text-sm sm:text-base"
                 >
                   {isLoading ? (
                     <>
@@ -564,7 +564,7 @@ export default function ArbitragePage() {
                   Scanning all available sports and leagues for positive return opportunities
                 </p>
                 {!isPremium && user && arbitrageUsesLeft !== null && (
-                  <p className="text-[#F4C430] text-xs font-medium">
+                  <p className="text-[#F4C430] text-xs sm:text-sm font-medium">
                     {arbitrageUsesLeft === 'unlimited' 
                       ? 'Unlimited searches' 
                       : arbitrageUsesLeft > 0 
@@ -598,13 +598,13 @@ export default function ArbitragePage() {
                       </div>
                     )}
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-4 sm:space-y-6">
                     {arbitrageData.map((arb, index) => (
-                      <div key={arb.id} className={`relative p-4 bg-[#0B1220] rounded-lg border border-[#1F2937] hover:border-[#F4C430]/30 transition-colors ${!isPremium && index > 0 ? 'blur-sm pointer-events-none' : ''}`}>
+                      <div key={arb.id} className={`relative p-4 sm:p-6 bg-[#0B1220] rounded-lg border border-[#1F2937] hover:border-[#F4C430]/30 transition-colors ${!isPremium && index > 0 ? 'blur-sm pointer-events-none' : ''}`}>
                         <div className="flex items-center justify-between mb-3">
                           <div>
                             <h4 className="text-[#E5E7EB] font-medium">{arb.matchup}</h4>
-                            <p className="text-[#6B7280] text-sm">{arb.sport} • {arb.market_display}</p>
+                            <p className="text-[#6B7280] text-xs sm:text-sm">{arb.sport} • {arb.market_display}</p>
                             <p className="text-[#6B7280] text-xs">{new Date(arb.commence_time).toLocaleDateString()} {new Date(arb.commence_time).toLocaleTimeString()}</p>
                           </div>
                           <div className="text-right">
@@ -614,7 +614,7 @@ export default function ArbitragePage() {
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3 mb-4 sm:mb-6">
                           {(arb.legs || []).map((leg, index) => (
                             <div key={index} className="p-3 bg-[#0F172A] rounded border border-[#1F2937]">
                               <div className="flex items-center justify-between mb-1">
@@ -640,10 +640,10 @@ export default function ArbitragePage() {
                           </div>
                         </div>
                         
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
                           <button 
                             onClick={() => handleNotifyMe(arb)}
-                            className="btn btn-outline text-sm flex-1"
+                            className="btn btn-outline text-sm flex-1 min-h-[44px] py-3 px-4"
                           >
                             <AlertCircle className="w-4 h-4 mr-2" />
                             Notify Me
@@ -653,7 +653,7 @@ export default function ArbitragePage() {
                               const stakeInfo = arb.stake_distribution.map(s => `${s.sportsbook}: ${s.stake} on ${s.selection}`).join('\n');
                               alert(`🎯 Arbitrage Instructions:\n\n${stakeInfo}\n\nTotal Investment: $${arb.investment_needed}\nExpected Return: $${arb.expected_return} (${arb.profit_percentage}%)\n\nPlace these bets quickly - odds may change!`);
                             }}
-                            className="btn btn-primary text-sm flex-1"
+                            className="btn btn-primary text-sm flex-1 min-h-[44px] py-3 px-4"
                           >
                             <Target className="w-4 h-4 mr-2" />
                             Show Stakes
@@ -673,7 +673,7 @@ export default function ArbitragePage() {
                               </p>
                               <button 
                                 onClick={handlePremiumClick}
-                                className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#e6b829] transition-colors"
+                                className="bg-[#F4C430] text-[#0B0F14] px-4 py-3 rounded-lg font-semibold text-sm hover:bg-[#e6b829] transition-colors min-h-[44px]"
                               >
                                 Go Premium
                               </button>

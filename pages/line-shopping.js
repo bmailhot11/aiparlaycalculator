@@ -238,18 +238,18 @@ export default function LineShopping() {
             className="mb-6"
           >
             <h2 className="text-[#E5E7EB] font-medium mb-3 text-center">Select a Sport</h2>
-            <div className="grid grid-cols-3 md:grid-cols-7 gap-2 md:gap-3 max-w-3xl mx-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-3 md:gap-3 max-w-3xl mx-auto">
               {sports.map(sport => (
                 <button
                   key={sport.value}
                   onClick={() => setSelectedSport(sport.value)}
-                  className={`p-3 md:p-4 rounded-lg border transition-all ${
+                  className={`p-4 md:p-4 rounded-lg border transition-all min-h-[44px] text-sm ${
                     selectedSport === sport.value
                       ? 'bg-[#F4C430] border-[#F4C430] text-[#0B0F14]'
                       : 'bg-[#141C28] border-[#1F2937] text-[#9CA3AF] hover:border-[#F4C430]/50'
                   }`}
                 >
-                  <div className="text-sm font-medium">{sport.label}</div>
+                  <div className="text-sm font-medium leading-tight">{sport.label}</div>
                 </button>
               ))}
             </div>
@@ -269,14 +269,14 @@ export default function LineShopping() {
                     Filters
                   </h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
                     {/* Team Filter */}
                     <div>
                       <label className="block text-[#9CA3AF] text-sm mb-2">Team</label>
                       <select
                         value={selectedTeam}
                         onChange={(e) => setSelectedTeam(e.target.value)}
-                        className="w-full px-3 py-2 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50"
+                        className="w-full px-4 py-3 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50 min-h-[44px] text-sm sm:text-base"
                       >
                         <option value="">All Teams</option>
                         {Array.isArray(availableTeams) && availableTeams.map((team, index) => (
@@ -291,7 +291,7 @@ export default function LineShopping() {
                       <select
                         value={selectedGame}
                         onChange={(e) => setSelectedGame(e.target.value)}
-                        className="w-full px-3 py-2 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50"
+                        className="w-full px-4 py-3 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50 min-h-[44px] text-sm sm:text-base"
                       >
                         <option value="">All Games</option>
                         {Array.isArray(availableGames) && availableGames.map(game => (
@@ -306,7 +306,7 @@ export default function LineShopping() {
                       <select
                         value={timeFilter}
                         onChange={(e) => setTimeFilter(e.target.value)}
-                        className="w-full px-3 py-2 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50"
+                        className="w-full px-4 py-3 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50 min-h-[44px] text-sm sm:text-base"
                       >
                         {timeFilters.map(filter => (
                           <option key={filter.value} value={filter.value}>{filter.label}</option>
@@ -320,7 +320,7 @@ export default function LineShopping() {
                       <select
                         value={edgeFilter}
                         onChange={(e) => setEdgeFilter(e.target.value)}
-                        className="w-full px-3 py-2 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50"
+                        className="w-full px-4 py-3 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50 min-h-[44px] text-sm sm:text-base"
                       >
                         {edgeFilters.map(filter => (
                           <option key={filter.value} value={filter.value}>{filter.label}</option>
@@ -334,7 +334,7 @@ export default function LineShopping() {
                       <select
                         value={marketType}
                         onChange={(e) => setMarketType(e.target.value)}
-                        className="w-full px-3 py-2 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50"
+                        className="w-full px-4 py-3 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50 min-h-[44px] text-sm sm:text-base"
                       >
                         {marketTypes.map(type => (
                           <option key={type.value} value={type.value}>{type.label}</option>
@@ -346,7 +346,7 @@ export default function LineShopping() {
                   <button
                     onClick={handleSearch}
                     disabled={loading}
-                    className="w-full px-4 py-3 bg-[#F4C430] text-[#0B0F14] font-semibold rounded-lg hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full px-6 py-4 bg-[#F4C430] text-[#0B0F14] font-semibold rounded-lg hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px] text-sm sm:text-base"
                   >
                     {loading ? (
                       <>

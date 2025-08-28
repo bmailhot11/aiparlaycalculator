@@ -152,22 +152,22 @@ export default function LearnSection() {
           <Header />
         </div>
         
-        <main className="max-w-7xl mx-auto px-4 py-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           {/* Hero Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-12"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#F4C430]/10 rounded-full text-[#F4C430] text-sm mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 min-h-[36px] bg-[#F4C430]/10 rounded-full text-[#F4C430] text-sm sm:text-base mb-4">
               <BookOpen className="w-4 h-4" />
               <span>Learn Center</span>
             </div>
             
-            <h1 className="text-4xl md:text-5xl font-bold text-[#E5E7EB] mb-4">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#E5E7EB] mb-4">
               Master Sports Betting
             </h1>
-            <p className="text-[#9CA3AF] text-lg max-w-3xl mx-auto">
+            <p className="text-[#9CA3AF] text-base sm:text-lg leading-relaxed max-w-3xl mx-auto">
               Educational guides to help you understand odds, calculate probabilities, and make smarter betting decisions. 
               No fluff, just practical knowledge.
             </p>
@@ -178,19 +178,19 @@ export default function LearnSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-gradient-to-r from-[#F4C430]/10 to-[#F4C430]/5 rounded-lg p-6 border border-[#F4C430]/20 mb-12"
+            className="bg-gradient-to-r from-[#F4C430]/10 to-[#F4C430]/5 rounded-lg p-4 sm:p-6 border border-[#F4C430]/20 mb-8 sm:mb-12"
           >
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-3 sm:gap-4">
               <Target className="w-8 h-8 text-[#F4C430] mt-1" />
               <div>
-                <h2 className="text-[#E5E7EB] font-semibold text-xl mb-2">
+                <h2 className="text-[#E5E7EB] font-semibold text-lg sm:text-xl mb-2">
                   Why We Built This Learn Section
                 </h2>
-                <p className="text-[#9CA3AF] mb-3">
+                <p className="text-[#9CA3AF] text-sm sm:text-base leading-relaxed mb-3">
                   BetChekr is a tool that analyzes your bet slips and tells you if they're Trash or Cash. 
                   But to use any tool effectively, you need to understand the fundamentals.
                 </p>
-                <p className="text-[#9CA3AF]">
+                <p className="text-[#9CA3AF] text-sm sm:text-base leading-relaxed"
                   These guides explain betting concepts in plain English — so you can make informed decisions 
                   before and after using our analysis tools.
                 </p>
@@ -199,14 +199,14 @@ export default function LearnSection() {
           </motion.div>
 
           {/* Categories */}
-          <div className="flex gap-4 mb-8">
+          <div className="flex flex-wrap gap-3 sm:gap-4 mb-6 sm:mb-8">
             {categories.map((category, index) => (
               <motion.div
                 key={category.name}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-[#141C28] rounded-lg px-4 py-3 border border-[#1F2937]"
+                className="bg-[#141C28] rounded-lg px-3 sm:px-4 py-2 sm:py-3 min-h-[44px] border border-[#1F2937]"
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full ${category.color}`} />
@@ -218,7 +218,7 @@ export default function LearnSection() {
           </div>
 
           {/* Articles Grid */}
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
             {articles.map((article, index) => (
               <motion.div
                 key={article.slug}
@@ -227,7 +227,7 @@ export default function LearnSection() {
                 transition={{ delay: index * 0.1 }}
               >
                 {article.comingSoon ? (
-                  <div className="bg-[#141C28] rounded-lg border border-[#1F2937] p-6 opacity-60">
+                  <div className="bg-[#141C28] rounded-lg border border-[#1F2937] p-4 sm:p-6 opacity-60">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-[#0F172A] rounded-lg text-[#6B7280]">
@@ -256,7 +256,7 @@ export default function LearnSection() {
                   </div>
                 ) : (
                   <Link href={`/learn/${article.slug}`}>
-                    <div className={`bg-[#141C28] rounded-lg border border-[#1F2937] p-6 hover:border-[#F4C430]/50 transition-all cursor-pointer ${
+                    <div className={`bg-[#141C28] rounded-lg border border-[#1F2937] p-4 sm:p-6 hover:border-[#F4C430]/50 transition-all cursor-pointer ${
                       article.featured ? 'ring-2 ring-[#F4C430]/20' : ''
                     }`}>
                       <div className="flex items-start justify-between mb-4">
@@ -307,23 +307,23 @@ export default function LearnSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="mt-16"
+            className="mt-12 sm:mt-16"
           >
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#F4C430]/10 rounded-full text-[#F4C430] text-sm mb-4">
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 min-h-[36px] bg-[#F4C430]/10 rounded-full text-[#F4C430] text-sm sm:text-base mb-4">
                 <Target className="w-4 h-4" />
                 <span>League-Specific Guides</span>
               </div>
-              <h2 className="text-3xl font-bold text-[#E5E7EB] mb-3">
+              <h2 className="text-2xl sm:text-3xl font-bold text-[#E5E7EB] mb-3">
                 Master Every Major League
               </h2>
-              <p className="text-[#9CA3AF] max-w-2xl mx-auto">
+              <p className="text-[#9CA3AF] text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
                 Each sport has unique betting markets, strategies, and opportunities. 
                 Learn the nuances that separate profitable bettors from the crowd.
               </p>
             </div>
 
-            <div className="grid gap-4 sm:gap-6">
+            <div className="space-y-4 sm:space-y-6">
               {leagueGuides.map((guide, index) => (
                 <motion.div
                   key={guide.slug}
@@ -333,27 +333,27 @@ export default function LearnSection() {
                 >
                   {guide.comingSoon ? (
                     <div className="bg-[#141C28] rounded-lg border border-[#1F2937] p-4 sm:p-6 opacity-60">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                            <span className="text-[#F4C430] text-sm font-bold">
+                      <div className="flex items-start gap-3 sm:gap-4 mb-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <span className="text-[#F4C430] text-sm sm:text-base font-bold">
                               {guide.league}
                             </span>
-                            <span className="text-[#6B7280] text-xs">
+                            <span className="text-[#6B7280] text-xs sm:text-sm">
                               Coming Soon
                             </span>
                           </div>
-                          <h3 className="text-[#9CA3AF] font-semibold text-lg mb-2">
+                          <h3 className="text-[#9CA3AF] font-semibold text-base sm:text-lg mb-2 leading-tight">
                             {guide.title}
                           </h3>
-                          <p className="text-[#6B7280] text-sm mb-2">
+                          <p className="text-[#6B7280] text-xs sm:text-sm mb-2">
                             {guide.subtitle}
                           </p>
-                          <p className="text-[#6B7280] text-sm">
+                          <p className="text-[#6B7280] text-xs sm:text-sm leading-relaxed">
                             {guide.description}
                           </p>
                         </div>
-                        <div className="text-[#6B7280] text-xs ml-4">
+                        <div className="text-[#6B7280] text-xs sm:text-sm flex-shrink-0">
                           {guide.readTime}
                         </div>
                       </div>
@@ -363,33 +363,33 @@ export default function LearnSection() {
                       <div className={`bg-[#141C28] rounded-lg border border-[#1F2937] p-4 sm:p-6 hover:border-[#F4C430]/50 transition-all cursor-pointer group ${
                         guide.featured ? 'ring-2 ring-[#F4C430]/20' : ''
                       }`}>
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                              <span className="text-[#F4C430] text-sm font-bold">
+                        <div className="flex items-start gap-3 sm:gap-4 mb-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <span className="text-[#F4C430] text-sm sm:text-base font-bold">
                                 {guide.league}
                               </span>
                               {guide.featured && (
-                                <span className="px-2 py-0.5 bg-[#F4C430] text-[#0B0F14] text-xs font-medium rounded">
+                                <span className="px-2 py-1 bg-[#F4C430] text-[#0B0F14] text-xs sm:text-sm font-medium rounded min-h-[24px] flex items-center">
                                   New
                                 </span>
                               )}
                             </div>
-                            <h3 className="text-[#E5E7EB] font-semibold text-lg group-hover:text-[#F4C430] transition-colors mb-2">
+                            <h3 className="text-[#E5E7EB] font-semibold text-base sm:text-lg group-hover:text-[#F4C430] transition-colors mb-2 leading-tight">
                               {guide.title}
                             </h3>
-                            <p className="text-[#F4C430] text-sm mb-2 font-medium">
+                            <p className="text-[#F4C430] text-xs sm:text-sm mb-2 font-medium">
                               {guide.subtitle}
                             </p>
-                            <p className="text-[#9CA3AF] text-sm mb-4">
+                            <p className="text-[#9CA3AF] text-xs sm:text-sm leading-relaxed mb-3 sm:mb-4">
                               {guide.description}
                             </p>
-                            <div className="flex items-center text-[#F4C430] text-sm font-medium">
+                            <div className="flex items-center text-[#F4C430] text-xs sm:text-sm font-medium min-h-[44px] py-2">
                               Read Guide
                               <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                             </div>
                           </div>
-                          <div className="text-[#6B7280] text-xs ml-4">
+                          <div className="text-[#6B7280] text-xs sm:text-sm flex-shrink-0">
                             {guide.readTime}
                           </div>
                         </div>
@@ -406,17 +406,17 @@ export default function LearnSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="mt-16 text-center bg-[#141C28] rounded-lg p-8 border border-[#1F2937]"
+            className="mt-12 sm:mt-16 text-center bg-[#141C28] rounded-lg p-6 sm:p-8 border border-[#1F2937]"
           >
-            <h2 className="text-2xl font-bold text-[#E5E7EB] mb-3">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#E5E7EB] mb-3">
               Ready to Analyze Your Bets?
             </h2>
-            <p className="text-[#9CA3AF] mb-6 max-w-2xl mx-auto">
+            <p className="text-[#9CA3AF] text-sm sm:text-base leading-relaxed mb-6 max-w-2xl mx-auto">
               Now that you understand the basics, use BetChekr to instantly analyze your bet slips 
               and see if they're Trash or Cash.
             </p>
             <Link href="/">
-              <button className="px-6 py-3 bg-[#F4C430] text-[#0B0F14] font-semibold rounded-lg hover:bg-[#e6b829] transition-colors">
+              <button className="px-6 py-4 min-h-[44px] bg-[#F4C430] text-[#0B0F14] font-semibold text-sm sm:text-base rounded-lg hover:bg-[#e6b829] transition-colors">
                 Try BetChekr Free
               </button>
             </Link>

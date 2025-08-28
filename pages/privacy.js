@@ -16,13 +16,13 @@ export default function Privacy() {
         <div className="min-h-screen text-white">
         {/* Header */}
         <header className="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
-          <nav className="container mx-auto px-4 flex justify-between items-center py-4">
-            <Link href="/" className="text-2xl font-bold text-green-500">
+          <nav className="container mx-auto px-4 sm:px-6 flex justify-between items-center py-3 sm:py-4">
+            <Link href="/" className="text-xl sm:text-2xl font-bold text-green-500">
               AiParlayCalculator
             </Link>
             <Link 
               href="/" 
-              className="flex items-center gap-2 text-gray-300 hover:text-green-400 transition-colors"
+              className="flex items-center gap-2 text-gray-300 hover:text-green-400 transition-colors text-sm sm:text-base min-h-[44px]"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Home
@@ -30,22 +30,22 @@ export default function Privacy() {
           </nav>
         </header>
 
-        <div className="container mx-auto px-4 py-16 max-w-4xl">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-4 flex items-center gap-3">
-              <Shield className="w-8 h-8 text-green-500" />
+        <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 lg:py-16 max-w-4xl">
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3">
+              <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-green-500" />
               Privacy Policy
             </h1>
-            <p className="text-gray-300 text-lg">
+            <p className="text-gray-300 text-sm sm:text-base lg:text-lg">
               Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </div>
 
-          <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 space-y-8">
+          <div className="bg-gray-800 rounded-xl p-4 sm:p-6 lg:p-8 border border-gray-700 space-y-6 sm:space-y-8">
             {/* Introduction */}
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-green-400">Introduction</h2>
-              <p className="text-gray-300 leading-relaxed">
+              <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-green-400">Introduction</h2>
+              <p className="text-gray-300 text-sm sm:text-base leading-relaxed">
                 AiParlayCalculator ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our AI-powered sports betting analysis services.
               </p>
             </section>

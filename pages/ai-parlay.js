@@ -576,12 +576,12 @@ export default function AIParlayPage() {
               {/* Sports Selection */}
               <div className="space-y-3">
                 <label className="block text-[#9CA3AF] text-sm font-medium">Select Sports</label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                   {sports.map(sport => (
                     <button
                       key={sport}
                       onClick={() => handleSportToggle(sport)}
-                      className={`py-2 px-2 rounded-lg font-medium transition-all text-xs sm:text-sm ${
+                      className={`py-3 px-3 rounded-lg font-medium transition-all text-xs sm:text-sm min-h-[44px] ${
                         selectedSports.includes(sport)
                           ? 'bg-[#F4C430] text-[#0B0F14]'
                           : 'bg-[#1F2937] text-[#9CA3AF] hover:bg-[#253044]'
@@ -600,7 +600,7 @@ export default function AIParlayPage() {
                   <select
                     value={parlaySize}
                     onChange={(e) => setParlaySize(e.target.value)}
-                    className="select w-full"
+                    className="select w-full min-h-[44px] py-3 px-4 text-sm sm:text-base"
                   >
                     <option value="2">2 Legs</option>
                     <option value="3">3 Legs</option>
@@ -615,7 +615,7 @@ export default function AIParlayPage() {
                   <select
                     value={riskLevel}
                     onChange={(e) => setRiskLevel(e.target.value)}
-                    className="select w-full"
+                    className="select w-full min-h-[44px] py-3 px-4 text-sm sm:text-base"
                   >
                     <option value="conservative">Conservative</option>
                     <option value="medium">Medium</option>
@@ -628,7 +628,7 @@ export default function AIParlayPage() {
                   <div className="flex rounded-lg overflow-hidden border border-[#1F2937] h-10">
                     <button
                       onClick={() => setIncludePlayerProps(false)}
-                      className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
+                      className={`flex-1 px-3 py-3 text-sm font-medium transition-colors min-h-[44px] ${
                         !includePlayerProps
                           ? 'bg-[#F4C430] text-[#0B0F14]'
                           : 'bg-[#0B1220] text-[#6B7280] hover:text-[#9CA3AF]'
@@ -638,7 +638,7 @@ export default function AIParlayPage() {
                     </button>
                     <button
                       onClick={() => setIncludePlayerProps(true)}
-                      className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
+                      className={`flex-1 px-3 py-3 text-sm font-medium transition-colors min-h-[44px] ${
                         includePlayerProps
                           ? 'bg-[#F4C430] text-[#0B0F14]'
                           : 'bg-[#0B1220] text-[#6B7280] hover:text-[#9CA3AF]'
@@ -655,7 +655,7 @@ export default function AIParlayPage() {
                 <button 
                   onClick={handleGenerateParlay}
                   disabled={isGenerating || selectedSports.length === 0}
-                  className="btn btn-primary flex-1"
+                  className="btn btn-primary flex-1 min-h-[44px] py-4 px-6 text-sm sm:text-base"
                 >
                   {isGenerating ? (
                     <>
@@ -674,7 +674,7 @@ export default function AIParlayPage() {
               {/* Usage indicator for free users */}
               {!isPremium && (
                 <div className="text-center mt-2">
-                  <p className="text-[#6B7280] text-xs">
+                  <p className="text-[#6B7280] text-xs sm:text-sm">
                     Free: {Math.max(0, 1 - usageData.generations)} parlay remaining today | 
                     <button onClick={handlePremiumClick} className="text-[#F4C430] hover:underline ml-1">
                       Upgrade for unlimited
@@ -685,7 +685,7 @@ export default function AIParlayPage() {
               
               {/* Premium Note */}
               {isPremium && (
-                <p className="text-[#6B7280] text-xs text-center">
+                <p className="text-[#6B7280] text-xs sm:text-sm text-center">
                   <AlertCircle className="w-3 h-3 inline mr-1" />
                   Premium active - unlimited generations and advanced features.
                 </p>
@@ -711,25 +711,25 @@ export default function AIParlayPage() {
                   {/* Parlay Stats */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 p-4 bg-[#0F172A] rounded-lg">
                     <div className="text-center">
-                      <div className="text-[#6B7280] text-xs">Total Odds</div>
+                      <div className="text-[#6B7280] text-xs sm:text-sm">Total Odds</div>
                       <div className="text-[#F4C430] font-bold text-lg">{generatedParlay.totalOdds}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-[#6B7280] text-xs">Probability</div>
+                      <div className="text-[#6B7280] text-xs sm:text-sm">Probability</div>
                       <div className="text-[#E5E7EB] font-medium">{generatedParlay.impliedProbability}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-[#6B7280] text-xs">Expected Value</div>
+                      <div className="text-[#6B7280] text-xs sm:text-sm">Expected Value</div>
                       <div className="text-green-400 font-medium">{generatedParlay.expectedValue}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-[#6B7280] text-xs">$10 Bet Pays</div>
+                      <div className="text-[#6B7280] text-xs sm:text-sm">$10 Bet Pays</div>
                       <div className="text-green-400 font-medium">{generatedParlay.potentialPayout}</div>
                     </div>
                   </div>
                   
                   {/* Parlay Legs */}
-                  <div className="space-y-4 mb-6">
+                  <div className="space-y-4 sm:space-y-6 mb-6">
                     {generatedParlay.legs.map((leg, index) => {
                       // Format the game date and time
                       const formatGameTime = (commenceTime) => {
@@ -836,10 +836,10 @@ export default function AIParlayPage() {
                   </div>
                   
                   {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
                     <button 
                       onClick={handleDownloadSlip}
-                      className="btn btn-outline text-sm flex-1"
+                      className="btn btn-outline text-sm flex-1 min-h-[44px] py-3 px-4"
                     >
                       <Download className="w-4 h-4 mr-2" />
                       <span className="hidden sm:inline">Download BetChekr Slip</span>
@@ -847,7 +847,7 @@ export default function AIParlayPage() {
                     </button>
                     <button 
                       onClick={handleCopySlip}
-                      className="btn btn-outline text-sm flex-1"
+                      className="btn btn-outline text-sm flex-1 min-h-[44px] py-3 px-4"
                     >
                       {copied ? (
                         <>
@@ -864,7 +864,7 @@ export default function AIParlayPage() {
                     </button>
                     <button 
                       onClick={() => handleFindBetterOdds(generatedParlay)}
-                      className="btn btn-primary text-sm flex-1"
+                      className="btn btn-primary text-sm flex-1 min-h-[44px] py-3 px-4"
                     >
                       <Target className="w-4 h-4 mr-2" />
                       <span className="hidden sm:inline">Find Better Odds</span>

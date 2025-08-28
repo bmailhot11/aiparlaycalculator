@@ -167,15 +167,15 @@ export default function SignIn() {
           <Header />
         </div>
 
-        <div className="min-h-screen pt-20 pb-12">
+        <div className="min-h-screen pt-16 sm:pt-20 pb-8 sm:pb-12">
         <div className="max-w-md mx-auto px-4 sm:px-6">
-          <div className="bg-[#141C28] border border-[#1F2937] rounded-lg p-6 sm:p-8">
+          <div className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 lg:p-8">
             {/* Header */}
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-[#E5E7EB] mb-2">
+            <div className="text-center mb-6 sm:mb-8">
+              <h1 className="text-xl sm:text-2xl font-bold text-[#E5E7EB] mb-2">
                 {isSignUp ? 'Create Account' : 'Welcome Back'}
               </h1>
-              <p className="text-[#9CA3AF]">
+              <p className="text-[#9CA3AF] text-sm sm:text-base leading-relaxed">
                 {isSignUp 
                   ? 'Sign up to access daily picks and track your performance'
                   : 'Sign in to access your daily picks and performance data'
@@ -185,7 +185,7 @@ export default function SignIn() {
 
             {/* Message Display */}
             {message.content && (
-              <div className={`mb-6 p-4 rounded-lg border flex items-center gap-3 ${
+              <div className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg border flex items-start gap-3 ${
                 message.type === 'success' 
                   ? 'bg-green-900/30 border-green-700 text-green-400'
                   : 'bg-red-900/30 border-red-700 text-red-400'
@@ -195,7 +195,7 @@ export default function SignIn() {
                 ) : (
                   <XCircle className="w-5 h-5 flex-shrink-0" />
                 )}
-                <span className="text-sm">{message.content}</span>
+                <span className="text-xs sm:text-sm leading-relaxed">{message.content}</span>
               </div>
             )}
 
@@ -203,7 +203,7 @@ export default function SignIn() {
             <button
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full bg-white text-gray-900 px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-3 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-6"
+              className="w-full bg-white text-gray-900 px-4 py-3 min-h-[48px] rounded-lg font-medium text-sm sm:text-base flex items-center justify-center gap-3 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4 sm:mb-6"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -214,19 +214,19 @@ export default function SignIn() {
             </button>
 
             {/* Divider */}
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-4 mb-4 sm:mb-6">
               <div className="flex-1 h-px bg-[#374151]"></div>
               <span className="text-[#9CA3AF] text-sm">or</span>
               <div className="flex-1 h-px bg-[#374151]"></div>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
               {/* Name fields for sign up */}
               {isSignUp && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-3 sm:space-y-4 sm:grid sm:grid-cols-2 sm:gap-4">
                   <div>
-                    <label htmlFor="firstName" className="block text-sm font-medium text-[#E5E7EB] mb-2">
+                    <label htmlFor="firstName" className="block text-xs sm:text-sm font-medium text-[#E5E7EB] mb-1 sm:mb-2">
                       First Name
                     </label>
                     <div className="relative">
@@ -238,13 +238,13 @@ export default function SignIn() {
                         value={formData.firstName}
                         onChange={handleInputChange}
                         required={isSignUp}
-                        className="w-full pl-10 pr-4 py-3 bg-[#0B0F14] border border-[#374151] rounded-lg text-[#E5E7EB] placeholder-[#6B7280] focus:border-[#F4C430] focus:ring-1 focus:ring-[#F4C430] focus:outline-none"
+                        className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-[#0B0F14] border border-[#374151] rounded-lg text-[#E5E7EB] text-sm sm:text-base placeholder-[#6B7280] focus:border-[#F4C430] focus:ring-1 focus:ring-[#F4C430] focus:outline-none"
                         placeholder="John"
                       />
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="lastName" className="block text-sm font-medium text-[#E5E7EB] mb-2">
+                    <label htmlFor="lastName" className="block text-xs sm:text-sm font-medium text-[#E5E7EB] mb-1 sm:mb-2">
                       Last Name
                     </label>
                     <div className="relative">
@@ -256,7 +256,7 @@ export default function SignIn() {
                         value={formData.lastName}
                         onChange={handleInputChange}
                         required={isSignUp}
-                        className="w-full pl-10 pr-4 py-3 bg-[#0B0F14] border border-[#374151] rounded-lg text-[#E5E7EB] placeholder-[#6B7280] focus:border-[#F4C430] focus:ring-1 focus:ring-[#F4C430] focus:outline-none"
+                        className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-[#0B0F14] border border-[#374151] rounded-lg text-[#E5E7EB] text-sm sm:text-base placeholder-[#6B7280] focus:border-[#F4C430] focus:ring-1 focus:ring-[#F4C430] focus:outline-none"
                         placeholder="Doe"
                       />
                     </div>
@@ -266,7 +266,7 @@ export default function SignIn() {
 
               {/* Email */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-[#E5E7EB] mb-2">
+                <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-[#E5E7EB] mb-1 sm:mb-2">
                   Email
                 </label>
                 <div className="relative">
@@ -278,7 +278,7 @@ export default function SignIn() {
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 pr-4 py-3 bg-[#0B0F14] border border-[#374151] rounded-lg text-[#E5E7EB] placeholder-[#6B7280] focus:border-[#F4C430] focus:ring-1 focus:ring-[#F4C430] focus:outline-none"
+                    className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-[#0B0F14] border border-[#374151] rounded-lg text-[#E5E7EB] text-sm sm:text-base placeholder-[#6B7280] focus:border-[#F4C430] focus:ring-1 focus:ring-[#F4C430] focus:outline-none"
                     placeholder="john@example.com"
                   />
                 </div>
@@ -286,7 +286,7 @@ export default function SignIn() {
 
               {/* Password */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-[#E5E7EB] mb-2">
+                <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-[#E5E7EB] mb-1 sm:mb-2">
                   Password
                 </label>
                 <div className="relative">
@@ -298,13 +298,13 @@ export default function SignIn() {
                     value={formData.password}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 pr-12 py-3 bg-[#0B0F14] border border-[#374151] rounded-lg text-[#E5E7EB] placeholder-[#6B7280] focus:border-[#F4C430] focus:ring-1 focus:ring-[#F4C430] focus:outline-none"
+                    className="w-full pl-10 pr-12 py-3 min-h-[44px] bg-[#0B0F14] border border-[#374151] rounded-lg text-[#E5E7EB] text-sm sm:text-base placeholder-[#6B7280] focus:border-[#F4C430] focus:ring-1 focus:ring-[#F4C430] focus:outline-none"
                     placeholder={isSignUp ? "Minimum 6 characters" : "Enter your password"}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#9CA3AF] hover:text-[#E5E7EB]"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#9CA3AF] hover:text-[#E5E7EB] min-h-[44px] flex items-center"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -314,7 +314,7 @@ export default function SignIn() {
               {/* Confirm Password for sign up */}
               {isSignUp && (
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-[#E5E7EB] mb-2">
+                  <label htmlFor="confirmPassword" className="block text-xs sm:text-sm font-medium text-[#E5E7EB] mb-1 sm:mb-2">
                     Confirm Password
                   </label>
                   <div className="relative">
@@ -326,7 +326,7 @@ export default function SignIn() {
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
                       required={isSignUp}
-                      className="w-full pl-10 pr-4 py-3 bg-[#0B0F14] border border-[#374151] rounded-lg text-[#E5E7EB] placeholder-[#6B7280] focus:border-[#F4C430] focus:ring-1 focus:ring-[#F4C430] focus:outline-none"
+                      className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-[#0B0F14] border border-[#374151] rounded-lg text-[#E5E7EB] text-sm sm:text-base placeholder-[#6B7280] focus:border-[#F4C430] focus:ring-1 focus:ring-[#F4C430] focus:outline-none"
                       placeholder="Confirm your password"
                     />
                   </div>
@@ -337,7 +337,7 @@ export default function SignIn() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#F4C430] text-[#0B0F14] px-4 py-3 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-[#F4C430] text-[#0B0F14] px-4 py-3 min-h-[48px] rounded-lg font-semibold text-sm sm:text-base hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="w-5 h-5 animate-spin" />}
                 {isSignUp ? 'Create Account' : 'Sign In'}
@@ -345,7 +345,7 @@ export default function SignIn() {
             </form>
 
             {/* Toggle between sign in and sign up */}
-            <div className="mt-6 text-center">
+            <div className="mt-4 sm:mt-6 text-center">
               <button
                 onClick={() => {
                   setIsSignUp(!isSignUp);
@@ -358,7 +358,7 @@ export default function SignIn() {
                     confirmPassword: ''
                   });
                 }}
-                className="text-[#F4C430] hover:text-[#e6b829] text-sm font-medium"
+                className="text-[#F4C430] hover:text-[#e6b829] text-sm sm:text-base font-medium min-h-[44px] inline-flex items-center"
               >
                 {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
               </button>
@@ -366,20 +366,20 @@ export default function SignIn() {
 
             {/* Forgot password link for sign in */}
             {!isSignUp && (
-              <div className="mt-4 text-center">
-                <Link href="/auth/forgot-password" className="text-[#9CA3AF] hover:text-[#E5E7EB] text-sm">
+              <div className="mt-3 sm:mt-4 text-center">
+                <Link href="/auth/forgot-password" className="text-[#9CA3AF] hover:text-[#E5E7EB] text-sm sm:text-base min-h-[44px] inline-flex items-center">
                   Forgot your password?
                 </Link>
               </div>
             )}
 
             {/* Premium upgrade option */}
-            <div className="mt-6 pt-6 border-t border-[#374151]">
+            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-[#374151]">
               <div className="text-center">
-                <p className="text-[#9CA3AF] text-sm mb-3">
+                <p className="text-[#9CA3AF] text-xs sm:text-sm mb-3">
                   Want unlimited access to all features?
                 </p>
-                <Link href="/pricing" className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#F4C430] to-[#e6b829] text-[#0B0F14] font-semibold text-sm rounded-lg hover:opacity-90 transition-opacity">
+                <Link href="/pricing" className="inline-flex items-center gap-2 px-4 py-3 min-h-[44px] bg-gradient-to-r from-[#F4C430] to-[#e6b829] text-[#0B0F14] font-semibold text-sm sm:text-base rounded-lg hover:opacity-90 transition-opacity">
                   <Crown className="w-4 h-4" />
                   Go Premium - $9.99/mo
                 </Link>

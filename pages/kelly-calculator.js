@@ -106,7 +106,7 @@ export default function KellyCalculator() {
         <div className="max-w-4xl mx-auto px-4 py-8">
           {/* Back Button */}
           <Link href="/">
-            <button className="flex items-center text-[#9CA3AF] hover:text-[#F4C430] mb-6 transition-colors">
+            <button className="flex items-center text-[#9CA3AF] hover:text-[#F4C430] mb-6 transition-colors min-h-[44px] py-2 px-2 text-sm sm:text-base">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Home
             </button>
@@ -139,7 +139,7 @@ export default function KellyCalculator() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             {/* Calculator Form */}
             <div className="bg-[#141C28] border border-[#1F2937] rounded-lg p-6">
               <h2 className="text-[#E5E7EB] text-xl font-bold mb-6 flex items-center">
@@ -156,7 +156,7 @@ export default function KellyCalculator() {
                   <select
                     value={oddsFormat}
                     onChange={(e) => setOddsFormat(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1F2937] border border-[#374151] rounded-lg text-[#E5E7EB] focus:border-[#F4C430] focus:outline-none"
+                    className="w-full px-4 py-3 bg-[#1F2937] border border-[#374151] rounded-lg text-[#E5E7EB] focus:border-[#F4C430] focus:outline-none min-h-[44px] text-sm sm:text-base"
                   >
                     <option value="american">American (e.g., +150, -110)</option>
                     <option value="decimal">Decimal (e.g., 2.50)</option>
@@ -174,7 +174,7 @@ export default function KellyCalculator() {
                     value={betOdds}
                     onChange={(e) => setBetOdds(e.target.value)}
                     placeholder={oddsFormat === 'american' ? '+150' : oddsFormat === 'decimal' ? '2.50' : '3/2'}
-                    className="w-full px-3 py-2 bg-[#1F2937] border border-[#374151] rounded-lg text-[#E5E7EB] focus:border-[#F4C430] focus:outline-none"
+                    className="w-full px-4 py-3 bg-[#1F2937] border border-[#374151] rounded-lg text-[#E5E7EB] focus:border-[#F4C430] focus:outline-none min-h-[44px] text-sm sm:text-base"
                   />
                 </div>
 
@@ -190,9 +190,9 @@ export default function KellyCalculator() {
                     placeholder="60"
                     min="1"
                     max="99"
-                    className="w-full px-3 py-2 bg-[#1F2937] border border-[#374151] rounded-lg text-[#E5E7EB] focus:border-[#F4C430] focus:outline-none"
+                    className="w-full px-4 py-3 bg-[#1F2937] border border-[#374151] rounded-lg text-[#E5E7EB] focus:border-[#F4C430] focus:outline-none min-h-[44px] text-sm sm:text-base"
                   />
-                  <p className="text-[#6B7280] text-xs mt-1">Your estimated chance of winning this bet</p>
+                  <p className="text-[#6B7280] text-xs sm:text-sm mt-1">Your estimated chance of winning this bet</p>
                 </div>
 
                 {/* Bankroll */}
@@ -206,13 +206,13 @@ export default function KellyCalculator() {
                     onChange={(e) => setBankroll(e.target.value)}
                     placeholder="1000"
                     min="1"
-                    className="w-full px-3 py-2 bg-[#1F2937] border border-[#374151] rounded-lg text-[#E5E7EB] focus:border-[#F4C430] focus:outline-none"
+                    className="w-full px-4 py-3 bg-[#1F2937] border border-[#374151] rounded-lg text-[#E5E7EB] focus:border-[#F4C430] focus:outline-none min-h-[44px] text-sm sm:text-base"
                   />
                 </div>
 
                 <button
                   onClick={calculateKelly}
-                  className="w-full bg-[#F4C430] text-[#0B0F14] px-6 py-3 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors"
+                  className="w-full bg-[#F4C430] text-[#0B0F14] px-6 py-4 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors min-h-[44px] text-sm sm:text-base"
                 >
                   Calculate Optimal Bet Size
                 </button>
@@ -262,14 +262,14 @@ export default function KellyCalculator() {
                         <h3 className="text-[#F4C430] font-semibold mb-3">Fractional Kelly (Conservative)</h3>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <p className="text-[#9CA3AF] text-xs">1/2 Kelly</p>
+                            <p className="text-[#9CA3AF] text-xs sm:text-sm">1/2 Kelly</p>
                             <p className="text-[#E5E7EB] font-semibold">${results.fractionalBet50.toFixed(2)}</p>
-                            <p className="text-[#9CA3AF] text-xs">{results.fractionalKelly50.toFixed(2)}%</p>
+                            <p className="text-[#9CA3AF] text-xs sm:text-sm">{results.fractionalKelly50.toFixed(2)}%</p>
                           </div>
                           <div>
-                            <p className="text-[#9CA3AF] text-xs">1/4 Kelly</p>
+                            <p className="text-[#9CA3AF] text-xs sm:text-sm">1/4 Kelly</p>
                             <p className="text-[#E5E7EB] font-semibold">${results.fractionalBet25.toFixed(2)}</p>
-                            <p className="text-[#9CA3AF] text-xs">{results.fractionalKelly25.toFixed(2)}%</p>
+                            <p className="text-[#9CA3AF] text-xs sm:text-sm">{results.fractionalKelly25.toFixed(2)}%</p>
                           </div>
                         </div>
                       </div>

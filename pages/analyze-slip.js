@@ -158,7 +158,7 @@ export default function AnalyzeSlip() {
         <div className="max-w-4xl mx-auto px-4 py-8">
           {/* Back Button */}
           <Link href="/">
-            <button className="flex items-center text-[#9CA3AF] hover:text-[#F4C430] mb-6 transition-colors">
+            <button className="flex items-center text-[#9CA3AF] hover:text-[#F4C430] mb-6 transition-colors min-h-[44px] py-2 px-2 text-sm sm:text-base">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Home
             </button>
@@ -191,7 +191,7 @@ export default function AnalyzeSlip() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             {/* Upload Section */}
             <div className="bg-[#141C28] border border-[#1F2937] rounded-lg p-6">
               <h2 className="text-[#E5E7EB] text-xl font-bold mb-6">Upload Bet Slip</h2>
@@ -210,15 +210,15 @@ export default function AnalyzeSlip() {
                   <p className="text-[#9CA3AF] text-sm mb-4">
                     or click to browse files
                   </p>
-                  <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded-lg font-medium hover:bg-[#e6b829] transition-colors">
+                  <button className="bg-[#F4C430] text-[#0B0F14] px-4 py-3 rounded-lg font-medium hover:bg-[#e6b829] transition-colors min-h-[44px] text-sm sm:text-base">
                     Select Image
                   </button>
-                  <p className="text-[#6B7280] text-xs mt-3">
+                  <p className="text-[#6B7280] text-xs sm:text-sm mt-3">
                     Supports PNG, JPG, WEBP
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 sm:space-y-6">
                   <div className="bg-[#1F2937] p-4 rounded-lg">
                     <div className="flex items-center gap-3">
                       <CheckCircle className="w-5 h-5 text-green-400" />
@@ -231,16 +231,16 @@ export default function AnalyzeSlip() {
                     </div>
                   </div>
                   
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <button
                       onClick={() => setUploadedFile(null)}
-                      className="flex-1 border border-[#374151] text-[#9CA3AF] px-4 py-2 rounded-lg hover:bg-[#1F2937] transition-colors"
+                      className="flex-1 border border-[#374151] text-[#9CA3AF] px-4 py-3 rounded-lg hover:bg-[#1F2937] transition-colors min-h-[44px] text-sm sm:text-base"
                     >
                       Remove
                     </button>
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex-1 border border-[#F4C430] text-[#F4C430] px-4 py-2 rounded-lg hover:bg-[#F4C430]/10 transition-colors"
+                      className="flex-1 border border-[#F4C430] text-[#F4C430] px-4 py-3 rounded-lg hover:bg-[#F4C430]/10 transition-colors min-h-[44px] text-sm sm:text-base"
                     >
                       Change
                     </button>
@@ -249,7 +249,7 @@ export default function AnalyzeSlip() {
                   <button
                     onClick={handleAnalyzeBetSlip}
                     disabled={isAnalyzing}
-                    className="w-full bg-[#F4C430] text-[#0B0F14] px-6 py-3 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors disabled:opacity-50"
+                    className="w-full bg-[#F4C430] text-[#0B0F14] px-6 py-4 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors disabled:opacity-50 min-h-[44px] text-sm sm:text-base"
                   >
                     {isAnalyzing ? 'Analyzing...' : 'Analyze Bet Slip'}
                   </button>
@@ -266,7 +266,7 @@ export default function AnalyzeSlip() {
 
               {!isPremium && (
                 <div className="mt-4 p-3 bg-[#1F2937] rounded-lg">
-                  <p className="text-[#6B7280] text-sm text-center">
+                  <p className="text-[#6B7280] text-xs sm:text-sm text-center">
                     Free: {Math.max(0, 1 - usageData.uploads)} analysis remaining today
                   </p>
                 </div>
