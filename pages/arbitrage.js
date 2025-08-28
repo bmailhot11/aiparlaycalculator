@@ -1,4 +1,5 @@
 import { useState, useContext, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { 
   Target,
@@ -6,7 +7,8 @@ import {
   AlertCircle,
   Check,
   RefreshCw,
-  Filter
+  Filter,
+  Crown
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -19,6 +21,7 @@ import { useAuth } from '../contexts/AuthContext';
 export default function ArbitragePage() {
   const { isPremium } = useContext(PremiumContext);
   const { user } = useAuth();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [arbitrageData, setArbitrageData] = useState([]);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -411,6 +414,16 @@ export default function ArbitragePage() {
     }
   };
 
+  const handlePremiumClick = (e) => {
+    e.preventDefault();
+    if (!user) {
+      localStorage.setItem('redirectAfterAuth', '/pricing');
+      router.push('/auth/signin');
+    } else {
+      router.push('/pricing');
+    }
+  };
+
   const handleNotifyMe = async (arbitrage) => {
     if (!user) {
       setShowPaywall(true);
@@ -575,10 +588,19 @@ export default function ArbitragePage() {
                   animate={{ opacity: 1, height: 'auto' }}
                   className="mt-6"
                 >
-                  <h3 className="text-[#E5E7EB] font-semibold mb-4">Live Arbitrage Opportunities</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-[#E5E7EB] font-semibold">Live Arbitrage Opportunities</h3>
+                    {!isPremium && arbitrageData.length > 1 && (
+                      <div className="bg-[#F4C430]/10 border border-[#F4C430]/20 rounded-lg px-3 py-1">
+                        <p className="text-[#F4C430] text-xs font-medium">
+                          Free: Showing 1 of {arbitrageData.length} opportunities
+                        </p>
+                      </div>
+                    )}
+                  </div>
                   <div className="space-y-4">
-                    {arbitrageData.map((arb) => (
-                      <div key={arb.id} className="p-4 bg-[#0B1220] rounded-lg border border-[#1F2937] hover:border-[#F4C430]/30 transition-colors">
+                    {arbitrageData.map((arb, index) => (
+                      <div key={arb.id} className={`relative p-4 bg-[#0B1220] rounded-lg border border-[#1F2937] hover:border-[#F4C430]/30 transition-colors ${!isPremium && index > 0 ? 'blur-sm pointer-events-none' : ''}`}>
                         <div className="flex items-center justify-between mb-3">
                           <div>
                             <h4 className="text-[#E5E7EB] font-medium">{arb.matchup}</h4>
@@ -637,6 +659,27 @@ export default function ArbitragePage() {
                             Show Stakes
                           </button>
                         </div>
+                        
+                        {/* Premium Upgrade Overlay for Free Users */}
+                        {!isPremium && index > 0 && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-[#0B1220]/90 rounded-lg">
+                            <div className="text-center p-4">
+                              <div className="mb-3">
+                                <Crown className="w-8 h-8 mx-auto text-[#F4C430]" />
+                              </div>
+                              <h4 className="text-[#E5E7EB] font-semibold mb-2">Premium Required</h4>
+                              <p className="text-[#9CA3AF] text-sm mb-4">
+                                Unlock all arbitrage opportunities with Premium
+                              </p>
+                              <button 
+                                onClick={handlePremiumClick}
+                                className="bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#e6b829] transition-colors"
+                              >
+                                Go Premium
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
