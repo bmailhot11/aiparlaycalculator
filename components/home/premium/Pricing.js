@@ -12,7 +12,7 @@ const PRICING_FEATURES = {
   ],
   premium: [
     'Unlimited arbitrage scanning',
-    'Real-time line shopping across 15+ books',
+    'Real-time line shopping across 50+ books',
     'Unlimited AI parlay generation',
     'Unlimited bet slip analysis',
     'Advanced Kelly sizing with risk management',

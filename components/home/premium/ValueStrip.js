@@ -9,7 +9,7 @@ const VALUE_PROPS = [
     title: 'Prices',
     description: 'We pull the latest odds from multiple sportsbooks',
     learnMore: '/learn/what-does-plus-150-mean',
-    detail: 'Live odds across 15+ major books'
+    detail: 'Live odds across 50+ major books'
   },
   {
     id: 'true-value', 
