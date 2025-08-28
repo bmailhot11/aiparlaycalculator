@@ -31,6 +31,8 @@ export default function Home() {
   const { user, loading: authLoading } = useAuth();
   const [currentUser, setCurrentUser] = useState(null);
   const [currentEdge, setCurrentEdge] = useState(null);
+  const [liveArbitrage, setLiveArbitrage] = useState(null);
+  const [loadingArbitrage, setLoadingArbitrage] = useState(false);
 
   // Load user data and fetch live stats
   useEffect(() => {
@@ -82,6 +84,33 @@ export default function Home() {
       }
     } catch (error) {
       // Keep null for graceful fallback
+    }
+  };
+
+  const fetchLiveArbitrage = async () => {
+    setLoadingArbitrage(true);
+    try {
+      const response = await fetch('/api/arbitrage/find-opportunities', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sport: null,
+          includeAllSports: true
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.opportunities && data.opportunities.length > 0) {
+          // Get top 3 arbitrage opportunities
+          setLiveArbitrage(data.opportunities.slice(0, 3));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching arbitrage:', error);
+    } finally {
+      setLoadingArbitrage(false);
     }
   };
 
@@ -381,6 +410,102 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Live Arbitrage Opportunities */}
+        <section className="py-8 sm:py-12 px-3 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-center mb-6"
+            >
+              <h2 className="text-2xl sm:text-3xl font-bold text-[#E5E7EB] mb-2">
+                🎯 Live Arbitrage Opportunities
+              </h2>
+              <p className="text-[#9CA3AF] text-sm sm:text-base">
+                Guaranteed profit opportunities happening right now
+              </p>
+            </motion.div>
+
+            {!loadingArbitrage && !liveArbitrage && (
+              <div className="text-center">
+                <button
+                  onClick={fetchLiveArbitrage}
+                  className="inline-flex items-center px-6 py-3 bg-[#F4C430] text-[#0B0F14] rounded-lg font-semibold hover:bg-[#e6b829] transition-colors"
+                >
+                  <TrendingUp className="w-5 h-5 mr-2" />
+                  Find Live Arbitrage
+                </button>
+              </div>
+            )}
+
+            {loadingArbitrage && (
+              <div className="text-center">
+                <div className="inline-flex items-center px-6 py-3 bg-[#1F2937] rounded-lg">
+                  <div className="w-5 h-5 border-2 border-[#F4C430] border-t-transparent rounded-full animate-spin mr-2" />
+                  <span className="text-[#9CA3AF]">Scanning all sports...</span>
+                </div>
+              </div>
+            )}
+
+            {liveArbitrage && liveArbitrage.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                {liveArbitrage.map((arb, index) => (
+                  <motion.div
+                    key={arb.id || index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 hover:border-[#F4C430]/50 transition-colors"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="text-[#E5E7EB] font-semibold text-sm">
+                          {arb.matchup || 'Unknown Match'}
+                        </h3>
+                        <p className="text-[#6B7280] text-xs">
+                          {arb.market_display || 'Market'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-green-400 font-bold text-lg">
+                          +{parseFloat(arb.profit_percentage || 0).toFixed(2)}%
+                        </span>
+                        <p className="text-[#6B7280] text-xs">Guaranteed</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {(arb.legs || []).slice(0, 2).map((leg, i) => (
+                        <div key={i} className="flex justify-between text-xs">
+                          <span className="text-[#9CA3AF]">{leg?.sportsbook}</span>
+                          <span className="text-[#F4C430]">
+                            {(leg?.american_odds || 0) > 0 ? '+' : ''}{leg?.american_odds}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Link href="/arbitrage">
+                      <button className="w-full mt-3 bg-[#F4C430]/10 text-[#F4C430] py-2 rounded text-xs font-medium hover:bg-[#F4C430]/20 transition-colors">
+                        View Details
+                      </button>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+            {liveArbitrage && liveArbitrage.length === 0 && (
+              <div className="text-center py-8">
+                <Target className="w-12 h-12 mx-auto mb-3 text-[#6B7280]" />
+                <p className="text-[#9CA3AF]">No arbitrage opportunities at the moment</p>
+                <p className="text-[#6B7280] text-sm mt-1">Check back soon or try again</p>
+              </div>
+            )}
           </div>
         </section>
 
