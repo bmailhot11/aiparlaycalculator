@@ -206,6 +206,7 @@ export default function Success() {
           </p>
         )}
         </div>
+        </div>
       </GradientBG>
     </div>
   );

@@ -269,6 +269,7 @@ export default function Privacy() {
             </Link>
           </div>
         </div>
+        </div>
       </GradientBG>
     </div>
   )
