@@ -1,194 +1,76 @@
-import { useState, useContext, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Head from 'next/head';
-import Link from 'next/link';
-import { useAuth } from '../contexts/AuthContext';
-import { 
-  Upload, 
-  TrendingUp, 
-  Target, 
-  Brain, 
-  Calculator,
-  DollarSign,
-  RotateCcw,
-  ChevronRight,
-  HelpCircle,
-  Clock,
-  BookOpen,
-  Check,
-  AlertTriangle,
-  ExternalLink,
-  Crown,
-  Star
-} from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { PremiumContext } from './_app';
-import { apiFetch } from '../utils/api';
+import GradientBG from '../components/theme/GradientBG';
+import Hero from '../components/home/premium/Hero';
+import ValueStrip from '../components/home/premium/ValueStrip';
+import FeatureTabs from '../components/home/premium/FeatureTabs';
+import Proof from '../components/home/premium/Proof';
+import Pricing from '../components/home/premium/Pricing';
+import FAQ from '../components/home/premium/FAQ';
+import { fetchLivePreviewData } from '../lib/adapters/premium-data-adapters';
+import { AlertTriangle, ArrowUp } from 'lucide-react';
 
 export default function Home() {
-  const { isPremium } = useContext(PremiumContext);
-  const { user, loading: authLoading } = useAuth();
-  const [currentUser, setCurrentUser] = useState(null);
-  const [currentEdge, setCurrentEdge] = useState(null);
-  const [liveArbitrage, setLiveArbitrage] = useState(null);
-  const [loadingArbitrage, setLoadingArbitrage] = useState(false);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [stickyCtaVisible, setStickyCtaVisible] = useState(false);
 
-  // Load user data and fetch live stats
+  // Load data on mount
   useEffect(() => {
-    // Prevent hydration issues by checking if we're in browser
-    if (typeof window === 'undefined') return;
-    
-    // Use real Supabase auth instead of localStorage
-    if (user) {
-      setCurrentUser({
-        email: user.email,
-        displayName: user.user_metadata?.display_name || user.user_metadata?.full_name || user.email,
-        isPremium: false // Can be updated later based on subscription
-      });
-    } else {
-      setCurrentUser(null);
-    }
-    
-
-    // Fetch current edge (with graceful fallbacks)
-    fetchCurrentEdge();
-  }, [user, isPremium]);
-
-
-  const fetchCurrentEdge = async () => {
-    try {
-      // Try to get a recent edge from line shopping or arbitrage
-      const response = await fetch('/api/arbitrage/find-opportunities', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sport: 'NBA',
-          includeAllSports: false
-        })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.opportunities && data.opportunities.length > 0) {
-          const edge = data.opportunities[0];
-          setCurrentEdge({
-            league: edge.sport || 'MLB',
-            market: edge.market || 'Moneyline',
-            price: edge.bestOdds || '+150',
-            edge: edge.profit ? (edge.profit * 100).toFixed(1) : '3.2',
-            timestamp: new Date().toLocaleTimeString()
-          });
-        }
+    const loadData = async () => {
+      try {
+        console.log('Loading preview data...');
+        const previewData = await fetchLivePreviewData();
+        console.log('Loaded preview data:', previewData);
+        setData(previewData);
+      } catch (error) {
+        console.error('Failed to load preview data:', error);
+        // Set empty data structure for graceful handling
+        setData({
+          evFeed: [],
+          arbitrage: [],
+          lineShop: [],
+          parlay: null,
+          clv: null
+        });
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      // Keep null for graceful fallback
-    }
+    };
+
+    loadData();
+  }, []);
+
+  // Scroll event listeners
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      setShowScrollTop(scrollY > 400);
+      setStickyCtaVisible(scrollY > 800);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const fetchLiveArbitrage = async () => {
-    setLoadingArbitrage(true);
-    try {
-      const response = await fetch('/api/arbitrage/find-opportunities', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sport: null,
-          includeAllSports: true
-        })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.opportunities && data.opportunities.length > 0) {
-          // Get top 3 arbitrage opportunities
-          setLiveArbitrage(data.opportunities.slice(0, 3));
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching arbitrage:', error);
-    } finally {
-      setLoadingArbitrage(false);
-    }
-  };
-
-  const handleFile = (file) => {
-    if (file.type.startsWith('image/')) {
-      setUploadedFile(file);
-    }
-  };
-
-  const handleFileInput = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0]);
-    }
-  };
-
-  const handleAnalyzeBetSlip = async () => {
-    if (!uploadedFile) {
-      alert('Please upload a bet slip image first');
-      return;
-    }
-
-    if (!isPremium && usageData.uploads >= 1) {
-      setShowPaywall(true);
-      return;
-    }
-
-    setIsAnalyzing(true);
-    
-    try {
-      const reader = new FileReader();
-      const processImage = () => new Promise((resolve, reject) => {
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(uploadedFile);
-      });
-      
-      const base64Result = await processImage();
-      const base64String = base64Result.split(',')[1];
-      
-      const response = await apiFetch('/api/analyze-slip', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          imageBase64: base64String,
-          userId: currentUser?.id || '',
-          username: currentUser?.username || ''
-        }),
-      });
-
-      const result = await response.json();
-      
-      if (result.success && result.analysis) {
-        setAnalysisResult(result.analysis);
-      } else {
-        throw new Error(result.message || 'Failed to analyze bet slip');
-      }
-    } catch (error) {
-      console.error('Error analyzing bet slip:', error);
-      alert(error.message || 'Failed to analyze bet slip. Please try again.');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  // Tooltip component for inline glossary
-  const Tooltip = ({ children, content }) => (
-    <span className="group relative cursor-help border-b border-dotted border-[#F4C430]">
-      {children}
-      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-[#1F2937] text-[#E5E7EB] text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap block">
-        {content}
-      </span>
-    </span>
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <>
+    <div className="betchekr-premium">
       <Head>
         <title>BetChekr — Find mispriced odds (+EV bets made simple)</title>
         <meta name="description" content="Beginner-friendly tools to spot +EV bets, remove the vig, compare prices, and size stakes with confidence. Clear math. No hype." />
@@ -249,605 +131,75 @@ export default function Home() {
         }} />
       </Head>
 
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
-        
+      <GradientBG>
+        {/* Header with Premium styling */}
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
 
-        {/* 1) Hero Section */}
-        <section className="relative py-6 sm:py-20 px-0 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="text-center max-w-4xl mx-auto mb-8 sm:mb-12"
-            >
-              <h1 className="text-[1.5rem] leading-[1.3] sm:text-4xl md:text-6xl font-bold text-[#E5E7EB] mb-3 sm:mb-6 px-3 sm:px-2">
-                Use our AI for sports betting to increase your odds and find the best opportunities for you
-              </h1>
-              
-              <p className="text-[#9CA3AF] text-sm sm:text-lg md:text-xl leading-relaxed mb-4 sm:mb-8 max-w-3xl mx-auto px-4 sm:px-0">
-                We compare sportsbook prices, remove the house edge (<Tooltip content="The bookmaker's built-in profit margin">vig</Tooltip>), 
-                and show where the value is so you bet smarter and win bigger.
+        {/* Page Content */}
+        <main>
+          <Hero data={data} />
+          <ValueStrip />
+          <FeatureTabs data={data} />
+          <Proof data={data} />
+          <Pricing />
+          <FAQ />
+
+          {/* Responsible Gaming Notice */}
+          <section className="py-12 px-6 border-t border-premium-border">
+            <div className="max-w-4xl mx-auto text-center">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                <span className="text-premium-text-primary font-medium">Responsible Betting</span>
+              </div>
+              <p className="text-premium-text-muted">
+                Bet responsibly. Set limits. If betting stops being fun, take a break.
+                <a href="https://www.ncpgambling.org/" target="_blank" rel="noopener noreferrer" className="text-premium-accent ml-1 hover:underline">
+                  Get help if needed
+                </a>
               </p>
-
-              {/* Tools grid */}
-              <div className="max-w-6xl mx-auto mt-4 sm:mt-12 px-3 sm:px-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 lg:gap-6">
-                  {/* Arbitrage Finder */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
-                  >
-                    <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
-                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">Arbitrage</h3>
-                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
-                      Find guaranteed profit opportunities across books.
-                    </p>
-                    <Link href="/arbitrage">
-                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
-                        Open
-                      </button>
-                    </Link>
-                  </motion.div>
-
-                  {/* Line Shopping */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
-                  >
-                    <Target className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
-                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">Line Shop</h3>
-                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
-                      Find the best price across books before you bet.
-                    </p>
-                    <Link href="/line-shopping">
-                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
-                        Open
-                      </button>
-                    </Link>
-                  </motion.div>
-
-                  {/* Kelly Calculator */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
-                  >
-                    <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
-                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">Kelly Calc</h3>
-                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
-                      Size your bet sensibly to manage risk.
-                    </p>
-                    <Link href="/kelly-calculator">
-                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
-                        Open
-                      </button>
-                    </Link>
-                  </motion.div>
-
-                  {/* AI Parlay Generator */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
-                  >
-                    <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
-                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">AI Parlay</h3>
-                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
-                      Generate smart parlays optimized for +EV or fun.
-                    </p>
-                    <Link href="/ai-parlay">
-                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
-                        Open
-                      </button>
-                    </Link>
-                  </motion.div>
-
-                  {/* Analyze Parlay / Bet Slip */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.4 }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
-                  >
-                    <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
-                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">Analyze Slip</h3>
-                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
-                      Upload your slip; we check if the price is fair.
-                    </p>
-                    <Link href="/analyze-slip">
-                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
-                        Open
-                      </button>
-                    </Link>
-                  </motion.div>
-                </div>
-              </div>
-
-              {/* Premium CTA */}
-              {!isPremium && (
-                <div className="mt-6 sm:mt-10 flex justify-center px-3">
-                  <Link href="/pricing">
-                    <button className="group relative inline-flex items-center bg-gradient-to-r from-[#F4C430] to-[#e6b829] text-[#0B0F14] px-4 sm:px-8 py-2.5 sm:py-4 rounded-xl font-bold text-[13px] sm:text-base hover:shadow-2xl hover:shadow-[#F4C430]/20 transform hover:-translate-y-0.5 transition-all duration-200">
-                      <Crown className="w-4 h-4 sm:w-6 sm:h-6 mr-1.5 sm:mr-2" />
-                      <span>Go Premium - $9.99/mo</span>
-                      <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-semibold">
-                        50% OFF
-                      </div>
-                    </button>
-                  </Link>
-                </div>
-              )}
-
-              {/* Secondary CTA */}
-              <div className="mt-6 mb-8 sm:mb-12 flex justify-center px-2">
-                <Link href="/learn/how-to-use-ai-for-sports-betting">
-                  <button 
-                    className="inline-flex items-center bg-transparent border border-[#F4C430] text-[#F4C430] px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm hover:bg-[#F4C430] hover:text-[#0B0F14] transition-colors"
-                    data-event="cta_ai_article_click"
-                  >
-                    How AI helps (2-minute read)
-                    <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 ml-2" />
-                  </button>
-                </Link>
-              </div>
-
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Answer-box Summary */}
-        <section className="py-6 sm:py-8 px-3 sm:px-6 lg:px-8 border-b border-[#1F2937]">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-[#141C28] rounded-lg p-4 sm:p-6 border border-[#1F2937]">
-              <p className="text-[#9CA3AF] text-sm sm:text-base mb-3 sm:mb-4">
-                BetChekr helps you find value in betting lines. We compare sportsbook prices to fair odds (vig removed) 
-                and highlight <Tooltip content="Bets with positive expected value">+EV</Tooltip> opportunities.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-green-400" />
-                  <span className="text-[#E5E7EB]">Find better prices</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-green-400" />
-                  <span className="text-[#E5E7EB]">Understand fair odds</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-green-400" />
-                  <span className="text-[#E5E7EB]">Size your bets sensibly</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Live Arbitrage Opportunities */}
-        <section className="py-8 sm:py-12 px-3 sm:px-6 lg:px-8">
-          <div className="max-w-6xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-center mb-6"
-            >
-              <h2 className="text-2xl sm:text-3xl font-bold text-[#E5E7EB] mb-2">
-                Live Arbitrage Opportunities
-              </h2>
-              <p className="text-[#9CA3AF] text-sm sm:text-base">
-                Positive return opportunities happening right now
-              </p>
-            </motion.div>
-
-            {!loadingArbitrage && !liveArbitrage && (
-              <div className="text-center">
-                <button
-                  onClick={fetchLiveArbitrage}
-                  className="inline-flex items-center px-6 py-3 bg-[#F4C430] text-[#0B0F14] rounded-lg font-semibold hover:bg-[#e6b829] transition-colors"
-                >
-                  <TrendingUp className="w-5 h-5 mr-2" />
-                  Find Live Arbitrage
-                </button>
-              </div>
-            )}
-
-            {loadingArbitrage && (
-              <div className="text-center">
-                <div className="inline-flex items-center px-6 py-3 bg-[#1F2937] rounded-lg">
-                  <div className="w-5 h-5 border-2 border-[#F4C430] border-t-transparent rounded-full animate-spin mr-2" />
-                  <span className="text-[#9CA3AF]">Scanning all sports...</span>
-                </div>
-              </div>
-            )}
-
-            {liveArbitrage && liveArbitrage.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                {liveArbitrage.map((arb, index) => (
-                  <motion.div
-                    key={arb.id || index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 hover:border-[#F4C430]/50 transition-colors"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="text-[#E5E7EB] font-semibold text-sm">
-                          {arb.matchup || 'Unknown Match'}
-                        </h3>
-                        <p className="text-[#6B7280] text-xs">
-                          {arb.market_display || 'Market'}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-green-400 font-bold text-lg">
-                          +{parseFloat(arb.profit_percentage || 0).toFixed(2)}%
-                        </span>
-                        <p className="text-[#6B7280] text-xs">Return</p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      {(arb.legs || []).slice(0, 2).map((leg, i) => (
-                        <div key={i} className="flex justify-between text-xs">
-                          <span className="text-[#9CA3AF]">{leg?.sportsbook}</span>
-                          <span className="text-[#F4C430]">
-                            {(leg?.american_odds || 0) > 0 ? '+' : ''}{leg?.american_odds}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <Link href="/arbitrage">
-                      <button className="w-full mt-3 bg-[#F4C430]/10 text-[#F4C430] py-2 rounded text-xs font-medium hover:bg-[#F4C430]/20 transition-colors">
-                        View Details
-                      </button>
-                    </Link>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-
-            {liveArbitrage && liveArbitrage.length === 0 && (
-              <div className="text-center py-8">
-                <Target className="w-12 h-12 mx-auto mb-3 text-[#6B7280]" />
-                <p className="text-[#9CA3AF]">No arbitrage opportunities at the moment</p>
-                <p className="text-[#6B7280] text-sm mt-1">Check back soon or try again</p>
-              </div>
-            )}
-          </div>
-        </section>
-
-
-        {/* 3) Edge of the Moment (Optional Ticker) */}
-        {currentEdge && (
-          <section className="py-6 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="bg-gradient-to-r from-green-500/10 to-[#F4C430]/10 border border-green-500/30 rounded-lg p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    <span className="text-green-400 font-medium text-sm">Live Edge</span>
-                  </div>
-                  <span className="text-[#6B7280] text-xs">{currentEdge.timestamp}</span>
-                </div>
-                <div className="mt-2">
-                  <span className="text-[#E5E7EB] font-medium">
-                    {currentEdge.league} {currentEdge.market} at {currentEdge.price}
-                  </span>
-                  <span className="ml-2 text-green-400 font-bold">
-                    +{currentEdge.edge}% edge
-                  </span>
-                </div>
-              </motion.div>
             </div>
           </section>
-        )}
+        </main>
 
-        {/* 3) How it works */}
-        <section className="py-12 sm:py-20 px-3 sm:px-6 lg:px-8">
-          <div className="max-w-6xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-center mb-12"
-            >
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#E5E7EB] mb-4 sm:mb-6">
-                How BetChekr helps
-              </h2>
-            </motion.div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-              {/* Step 1 */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.1 }}
-                className="text-center"
-              >
-                <div className="w-12 h-12 bg-[#F4C430] text-[#0B0F14] rounded-full flex items-center justify-center font-bold text-xl mb-4 mx-auto">
-                  1
-                </div>
-                <h3 className="text-xl font-semibold text-[#E5E7EB] mb-3">Prices</h3>
-                <p className="text-[#9CA3AF]">
-                  We pull the latest odds from multiple sportsbooks.
-                </p>
-              </motion.div>
-
-              {/* Step 2 */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2 }}
-                className="text-center"
-              >
-                <div className="w-12 h-12 bg-[#F4C430] text-[#0B0F14] rounded-full flex items-center justify-center font-bold text-xl mb-4 mx-auto">
-                  2
-                </div>
-                <h3 className="text-xl font-semibold text-[#E5E7EB] mb-3">True value</h3>
-                <p className="text-[#9CA3AF]">
-                  We remove the <Tooltip content="The bookmaker's built-in profit margin">vig</Tooltip> (the book's cut) to estimate fair odds.
-                </p>
-              </motion.div>
-
-              {/* Step 3 */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.3 }}
-                className="text-center"
-              >
-                <div className="w-12 h-12 bg-[#F4C430] text-[#0B0F14] rounded-full flex items-center justify-center font-bold text-xl mb-4 mx-auto">
-                  3
-                </div>
-                <h3 className="text-xl font-semibold text-[#E5E7EB] mb-3">Your decision</h3>
-                <p className="text-[#9CA3AF]">
-                  We highlight better-value bets (<Tooltip content="Bets with positive expected value">+EV</Tooltip>) and suggest smart staking rules like <Tooltip content="A bet sizing strategy that maximizes long-term growth">Kelly</Tooltip>.
-                </p>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        {/* 4) Proof section */}
-        <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#E5E7EB] mb-4 sm:mb-6">
-                Proof, not promises
-              </h2>
-              <p className="text-[#9CA3AF] text-base sm:text-lg leading-relaxed mb-6 sm:mb-8 max-w-3xl mx-auto">
-                We judge ourselves by <Tooltip content="How much better your bet was compared to the final market price">Closing Line Value (CLV)</Tooltip>—did our picks beat the final market price? 
-                Wins and losses swing day to day; CLV shows whether the price you took was good.
-              </p>
-              
-              <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
-                <Link href="/learn/how-to-use-ai-for-sports-betting" className="w-full sm:w-auto">
-                  <button className="w-full sm:w-auto bg-[#F4C430] text-[#0B0F14] px-6 py-3 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors touch-manipulation">
-                    Our Math & Method
-                  </button>
-                </Link>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* 6) Learn panel */}
-        <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 bg-[#0A0E13]">
-          <div className="max-w-6xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-center mb-8 sm:mb-12"
-            >
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#E5E7EB] mb-4 sm:mb-6">
-                Learn the basics (quick reads)
-              </h2>
-            </motion.div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              {/* AI Article */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 hover:border-[#F4C430]/50 transition-colors"
-              >
-                <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                  <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430]" />
-                  <span className="text-[#F4C430] text-xs sm:text-sm font-medium">15 min read</span>
-                </div>
-                <h3 className="text-base sm:text-lg font-semibold text-[#E5E7EB] mb-2">
-                  How to use AI for sports betting
-                </h3>
-                <p className="text-[#9CA3AF] text-sm mb-3 sm:mb-4">
-                  Step-by-step guide with formulas, prompts, and responsible practices.
-                </p>
-                <Link href="/learn/how-to-use-ai-for-sports-betting">
-                  <span className="inline-flex items-center text-[#F4C430] text-sm font-medium hover:gap-2 transition-all touch-manipulation">
-                    Read guide
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </span>
-                </Link>
-              </motion.div>
-
-              {/* EV Article */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.1 }}
-                className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 hover:border-[#F4C430]/50 transition-colors"
-              >
-                <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430]" />
-                  <span className="text-[#F4C430] text-xs sm:text-sm font-medium">6 min read</span>
-                </div>
-                <h3 className="text-base sm:text-lg font-semibold text-[#E5E7EB] mb-2">
-                  What is +EV (expected value)?
-                </h3>
-                <p className="text-[#9CA3AF] text-sm mb-3 sm:mb-4">
-                  Why EV is the most important concept in profitable sports betting.
-                </p>
-                <Link href="/learn/what-is-expected-value">
-                  <span className="inline-flex items-center text-[#F4C430] text-sm font-medium hover:gap-2 transition-all touch-manipulation">
-                    Read guide
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </span>
-                </Link>
-              </motion.div>
-
-              {/* Odds Article */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2 }}
-                className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 hover:border-[#F4C430]/50 transition-colors"
-              >
-                <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                  <Calculator className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430]" />
-                  <span className="text-[#F4C430] text-xs sm:text-sm font-medium">5 min read</span>
-                </div>
-                <h3 className="text-base sm:text-lg font-semibold text-[#E5E7EB] mb-2">
-                  Odds made simple
-                </h3>
-                <p className="text-[#9CA3AF] text-sm mb-3 sm:mb-4">
-                  American, Decimal, Fractional formats explained.
-                </p>
-                <Link href="/learn/what-does-plus-150-mean">
-                  <span className="inline-flex items-center text-[#F4C430] text-sm font-medium hover:gap-2 transition-all touch-manipulation">
-                    Read guide
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </span>
-                </Link>
-              </motion.div>
-
-              {/* CLV Article */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.3 }}
-                className="bg-[#141C28] border border-[#1F2937] rounded-lg p-4 sm:p-6 hover:border-[#F4C430]/50 transition-colors"
-              >
-                <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                  <Target className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430]" />
-                  <span className="text-[#F4C430] text-xs sm:text-sm font-medium">4 min read</span>
-                </div>
-                <h3 className="text-base sm:text-lg font-semibold text-[#E5E7EB] mb-2">
-                  What is CLV and why it matters
-                </h3>
-                <p className="text-[#9CA3AF] text-sm mb-3 sm:mb-4">
-                  Understanding Closing Line Value and long-term success.
-                </p>
-                <Link href="/learn">
-                  <span className="inline-flex items-center text-[#F4C430] text-sm font-medium hover:gap-2 transition-all touch-manipulation">
-                    Read guide
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </span>
-                </Link>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        {/* 7) Pricing ribbon */}
-        <section className="py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="bg-gradient-to-r from-[#1F2937] to-[#374151] rounded-2xl p-6 sm:p-8 border border-[#374151]"
-            >
-              <p className="text-[#E5E7EB] text-base sm:text-lg mb-4 sm:mb-6">
-                Ready to try BetChekr?
-              </p>
-              <Link href="/pricing" className="block sm:inline-block">
-                <button 
-                  className="w-full sm:w-auto bg-[#F4C430] text-[#0B0F14] px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg hover:bg-[#e6b829] transition-colors touch-manipulation"
-                  data-event="cta_pricing_click"
-                >
-                  See pricing
-                </button>
-              </Link>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* FAQ Section */}
-        <section className="py-20 px-4 sm:px-6 lg:px-8 border-t border-[#1F2937]">
-          <div className="max-w-4xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-center mb-12"
-            >
-              <h2 className="text-2xl font-bold text-[#E5E7EB] mb-6">
-                Frequently Asked Questions
-              </h2>
-            </motion.div>
-
-            <div className="space-y-6">
-              <div className="bg-[#141C28] rounded-lg border border-[#1F2937] p-6">
-                <h3 className="text-lg font-semibold text-[#F4C430] mb-3">What does +EV mean?</h3>
-                <p className="text-[#9CA3AF]">A bet with positive expected value based on fair odds.</p>
-              </div>
-
-              <div className="bg-[#141C28] rounded-lg border border-[#1F2937] p-6">
-                <h3 className="text-lg font-semibold text-[#F4C430] mb-3">What does removing the vig do?</h3>
-                <p className="text-[#9CA3AF]">It takes out the book's cut to estimate fair odds.</p>
-              </div>
-
-              <div className="bg-[#141C28] rounded-lg border border-[#1F2937] p-6">
-                <h3 className="text-lg font-semibold text-[#F4C430] mb-3">Is this betting advice?</h3>
-                <p className="text-[#9CA3AF]">No. We show math and prices so you can decide.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 8) Responsible betting footer note */}
-        <section className="py-12 px-4 sm:px-6 lg:px-8 bg-[#0A0E13]">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <AlertTriangle className="w-5 h-5 text-yellow-400" />
-              <span className="text-[#E5E7EB] font-medium">Responsible Betting</span>
-            </div>
-            <p className="text-[#9CA3AF]">
-              Bet responsibly. Set limits. If betting stops being fun, take a break.
-            </p>
-          </div>
-        </section>
-        
         <Footer />
-      </div>
-    </>
+
+        {/* Sticky Bottom CTA (Mobile) */}
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ 
+            y: stickyCtaVisible ? 0 : 100, 
+            opacity: stickyCtaVisible ? 1 : 0 
+          }}
+          transition={{ duration: 0.3 }}
+          className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-premium-panel border-t border-premium-border backdrop-blur-md lg:hidden"
+        >
+          <div className="flex gap-3">
+            <a href="/pricing" className="flex-1 btn-primary py-3 text-center font-semibold">
+              Go Premium
+            </a>
+            <a href="/arbitrage" className="flex-1 btn-secondary py-3 text-center font-semibold">
+              Try Free
+            </a>
+          </div>
+        </motion.div>
+
+        {/* Scroll to Top Button */}
+        <motion.button
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ 
+            scale: showScrollTop ? 1 : 0, 
+            opacity: showScrollTop ? 1 : 0 
+          }}
+          transition={{ duration: 0.2 }}
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 w-12 h-12 bg-premium-accent text-black rounded-full shadow-lg hover:bg-premium-accent-hover transition-colors z-30 flex items-center justify-center"
+          aria-label="Scroll to top"
+        >
+          <ArrowUp className="w-5 h-5" />
+        </motion.button>
+      </GradientBG>
+    </div>
   );
 }
