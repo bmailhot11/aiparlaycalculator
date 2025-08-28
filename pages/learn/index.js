@@ -190,8 +190,8 @@ export default function LearnSection() {
                   BetChekr is a tool that analyzes your bet slips and tells you if they're Trash or Cash. 
                   But to use any tool effectively, you need to understand the fundamentals.
                 </p>
-                <p className="text-[#9CA3AF] text-sm sm:text-base leading-relaxed"
-                  These guides explain betting concepts in plain English — so you can make informed decisions 
+                <p className="text-[#9CA3AF] text-sm sm:text-base leading-relaxed">
+                  These guides explain betting concepts in plain English - so you can make informed decisions 
                   before and after using our analysis tools.
                 </p>
               </div>
