@@ -22,6 +22,54 @@ export default function ArbitragePage() {
   const [arbitrageData, setArbitrageData] = useState([]);
   const [showPaywall, setShowPaywall] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [arbitrageUsesLeft, setArbitrageUsesLeft] = useState(null);
+
+  // Check arbitrage usage on component mount
+  useEffect(() => {
+    if (user && !isPremium) {
+      checkArbitrageUsage();
+    } else if (isPremium) {
+      setArbitrageUsesLeft('unlimited');
+    }
+  }, [user, isPremium]);
+
+  const checkArbitrageUsage = () => {
+    try {
+      const usageKey = `arbitrage_usage_${user.id}`;
+      const usage = localStorage.getItem(usageKey);
+      const usageData = usage ? JSON.parse(usage) : { count: 0, lastReset: new Date().toDateString() };
+      
+      // Reset daily if it's a new day
+      const today = new Date().toDateString();
+      if (usageData.lastReset !== today) {
+        usageData.count = 0;
+        usageData.lastReset = today;
+        localStorage.setItem(usageKey, JSON.stringify(usageData));
+      }
+      
+      const remaining = Math.max(0, 1 - usageData.count);
+      setArbitrageUsesLeft(remaining);
+    } catch (error) {
+      console.error('Error checking arbitrage usage:', error);
+      setArbitrageUsesLeft(0);
+    }
+  };
+
+  const incrementArbitrageUsage = () => {
+    try {
+      const usageKey = `arbitrage_usage_${user.id}`;
+      const usage = localStorage.getItem(usageKey);
+      const usageData = usage ? JSON.parse(usage) : { count: 0, lastReset: new Date().toDateString() };
+      
+      usageData.count += 1;
+      localStorage.setItem(usageKey, JSON.stringify(usageData));
+      
+      const remaining = Math.max(0, 1 - usageData.count);
+      setArbitrageUsesLeft(remaining);
+    } catch (error) {
+      console.error('Error incrementing arbitrage usage:', error);
+    }
+  };
 
   // Hero background images (sports-related)
   const backgroundImages = [
@@ -212,10 +260,22 @@ export default function ArbitragePage() {
       return;
     }
     
-    // Check premium access for authenticated users
+    // Check usage limits for non-premium users
     if (!isPremium) {
-      setShowPaywall(true);
-      return;
+      if (arbitrageUsesLeft === null) {
+        // Still loading usage data
+        setNotification({ 
+          type: 'info', 
+          message: 'Loading usage data...' 
+        });
+        setTimeout(() => setNotification(null), 2000);
+        return;
+      }
+      
+      if (arbitrageUsesLeft <= 0) {
+        setShowPaywall(true);
+        return;
+      }
     }
     
     setIsLoading(true);
@@ -295,17 +355,30 @@ export default function ArbitragePage() {
         
         setArbitrageData(transformedData);
         
+        // Increment usage for non-premium users
+        if (!isPremium && user) {
+          incrementArbitrageUsage();
+        }
+        
         // Show notification based on results
         if (transformedData.length === 0) {
+          let message = `No arbitrage opportunities found. Checked ${data.total_games_checked || 0} games across ${data.books_checked || 'multiple'} sportsbooks.`;
+          if (!isPremium && arbitrageUsesLeft === 1) {
+            message += ` You have used your free daily search.`;
+          }
           setNotification({ 
             type: 'info', 
-            message: `No arbitrage opportunities found. Checked ${data.total_games_checked || 0} games across ${data.books_checked || 'multiple'} sportsbooks.` 
+            message: message
           });
           setTimeout(() => setNotification(null), 4000);
         } else {
+          let message = `Found ${transformedData.length} arbitrage opportunities!`;
+          if (!isPremium && arbitrageUsesLeft === 1) {
+            message += ` You have used your free daily search.`;
+          }
           setNotification({ 
             type: 'success', 
-            message: `Found ${transformedData.length} arbitrage opportunities!` 
+            message: message
           });
           setTimeout(() => setNotification(null), 3000);
         }
@@ -401,7 +474,8 @@ export default function ArbitragePage() {
       {/* Paywall Overlay */}
       {showPaywall && (
         <Paywall 
-          feature="arbitrage finder" 
+          feature="arbitrage finder"
+          usageLimit={!user ? null : "1 free search per day"}
         />
       )}
       
@@ -469,9 +543,21 @@ export default function ArbitragePage() {
                   )}
                 </button>
               
-              <p className="text-[#6B7280] text-sm text-center">
-                Scanning all available sports and leagues for guaranteed profit opportunities
-              </p>
+              <div className="text-center">
+                <p className="text-[#6B7280] text-sm mb-2">
+                  Scanning all available sports and leagues for guaranteed profit opportunities
+                </p>
+                {!isPremium && user && arbitrageUsesLeft !== null && (
+                  <p className="text-[#F4C430] text-xs font-medium">
+                    {arbitrageUsesLeft === 'unlimited' 
+                      ? 'Unlimited searches' 
+                      : arbitrageUsesLeft > 0 
+                        ? `${arbitrageUsesLeft} free search remaining today`
+                        : 'No free searches remaining - upgrade for unlimited access'
+                    }
+                  </p>
+                )}
+              </div>
               
               {/* Premium Note */}
               <p className="text-[#6B7280] text-xs text-center">
