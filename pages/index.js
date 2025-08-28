@@ -272,8 +272,8 @@ export default function Home() {
               </p>
 
               {/* Tools grid */}
-              <div className="max-w-5xl mx-auto mt-4 sm:mt-12 px-3 sm:px-4">
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-6">
+              <div className="max-w-6xl mx-auto mt-4 sm:mt-12 px-3 sm:px-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 lg:gap-6">
                   {/* Arbitrage Finder */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -333,12 +333,32 @@ export default function Home() {
                     </Link>
                   </motion.div>
 
-                  {/* Analyze Parlay / Bet Slip */}
+                  {/* AI Parlay Generator */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.3 }}
+                    className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
+                  >
+                    <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
+                    <h3 className="text-sm sm:text-base font-semibold text-[#E5E7EB] mb-1 sm:mb-2">AI Parlay</h3>
+                    <p className="text-[#9CA3AF] text-xs sm:text-sm mb-2 sm:mb-3 hidden sm:block">
+                      Generate smart parlays optimized for +EV or fun.
+                    </p>
+                    <Link href="/ai-parlay">
+                      <button className="bg-[#F4C430] text-[#0B0F14] px-3 py-2 rounded font-medium text-xs sm:text-sm hover:bg-[#e6b829] transition-colors touch-manipulation w-full">
+                        Open
+                      </button>
+                    </Link>
+                  </motion.div>
+
+                  {/* Analyze Parlay / Bet Slip */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.4 }}
                     className="bg-[#141C28] border border-[#1F2937] rounded-lg p-3 sm:p-4 hover:border-[#F4C430]/50 transition-colors"
                   >
                     <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-[#F4C430] mb-2 sm:mb-3" />
