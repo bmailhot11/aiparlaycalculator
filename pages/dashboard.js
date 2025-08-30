@@ -80,6 +80,10 @@ export default function Dashboard() {
   // UI State
   const [showAddBet, setShowAddBet] = useState(false);
   const [showBankrollActions, setShowBankrollActions] = useState(false);
+  const [showUploadSlip, setShowUploadSlip] = useState(false);
+  const [uploadedSlip, setUploadedSlip] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const slipInputRef = useRef(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -170,6 +174,108 @@ export default function Dashboard() {
     }
     setIsEditingBio(false);
     await saveUserData({ bio });
+  };
+
+  const handleSlipUpload = async (file) => {
+    if (!file) return;
+    
+    setIsAnalyzing(true);
+    
+    try {
+      const reader = new FileReader();
+      const base64Data = await new Promise((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      
+      // Analyze the slip using the API
+      const response = await fetch('/api/analyze-slip-v2', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: base64Data,
+          userIdentifier: user?.id || 'anonymous'
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success && result.analysis) {
+        // Convert analysis result to bet format and add to tracking
+        const parsedBets = parseSlipAnalysisIntoBets(result.analysis);
+        
+        // Add each bet to the user's tracking
+        for (const bet of parsedBets) {
+          const newBet = {
+            id: Date.now() + Math.random(),
+            date: new Date().toISOString().split('T')[0],
+            sport: bet.sport || 'Unknown',
+            market: bet.market || 'Unknown',
+            selection: bet.selection,
+            odds: bet.odds,
+            stake: bet.stake || 0,
+            result: 'pending',
+            payout: 0,
+            profit: 0,
+            sportsbook: bet.sportsbook || 'Unknown',
+            source: 'slip_upload',
+            metadata: {
+              originalAnalysis: result.analysis,
+              uploadedAt: new Date().toISOString()
+            }
+          };
+          
+          setBets(prev => [newBet, ...prev]);
+        }
+        
+        calculateAnalytics([...bets, ...parsedBets]);
+        await saveUserData({ bets: [...bets, ...parsedBets] });
+        
+        setShowUploadSlip(false);
+        
+        // Show success message
+        alert(`Successfully added ${parsedBets.length} bet(s) to your tracking!`);
+      } else {
+        alert('Failed to analyze slip. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error analyzing slip:', error);
+      alert('Error analyzing slip. Please try again.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const parseSlipAnalysisIntoBets = (analysis) => {
+    const bets = [];
+    
+    if (analysis.legs && Array.isArray(analysis.legs)) {
+      analysis.legs.forEach((leg, index) => {
+        bets.push({
+          sport: leg.sport || 'Unknown',
+          market: leg.market || leg.bet_type || 'Unknown',
+          selection: leg.selection || leg.team || `Leg ${index + 1}`,
+          odds: leg.odds || leg.american_odds || '+100',
+          stake: analysis.total_stake ? (analysis.total_stake / analysis.legs.length) : 0,
+          sportsbook: analysis.sportsbook || 'Unknown'
+        });
+      });
+    } else if (analysis.matchup && analysis.selection) {
+      // Single bet
+      bets.push({
+        sport: analysis.sport || 'Unknown',
+        market: analysis.market || analysis.bet_type || 'Unknown',
+        selection: analysis.selection,
+        odds: analysis.odds || analysis.american_odds || '+100',
+        stake: analysis.total_stake || 0,
+        sportsbook: analysis.sportsbook || 'Unknown'
+      });
+    }
+    
+    return bets;
   };
 
   const handleBankrollAction = async (type, amount, description) => {
@@ -601,6 +707,13 @@ export default function Dashboard() {
               </h3>
               <div className="space-y-3">
                 <button 
+                  onClick={() => setShowUploadSlip(true)}
+                  className="w-full bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 p-3 rounded-lg flex items-center justify-between transition-colors"
+                >
+                  <span>Bet Slip Upload</span>
+                  <Upload className="w-4 h-4" />
+                </button>
+                <button 
                   onClick={() => router.push('/arbitrage')}
                   className="w-full bg-green-500/20 hover:bg-green-500/30 text-green-400 p-3 rounded-lg flex items-center justify-between transition-colors"
                 >
@@ -710,6 +823,15 @@ export default function Dashboard() {
         />
       )}
 
+      {/* Bet Slip Upload Modal */}
+      {showUploadSlip && (
+        <BetSlipUploadModal
+          onClose={() => setShowUploadSlip(false)}
+          onUpload={handleSlipUpload}
+          isAnalyzing={isAnalyzing}
+        />
+      )}
+
       <Footer />
     </div>
   );
@@ -782,6 +904,143 @@ function BankrollModal({ onClose, onAction }) {
           <button
             onClick={onClose}
             className="flex-1 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// Bet Slip Upload Modal Component
+function BetSlipUploadModal({ onClose, onUpload, isAnalyzing }) {
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef(null);
+  const [uploadedFile, setUploadedFile] = useState(null);
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      handleFile(files[0]);
+    }
+  };
+
+  const handleFile = (file) => {
+    if (file.type.startsWith('image/')) {
+      setUploadedFile(file);
+    } else {
+      alert('Please upload an image file (PNG, JPG, WEBP)');
+    }
+  };
+
+  const handleFileInput = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFile(e.target.files[0]);
+    }
+  };
+
+  const handleAnalyze = () => {
+    if (uploadedFile) {
+      onUpload(uploadedFile);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 w-full max-w-md"
+      >
+        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+          <Upload className="w-5 h-5" />
+          Bet Slip Upload
+        </h3>
+        
+        <div className="mb-4">
+          <div
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+              dragActive
+                ? 'border-blue-400 bg-blue-400/10'
+                : uploadedFile
+                ? 'border-green-400 bg-green-400/10'
+                : 'border-white/30 hover:border-white/50'
+            }`}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileInput}
+              className="hidden"
+            />
+            {uploadedFile ? (
+              <div className="text-green-400">
+                <Upload className="w-8 h-8 mx-auto mb-2" />
+                <p className="font-medium">{uploadedFile.name}</p>
+                <p className="text-sm text-white/60 mt-1">Click to change file</p>
+              </div>
+            ) : (
+              <div className="text-white/60">
+                <Upload className="w-8 h-8 mx-auto mb-2" />
+                <p className="font-medium mb-1">Drop your bet slip here</p>
+                <p className="text-sm">or click to select</p>
+              </div>
+            )}
+          </div>
+          
+          {uploadedFile && (
+            <div className="mt-4 p-3 bg-white/5 rounded-lg">
+              <p className="text-white/80 text-sm">
+                <strong>Note:</strong> The bet slip will be analyzed and automatically added to your bet tracking. 
+                You can edit details later if needed.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-4">
+          <button
+            onClick={handleAnalyze}
+            disabled={!uploadedFile || isAnalyzing}
+            className="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isAnalyzing ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                <span>Analyzing...</span>
+              </>
+            ) : (
+              <>
+                <Brain className="w-4 h-4" />
+                <span>Analyze & Add</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={onClose}
+            disabled={isAnalyzing}
+            className="flex-1 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg text-white font-medium transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
