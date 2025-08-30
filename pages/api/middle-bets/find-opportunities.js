@@ -106,7 +106,7 @@ async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      opportunities: qualityMiddles.slice(0, 50), // Top 50 best middles
+      opportunities: qualityMiddles, // Return all quality middles
       total_opportunities: qualityMiddles.length,
       total_games_checked: oddsData.length,
       timestamp: new Date().toISOString()

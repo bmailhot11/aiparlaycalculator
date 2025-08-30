@@ -30,6 +30,32 @@ export default function MiddleBetsPage() {
   const [notification, setNotification] = useState(null);
   const [middleUsesLeft, setMiddleUsesLeft] = useState(null);
 
+  // Filter states
+  const [selectedSport, setSelectedSport] = useState('');
+  const [selectedTeam, setSelectedTeam] = useState('');
+  const [selectedGame, setSelectedGame] = useState('');
+  const [timeFilter, setTimeFilter] = useState('7d');
+  const [availableTeams, setAvailableTeams] = useState([]);
+  const [availableGames, setAvailableGames] = useState([]);
+
+  // Sport options
+  const sportsOptions = [
+    { key: 'NFL', label: 'NFL' },
+    { key: 'NBA', label: 'NBA' },
+    { key: 'NHL', label: 'NHL' },
+    { key: 'MLB', label: 'MLB' },
+    { key: 'NCAAF', label: 'College Football' },
+    { key: 'NCAAB', label: 'College Basketball' }
+  ];
+
+  // Time filters
+  const timeFilters = [
+    { value: '1d', label: 'Next 24 Hours' },
+    { value: '3d', label: 'Next 3 Days' },
+    { value: '7d', label: 'Next Week' },
+    { value: 'all', label: 'All Games' }
+  ];
+
   // Check middle bet usage on component mount
   useEffect(() => {
     if (user && !isPremium) {
@@ -110,7 +136,7 @@ export default function MiddleBetsPage() {
 
     setIsLoading(true);
     try {
-      const data = await apiFetch('/api/middle-bets/find-opportunities', {
+      const response = await apiFetch('/api/middle-bets/find-opportunities', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -120,6 +146,7 @@ export default function MiddleBetsPage() {
         }),
       });
 
+      const data = await response.json();
       setMiddleData(data.opportunities || []);
 
       if (data.opportunities?.length > 0) {
@@ -159,53 +186,66 @@ export default function MiddleBetsPage() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300"
+      className="bg-white/5 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-white/10 hover:border-white/20 hover:bg-white/8 transition-all duration-300 shadow-lg"
     >
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="text-lg font-bold text-white mb-1">{middle.matchup}</h3>
-          <p className="text-blue-200 text-sm">{middle.market_display}</p>
-        </div>
-        <div className="text-right">
-          <div className="flex items-center gap-1 mb-1">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+        <div className="flex-1">
+          <h3 className="text-lg sm:text-xl font-bold text-white mb-1">{middle.matchup}</h3>
+          <div className="flex items-center gap-2">
+            <span className="text-blue-300 text-sm capitalize">{middle.market_type}</span>
             <span className="text-2xl">{middle.ev_classification}</span>
           </div>
-          <p className="text-green-400 font-bold text-lg">{middle.hit_probability} Hit Rate</p>
-          <p className="text-yellow-400 font-semibold">EV: +{(middle.expected_value * 100).toFixed(0)}%</p>
+        </div>
+        <div className="flex sm:flex-col gap-4 sm:gap-1 sm:text-right">
+          <div className="flex-1 sm:flex-none">
+            <p className="text-green-400 font-bold text-lg sm:text-xl">{middle.hit_probability}</p>
+            <p className="text-green-300 text-xs sm:text-sm">Hit Rate</p>
+          </div>
+          <div className="flex-1 sm:flex-none">
+            <p className="text-yellow-400 font-bold text-lg sm:text-xl">+{(middle.expected_value * 100).toFixed(1)}%</p>
+            <p className="text-yellow-300 text-xs sm:text-sm">Expected Value</p>
+          </div>
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
         {middle.legs.map((leg, legIndex) => (
-          <div key={legIndex} className="bg-white/5 rounded-lg p-4 border border-white/10">
-            <div className="flex justify-between items-start mb-2">
+          <div key={legIndex} className="bg-white/8 rounded-xl p-3 sm:p-4 border border-white/10">
+            <div className="flex justify-between items-center mb-2">
               <span className="text-purple-300 font-medium text-sm">{leg.sportsbook}</span>
-              <span className="text-white font-bold">{leg.odds}</span>
+              <span className="text-white font-bold text-lg">{leg.odds > 0 ? '+' : ''}{leg.odds}</span>
             </div>
-            <p className="text-white font-semibold">{leg.selection}</p>
-            <p className="text-blue-200 text-sm">Decimal: {leg.decimal_odds}</p>
+            <p className="text-white font-semibold mb-1">{leg.selection}</p>
+            <p className="text-blue-200 text-xs">Decimal: {leg.decimal_odds}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-lg p-4 border border-green-400/30">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+      <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 rounded-xl p-3 sm:p-4 border border-green-400/20">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-center">
           <div>
-            <p className="text-green-300 text-sm font-medium">Middle Window</p>
+            <p className="text-green-300 text-xs font-medium mb-1">Middle Window</p>
             <p className="text-white font-bold text-sm">{middle.middle_range}</p>
           </div>
           <div>
-            <p className="text-blue-300 text-sm font-medium">Gap Size</p>
-            <p className="text-white font-bold">{middle.gap_size} pts</p>
+            <p className="text-blue-300 text-xs font-medium mb-1">Gap Size</p>
+            <p className="text-white font-bold text-sm">{middle.gap_size} pts</p>
           </div>
           <div>
-            <p className="text-yellow-300 text-sm font-medium">Hit Numbers</p>
-            <p className="text-white font-bold text-sm">{middle.middle_window.slice(0, 3).join(', ')}...</p>
-          </div>
-          <div>
-            <p className="text-purple-300 text-sm font-medium">Time</p>
+            <p className="text-yellow-300 text-xs font-medium mb-1">Hit Numbers</p>
             <p className="text-white font-bold text-sm">
-              {new Date(middle.commence_time).toLocaleDateString()}
+              {middle.middle_window.slice(0, window.innerWidth < 640 ? 2 : 3).join(', ')}{middle.middle_window.length > 2 ? '...' : ''}
+            </p>
+          </div>
+          <div className="col-span-2 lg:col-span-1">
+            <p className="text-purple-300 text-xs font-medium mb-1">Game Time</p>
+            <p className="text-white font-bold text-sm">
+              {new Date(middle.commence_time).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
             </p>
           </div>
         </div>
@@ -251,21 +291,21 @@ export default function MiddleBetsPage() {
       
       <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Hero Section */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 sm:mb-12 px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="mb-8"
+            className="mb-6 sm:mb-8"
           >
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Activity className="w-8 h-8 text-yellow-400" />
-              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+            <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4">
+              <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400" />
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
                 Middle Bets Finder
               </h1>
-              <Zap className="w-8 h-8 text-yellow-400" />
+              <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400" />
             </div>
-            <p className="text-xl text-blue-200 mb-6 max-w-3xl mx-auto">
+            <p className="text-base sm:text-xl text-blue-200 mb-6 max-w-3xl mx-auto px-4">
               Discover high-probability middle bet opportunities with guaranteed profit windows. 
               Our advanced algorithm finds the best spreads and totals middles with key number coverage.
             </p>
@@ -359,14 +399,8 @@ export default function MiddleBetsPage() {
             </div>
 
             <div className="grid gap-6">
-              {middleData.slice(0, 20).map((middle, index) => renderMiddleOpportunity(middle, index))}
+              {middleData.map((middle, index) => renderMiddleOpportunity(middle, index))}
             </div>
-
-            {middleData.length > 20 && (
-              <div className="text-center mt-6">
-                <p className="text-blue-200">Showing top 20 opportunities. {middleData.length - 20} more available.</p>
-              </div>
-            )}
           </motion.div>
         )}
 
