@@ -28,7 +28,7 @@ export default function MiddleBetsPage() {
   const [middleData, setMiddleData] = useState([]);
   const [showPaywall, setShowPaywall] = useState(false);
   const [notification, setNotification] = useState(null);
-  const [middleUsesLeft, setMiddleUsesLeft] = useState(null);
+  const [middleUsesLeft, setMiddleUsesLeft] = useState(1); // Initialize with 1 instead of null
 
   // Filter states
   const [selectedSport, setSelectedSport] = useState('');
@@ -322,7 +322,7 @@ export default function MiddleBetsPage() {
                   <>
                     <Target className="w-5 h-5 text-blue-400" />
                     <span className="text-white">
-                      {middleUsesLeft === null ? 'Loading...' : `${middleUsesLeft} search${middleUsesLeft !== 1 ? 'es' : ''} remaining today`}
+                      {middleUsesLeft === null ? 'Loading...' : middleUsesLeft === 1 ? '1 search remaining today' : `${middleUsesLeft} searches remaining today`}
                     </span>
                   </>
                 )}
@@ -341,7 +341,7 @@ export default function MiddleBetsPage() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => findMiddleBets(true)}
-              disabled={isLoading || (!isPremium && middleUsesLeft <= 0)}
+              disabled={isLoading || (!isPremium && middleUsesLeft !== null && middleUsesLeft <= 0)}
               className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isLoading ? (
