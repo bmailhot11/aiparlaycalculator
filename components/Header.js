@@ -33,13 +33,18 @@ export default function Header() {
     }
   };
   
-  const navLinks = [
+  // Primary navigation links - most important features
+  const primaryNavLinks = [
     { href: '/dashboard', label: 'Dashboard' },
-    { href: '/line-shopping', label: 'Line Shopping' },
-    { href: '/ai-parlay', label: 'AI-Generated Parlay' },
-    { href: '/arbitrage', label: 'Arbitrage Opportunities' },
+    { href: '/arbitrage', label: 'Arbitrage' },
+    { href: '/line-shopping', label: 'Line Shop' },
+    { href: '/ai-parlay', label: 'AI Parlay' },
+    { href: '/daily-picks', label: 'Daily Picks' }
+  ];
+
+  // Secondary navigation links - additional features
+  const secondaryNavLinks = [
     { href: '/middle-bets', label: 'Middle Bets' },
-    { href: '/daily-picks', label: 'Daily Picks' },
     { href: '/learn', label: 'Learn' },
     { href: '/results', label: 'Results' }
   ];
@@ -49,7 +54,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 h-[72px] bg-[#0B0F14]/60 backdrop-blur-[10px] border-b border-[#1F2937]">
       <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-full">
+        <div className="flex items-center h-full gap-4 lg:gap-8">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <img 
@@ -62,40 +67,63 @@ export default function Header() {
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link) => (
-              <Link 
-                key={link.href}
-                href={link.href}
-                className={`text-sm font-medium transition-colors relative py-2 ${
-                  isActiveLink(link.href) 
-                    ? 'text-[#F4C430]' 
-                    : 'text-[#9CA3AF] hover:text-[#F4C430]'
-                }`}
-              >
-                {link.label}
-                {isActiveLink(link.href) && (
-                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#F4C430]" />
-                )}
-              </Link>
-            ))}
+          {/* Desktop Navigation - Responsive layout */}
+          <nav className="hidden md:flex items-center">
+            {/* Primary navigation - always visible on desktop */}
+            <div className="flex items-center space-x-4 lg:space-x-6">
+              {primaryNavLinks.map((link) => (
+                <Link 
+                  key={link.href}
+                  href={link.href}
+                  className={`text-sm font-medium transition-colors relative py-2 whitespace-nowrap ${
+                    isActiveLink(link.href) 
+                      ? 'text-[#F4C430]' 
+                      : 'text-[#9CA3AF] hover:text-[#F4C430]'
+                  }`}
+                >
+                  {link.label}
+                  {isActiveLink(link.href) && (
+                    <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#F4C430]" />
+                  )}
+                </Link>
+              ))}
+            </div>
+            
+            {/* Secondary navigation - hidden on smaller desktops, shown on large screens */}
+            <div className="hidden xl:flex items-center space-x-4 ml-6 pl-6 border-l border-[#1F2937]">
+              {secondaryNavLinks.map((link) => (
+                <Link 
+                  key={link.href}
+                  href={link.href}
+                  className={`text-sm font-medium transition-colors relative py-2 whitespace-nowrap ${
+                    isActiveLink(link.href) 
+                      ? 'text-[#F4C430]' 
+                      : 'text-[#9CA3AF] hover:text-[#F4C430]'
+                  }`}
+                >
+                  {link.label}
+                  {isActiveLink(link.href) && (
+                    <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#F4C430]" />
+                  )}
+                </Link>
+              ))}
+            </div>
           </nav>
 
-          {/* Right Section */}
-          <div className="flex items-center space-x-4">
+          {/* Right Section - Properly spaced */}
+          <div className="flex items-center space-x-3 lg:space-x-4 ml-auto">
             {/* Premium Button */}
             {!isPremium && (
               <button 
                 onClick={handlePremiumClick}
-                className="hidden sm:inline-flex items-center px-5 py-2.5 bg-[#F4C430] text-[#0B0F14] font-semibold text-sm rounded-lg hover:bg-[#e6b829] transition-colors shadow-[0_6px_16px_rgba(244,196,48,0.35)] focus:outline-none focus:ring-2 focus:ring-[#F4C430] focus:ring-offset-2"
+                className="hidden sm:inline-flex items-center px-4 lg:px-5 py-2.5 bg-[#F4C430] text-[#0B0F14] font-semibold text-sm rounded-lg hover:bg-[#e6b829] transition-colors shadow-[0_6px_16px_rgba(244,196,48,0.35)] focus:outline-none focus:ring-2 focus:ring-[#F4C430] focus:ring-offset-2 whitespace-nowrap"
               >
                 <Crown className="w-4 h-4 mr-2" />
                 Go Premium
               </button>
             )}
             {isPremium && (
-              <div className="hidden sm:inline-flex items-center px-5 py-2.5 bg-green-600 text-white font-semibold text-sm rounded-lg">
+              <div className="hidden sm:inline-flex items-center px-4 lg:px-5 py-2.5 bg-green-600 text-white font-semibold text-sm rounded-lg whitespace-nowrap">
                 <Check className="w-4 h-4 mr-2" />
                 Premium
               </div>
@@ -162,7 +190,27 @@ export default function Header() {
       {mobileMenuOpen && (
         <div className="md:hidden absolute top-[72px] left-0 right-0 bg-[#0B0F14]/95 backdrop-blur-lg border-b border-[#1F2937]">
           <nav className="px-4 py-4 space-y-2">
-            {navLinks.map((link) => (
+            {/* Primary navigation links */}
+            {primaryNavLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`block px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                  isActiveLink(link.href)
+                    ? 'bg-[#141C28] text-[#F4C430]'
+                    : 'text-[#9CA3AF] hover:bg-[#141C28] hover:text-[#F4C430]'
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+            
+            {/* Divider */}
+            <div className="h-px bg-[#1F2937] my-3" />
+            
+            {/* Secondary navigation links */}
+            {secondaryNavLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
