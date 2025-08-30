@@ -6,17 +6,17 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { sport, includeAllSports = false } = req.body;
+  const { sport, includeAllSports = false, maxResults = 100 } = req.body;
 
   try {
     if (includeAllSports || !sport) {
-      console.log(`🎯 [Arbitrage] Finding opportunities across ALL SPORTS`);
-      const arbitrageData = await findAllSportsArbitrageOpportunities();
+      console.log(`🎯 [Arbitrage] Finding opportunities across ALL SPORTS (max ${maxResults})`);
+      const arbitrageData = await findAllSportsArbitrageOpportunities(maxResults);
       console.log(`✅ [Arbitrage] Found ${arbitrageData.opportunities.length} arbitrage opportunities across all sports`);
       return res.status(200).json(arbitrageData);
     } else {
-      console.log(`🎯 [Arbitrage] Finding opportunities for ${sport}`);
-      const arbitrageData = await findArbitrageOpportunities(sport);
+      console.log(`🎯 [Arbitrage] Finding opportunities for ${sport} (max ${maxResults})`);
+      const arbitrageData = await findArbitrageOpportunities(sport, maxResults);
       console.log(`✅ [Arbitrage] Found ${arbitrageData.opportunities.length} arbitrage opportunities`);
       return res.status(200).json(arbitrageData);
     }
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
 }
 
 // Find arbitrage across ALL available sports
-async function findAllSportsArbitrageOpportunities() {
+async function findAllSportsArbitrageOpportunities(maxResults = 100) {
   const allSports = [
     'NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'MLS', 'UEFA', 'Soccer', 
     'UFC', 'Boxing', 'Tennis', 'Golf', 'Formula1', 'NASCAR', 'Cricket'
@@ -73,11 +73,15 @@ async function findAllSportsArbitrageOpportunities() {
   // Sort all opportunities by profit percentage
   allOpportunities.sort((a, b) => parseFloat(b.profit_percentage) - parseFloat(a.profit_percentage));
 
+  // Limit results to prevent huge responses
+  const limitedOpportunities = allOpportunities.slice(0, maxResults);
+
   return {
     success: true,
-    opportunities: allOpportunities,
+    opportunities: limitedOpportunities,
     total_games_checked: totalGamesChecked,
     total_opportunities: allOpportunities.length,
+    returned_opportunities: limitedOpportunities.length,
     sports_scanned: allSports.length,
     sports_results: sportsResults,
     best_opportunity: allOpportunities[0] || null,
@@ -86,7 +90,7 @@ async function findAllSportsArbitrageOpportunities() {
   };
 }
 
-async function findArbitrageOpportunities(sport) {
+async function findArbitrageOpportunities(sport, maxResults = 100) {
   try {
     // Step 1: Get upcoming events
     const upcomingEvents = await eventsCache.cacheUpcomingEvents(sport);
@@ -130,11 +134,15 @@ async function findArbitrageOpportunities(sport) {
     // Sort by profit percentage (highest first)
     opportunities.sort((a, b) => parseFloat(b.profit_percentage) - parseFloat(a.profit_percentage));
 
+    // Limit results to prevent huge responses
+    const limitedOpportunities = opportunities.slice(0, maxResults);
+
     return {
       success: true,
-      opportunities,
+      opportunities: limitedOpportunities,
       total_games_checked: oddsData.length,
       total_opportunities: opportunities.length,
+      returned_opportunities: limitedOpportunities.length,
       sport,
       timestamp: new Date().toISOString(),
       best_opportunity: opportunities[0] || null

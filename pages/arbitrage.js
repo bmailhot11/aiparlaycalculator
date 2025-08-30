@@ -287,7 +287,7 @@ export default function ArbitragePage() {
     try {
       // Set a longer timeout for scanning all sports
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // Increase to 60 seconds
       
       const response = await apiFetch('/api/arbitrage/find-opportunities', {
         method: 'POST',
@@ -296,7 +296,8 @@ export default function ArbitragePage() {
         },
         body: JSON.stringify({
           sport: null,
-          includeAllSports: true
+          includeAllSports: true,
+          maxResults: 100 // Limit results to prevent huge responses
         }),
         signal: controller.signal
       });
