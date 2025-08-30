@@ -1,7 +1,8 @@
 -- Fix the user profile trigger
 -- Run this in Supabase SQL Editor
 
--- First, let's see what the exact error is by testing the function
+-- First, drop the trigger, then the function to avoid dependency issues
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS handle_new_user();
 
 -- Recreate the function with better error handling
@@ -50,8 +51,7 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Make sure the trigger is attached
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+-- Recreate the trigger
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT OR UPDATE ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
