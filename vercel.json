@@ -9,18 +9,6 @@
     {
       "path": "/api/daily-picks/publish",
       "schedule": "0 16 * * *"
-    },
-    {
-      "path": "/api/collect-odds-data",
-      "schedule": "0 */4 * * *"
-    },
-    {
-      "path": "/api/daily-picks/grade-bets",
-      "schedule": "0 3,6 * * *"
-    },
-    {
-      "path": "/api/clv/collect-closing-lines",
-      "schedule": "*/30 10-23 * * *"
     }
   ],
   "functions": {
