@@ -87,23 +87,12 @@ export default async function handler(req, res) {
       return sum;
     }, 0);
 
-    // Generate CLV-like data from edge percentages over time
-    const performanceData = (recentLegs || []).slice(0, 30).map((leg, index) => ({
-      date: leg.created_at.split('T')[0],
-      clv: leg.edge_percentage || 0,
-      market: `${leg.home_team} vs ${leg.away_team} - ${leg.market_type}`,
-      sport: leg.sport
-    })).reverse(); // Reverse to show oldest first for timeline
+    // Don't generate fake CLV data - return empty array since we don't track closing lines yet
+    const performanceData = [];
 
-    // Get recent highlights
-    const highlights = (recentLegs || []).slice(0, 3).map(leg => ({
-      market: `${leg.home_team} vs ${leg.away_team}`,
-      placedPrice: leg.best_odds,
-      closePrice: leg.best_odds, // We don't track closing odds yet
-      delta: `${(leg.edge_percentage || 0).toFixed(1)}%`,
-      positive: (leg.edge_percentage || 0) > 0,
-      sport: leg.sport
-    }));
+    // Get recent highlights - only show if we actually have different closing prices
+    // Since we don't track closing odds yet, return empty array to avoid mock data
+    const highlights = [];
 
     console.log(`✅ Found ${recentRecos?.length || 0} recent recommendations`);
     console.log(`✅ Found ${recentLegs?.length || 0} recent bet legs`);
@@ -118,9 +107,7 @@ export default async function handler(req, res) {
           totalBets: settledBets.length,
           winRate: winRate ? `${winRate}%` : 'N/A',
           totalProfit: totalProfit,
-          avgEdge: performanceData.length > 0 
-            ? (performanceData.reduce((sum, d) => sum + d.clv, 0) / performanceData.length).toFixed(1) + '%'
-            : 'N/A'
+          avgCLV: 'N/A' // No real CLV data available yet
         },
         recentActivity: recentRecos?.slice(0, 5).map(reco => ({
           date: reco.reco_date,

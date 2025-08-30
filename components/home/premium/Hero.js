@@ -2,42 +2,11 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { TrendingUp, Target, ArrowRight } from 'lucide-react';
+import { Target, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import MobileCarousel from './MobileCarousel';
 
 const PREVIEW_CARDS = [
-  {
-    id: 'ev-feed',
-    title: 'Top +EV Today',
-    subtitle: 'High value bets right now',
-    icon: TrendingUp,
-    content: (data) => (
-      <div className="space-y-3">
-        {data.evFeed && data.evFeed.length > 0 ? (
-          data.evFeed.slice(0, 3).map((bet, i) => (
-            <div key={i} className="flex items-center justify-between text-sm">
-              <div>
-                <div className="text-premium-text-primary font-medium">
-                  {bet.home} vs {bet.away}
-                </div>
-                <div className="text-premium-text-muted text-xs">{bet.market}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-green-400 font-semibold">+{bet.evPct.toFixed(1)}%</div>
-                <div className="text-premium-text-muted text-xs">{bet.odds}</div>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="text-center py-8">
-            <div className="text-premium-text-muted mb-2">No +EV opportunities found</div>
-            <div className="text-premium-text-muted text-xs">Check back later for new opportunities</div>
-          </div>
-        )}
-      </div>
-    )
-  },
   {
     id: 'arbitrage',
     title: 'Best Arbitrage',
@@ -161,11 +130,6 @@ export default function Hero({ data }) {
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </button>
               
-              <Link href="/arbitrage">
-                <button className="btn-secondary px-8 py-3 text-base font-semibold">
-                  See Live +EV Feed
-                </button>
-              </Link>
             </div>
           </motion.div>
 

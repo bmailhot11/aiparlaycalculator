@@ -17,64 +17,68 @@ function CLVSparkline({ data, className = "" }) {
 
   return (
     <div className={`relative ${className}`}>
-      <svg width="280" height="80" viewBox="0 0 280 80" className="w-full h-20">
-        {/* Zero baseline */}
-        <line 
-          x1="0" y1="40" x2="280" y2="40" 
-          stroke="var(--border)" 
-          strokeWidth="1"
-          strokeDasharray="2,2"
-        />
+      <div className="flex">
+        {/* Y-axis labels - properly separated from chart */}
+        <div className="flex flex-col justify-between text-xs text-premium-text-muted pr-3 py-1 h-20">
+          <span className="leading-none">+5%</span>
+          <span className="opacity-60 leading-none">0%</span>
+          <span className="leading-none">-5%</span>
+        </div>
         
-        {/* Grid lines */}
-        <line x1="0" y1="20" x2="280" y2="20" stroke="var(--border)" strokeWidth="0.5" opacity="0.3" />
-        <line x1="0" y1="60" x2="280" y2="60" stroke="var(--border)" strokeWidth="0.5" opacity="0.3" />
-        
-        {/* CLV line */}
-        <path
-          d={pathD}
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth="2"
-          className="animate-pulse"
-        />
-        
-        {/* Data points */}
-        {normalizedData.map((point, i) => (
-          <circle
-            key={i}
-            cx={point.x}
-            cy={point.y}
-            r="2"
-            fill="var(--accent)"
-            className="opacity-70"
-          />
-        ))}
-        
-        {/* Gradient fill under line */}
-        <defs>
-          <linearGradient id="clvGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path
-          d={`${pathD} L 280 80 L 0 80 Z`}
-          fill="url(#clvGradient)"
-        />
-      </svg>
-      
-      {/* Y-axis labels */}
-      <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-premium-text-muted py-1">
-        <span>+5%</span>
-        <span className="opacity-60">0%</span>
-        <span>-5%</span>
-      </div>
-      
-      {/* X-axis labels */}
-      <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-premium-text-muted mt-2">
-        <span>30d ago</span>
-        <span>Today</span>
+        {/* Main chart area */}
+        <div className="flex-1">
+          <svg width="100%" height="80" viewBox="0 0 280 80" className="w-full h-20 block">
+            {/* Zero baseline */}
+            <line 
+              x1="0" y1="40" x2="280" y2="40" 
+              stroke="var(--border)" 
+              strokeWidth="1"
+              strokeDasharray="2,2"
+            />
+            
+            {/* Grid lines */}
+            <line x1="0" y1="20" x2="280" y2="20" stroke="var(--border)" strokeWidth="0.5" opacity="0.3" />
+            <line x1="0" y1="60" x2="280" y2="60" stroke="var(--border)" strokeWidth="0.5" opacity="0.3" />
+            
+            {/* Gradient fill under line */}
+            <defs>
+              <linearGradient id="clvGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path
+              d={`${pathD} L 280 80 L 0 80 Z`}
+              fill="url(#clvGradient)"
+            />
+            
+            {/* CLV line */}
+            <path
+              d={pathD}
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth="2"
+            />
+            
+            {/* Data points */}
+            {normalizedData.map((point, i) => (
+              <circle
+                key={i}
+                cx={point.x}
+                cy={point.y}
+                r="2"
+                fill="var(--accent)"
+                className="opacity-70"
+              />
+            ))}
+          </svg>
+          
+          {/* X-axis labels - properly separated from chart */}
+          <div className="flex justify-between text-xs text-premium-text-muted pt-2 px-1">
+            <span>30d ago</span>
+            <span>Today</span>
+          </div>
+        </div>
       </div>
     </div>
   );
