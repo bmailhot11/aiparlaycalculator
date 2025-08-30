@@ -278,6 +278,44 @@ export default function Dashboard() {
     return bets;
   };
 
+  const exportBettingData = async () => {
+    if (!user) {
+      alert('Please sign in to export data');
+      return;
+    }
+
+    try {
+      // Option 1: Download as JSON
+      const dataToExport = {
+        bets,
+        analytics,
+        bankroll,
+        exportedAt: new Date().toISOString(),
+        summary: {
+          totalBets: bets.length,
+          settledBets: bets.filter(b => b.result !== 'pending').length,
+          totalProfit: bets.reduce((sum, b) => sum + (b.profit || 0), 0),
+          totalStaked: bets.reduce((sum, b) => sum + (b.stake || 0), 0)
+        }
+      };
+
+      const blob = new Blob([JSON.stringify(dataToExport, null, 2)], {
+        type: 'application/json'
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `betting-data-${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      alert('Betting data exported successfully!');
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export data');
+    }
+  };
+
   const handleBankrollAction = async (type, amount, description) => {
     const transaction = {
       id: Date.now(),
@@ -712,6 +750,13 @@ export default function Dashboard() {
                 >
                   <span>Bet Slip Upload</span>
                   <Upload className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={exportBettingData}
+                  className="w-full bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 p-3 rounded-lg flex items-center justify-between transition-colors"
+                >
+                  <span>Export Data</span>
+                  <DollarSign className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => router.push('/arbitrage')}
