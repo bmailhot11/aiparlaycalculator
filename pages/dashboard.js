@@ -518,12 +518,13 @@ export default function Dashboard() {
       <Head>
         <title>Dashboard - BetChekr</title>
         <meta name="description" content="Your personal betting dashboard and performance tracker" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
       <GradientBG />
       <Header />
       
-      <div className="container mx-auto px-4 pt-20 pb-8 relative z-10">
+      <div className="container mx-auto px-4 pt-4 sm:pt-20 pb-8 relative z-10">
         {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
