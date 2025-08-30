@@ -4,28 +4,28 @@ import { DollarSign, Target, Brain, ArrowRight } from 'lucide-react';
 
 const VALUE_PROPS = [
   {
-    id: 'prices',
-    icon: DollarSign,
-    title: 'Prices',
-    description: 'We pull the latest odds from multiple sportsbooks',
-    learnMore: '/learn/what-does-plus-150-mean',
-    detail: 'Live odds across 50+ major books'
-  },
-  {
-    id: 'true-value', 
-    icon: Target,
-    title: 'True Value',
-    description: 'We remove the vig to estimate fair odds',
-    learnMore: '/learn/what-is-expected-value',
-    detail: 'Vig-free probability calculations'
-  },
-  {
-    id: 'your-decision',
+    id: 'ai-analysis',
     icon: Brain,
-    title: 'Your Decision', 
-    description: 'We highlight +EV bets and suggest Kelly sizing',
+    title: 'AI Analysis',
+    description: 'Our AI scans thousands of lines across sports to find mispriced opportunities',
+    learnMore: '/learn/what-does-plus-150-mean',
+    detail: 'Advanced algorithms identify profitable patterns'
+  },
+  {
+    id: 'ev-identification', 
+    icon: Target,
+    title: '+EV Detection',
+    description: 'We pinpoint bets with positive expected value for long-term profit',
+    learnMore: '/learn/what-is-expected-value',
+    detail: 'Mathematical edge calculation & vig removal'
+  },
+  {
+    id: 'smart-guidance',
+    icon: DollarSign,
+    title: 'Smart Guidance', 
+    description: 'Get optimal stake sizing and profit-maximizing bet recommendations',
     learnMore: '/kelly-calculator',
-    detail: 'AI-powered bet analysis & sizing'
+    detail: 'Kelly criterion & bankroll management'
   }
 ];
 
@@ -42,10 +42,10 @@ export default function ValueStrip() {
           className="text-center mb-16"
         >
           <h2 className="text-premium-text-primary font-semibold mb-4">
-            How it works
+            Your AI betting assistant in action
           </h2>
           <p className="body-text max-w-2xl mx-auto">
-            We turn complex betting math into clear decisions. Here's how we help you find value.
+            BetChekr works 24/7 analyzing odds, identifying profitable opportunities, and guiding your betting decisions for consistent long-term growth.
           </p>
         </motion.div>
 

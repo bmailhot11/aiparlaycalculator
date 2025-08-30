@@ -32,7 +32,6 @@ export default function AIParlayPage() {
   const [selectedLeague, setSelectedLeague] = useState('All Games');
   const [parlaySize, setParlaySize] = useState('3');
   const [riskLevel, setRiskLevel] = useState('moderate');
-  const [includePlayerProps, setIncludePlayerProps] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedParlay, setGeneratedParlay] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -184,7 +183,6 @@ export default function AIParlayPage() {
           league: selectedLeague || 'All Games',
           riskLevel,
           legs: parseInt(parlaySize),
-          includePlayerProps: includePlayerProps
         }),
       });
 
@@ -697,31 +695,6 @@ export default function AIParlayPage() {
                   </select>
                 </div>
                 
-                <div>
-                  <label className="block text-[#9CA3AF] text-sm font-medium mb-2">Include Player Props</label>
-                  <div className="flex rounded-lg overflow-hidden border border-[#1F2937] h-10">
-                    <button
-                      onClick={() => setIncludePlayerProps(false)}
-                      className={`flex-1 px-3 py-3 text-sm font-medium transition-colors min-h-[44px] ${
-                        !includePlayerProps
-                          ? 'bg-[#F4C430] text-[#0B0F14]'
-                          : 'bg-[#0B1220] text-[#6B7280] hover:text-[#9CA3AF]'
-                      }`}
-                    >
-                      No
-                    </button>
-                    <button
-                      onClick={() => setIncludePlayerProps(true)}
-                      className={`flex-1 px-3 py-3 text-sm font-medium transition-colors min-h-[44px] ${
-                        includePlayerProps
-                          ? 'bg-[#F4C430] text-[#0B0F14]'
-                          : 'bg-[#0B1220] text-[#6B7280] hover:text-[#9CA3AF]'
-                      }`}
-                    >
-                      Yes
-                    </button>
-                  </div>
-                </div>
               </div>
               
               {/* CTA */}

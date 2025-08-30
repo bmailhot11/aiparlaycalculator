@@ -88,12 +88,39 @@ export default function Hero({ data }) {
     return () => clearInterval(interval);
   }, [isAutoRotating]);
 
-  const handlePremiumClick = (e) => {
+  const handlePremiumClick = async (e) => {
     e.preventDefault();
+    
     if (!user) {
-      localStorage.setItem('redirectAfterAuth', '/pricing');
+      localStorage.setItem('redirectAfterAuth', '/stripe-checkout');
       router.push('/auth/signin');
-    } else {
+      return;
+    }
+
+    try {
+      // Create Stripe checkout session
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+          plan: 'monthly',
+          userIdentifier: user.uid
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('No checkout URL received');
+        router.push('/pricing');
+      }
+    } catch (error) {
+      console.error('Stripe checkout error:', error);
       router.push('/pricing');
     }
   };
@@ -115,12 +142,13 @@ export default function Hero({ data }) {
           >
             <div className="space-y-6">
               <h1 className="text-premium-text-primary font-semibold leading-tight">
-                Find mispriced lines. Bet the true price.
+                Your AI betting assistant for long-term profits.
               </h1>
               
               <p className="body-text max-w-lg">
-                We strip the vig to reveal fair odds, highlight +EV bets, and size stakes 
-                with Kelly—so you bet the true price.
+                BetChekr analyzes thousands of lines to find profitable opportunities others miss. 
+                Our AI identifies +EV bets, removes vig bias, and guides optimal stake sizing—helping you 
+                build consistent profits over time.
               </p>
             </div>
 

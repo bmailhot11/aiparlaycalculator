@@ -184,6 +184,7 @@ export default function LineShopping() {
             market: line.market_display || line.market_type,
             selection: line.selection,
             point: line.point,
+            commence_time: line.commence_time,
             books: []
           };
         }
@@ -213,6 +214,30 @@ export default function LineShopping() {
 
   const formatOdds = (odds) => {
     return odds > 0 ? `+${odds}` : odds;
+  };
+
+  const formatGameDate = (commenceTime) => {
+    if (!commenceTime) return '';
+    
+    const gameDate = new Date(commenceTime);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    const gameDay = new Date(gameDate.getFullYear(), gameDate.getMonth(), gameDate.getDate());
+    
+    // Check if it's today, tomorrow, or another day
+    if (gameDay.getTime() === today.getTime()) {
+      return `Today ${gameDate.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}`;
+    } else if (gameDay.getTime() === tomorrow.getTime()) {
+      return `Tomorrow ${gameDate.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}`;
+    } else {
+      return gameDate.toLocaleDateString([], {
+        month: 'short', 
+        day: 'numeric',
+        hour: 'numeric', 
+        minute: '2-digit'
+      });
+    }
   };
 
 
@@ -383,6 +408,11 @@ export default function LineShopping() {
                           <p className="text-[#6B7280] text-xs mt-1">
                             {group.market} • {group.selection}{group.point ? ` ${group.point}` : ''}
                           </p>
+                          {group.commence_time && (
+                            <p className="text-[#9CA3AF] text-xs mt-1">
+                              {formatGameDate(group.commence_time)}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-3">
                           {group.books[0]?.value > 0 && (

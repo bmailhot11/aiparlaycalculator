@@ -81,8 +81,6 @@ export default function Dashboard() {
   });
   
   // Premium/Subscription State
-  const [isPremiumUser, setIsPremiumUser] = useState(false);
-  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [showPaywall, setShowPaywall] = useState(false);
 
   // UI State
@@ -99,17 +97,12 @@ export default function Dashboard() {
       return;
     }
     
-    if (user) {
+    if (user && !loading) {
       loadUserData();
     }
-  }, [user, authLoading]);
+  }, [user, authLoading]); // Removed router dependency to prevent unnecessary re-renders
 
-  // Load subscription status separately (non-blocking)
-  useEffect(() => {
-    if (user) {
-      loadSubscriptionStatus();
-    }
-  }, [user]);
+  // No need for separate subscription loading - use PremiumContext
 
   const loadUserData = async () => {
     try {
@@ -150,46 +143,6 @@ export default function Dashboard() {
     }
   };
 
-  // Load subscription status (non-blocking)
-  const loadSubscriptionStatus = async () => {
-    try {
-      console.log('🔄 Dashboard: Loading subscription status...');
-      
-      // Add timeout to prevent hanging
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
-      const response = await fetch('/api/subscription/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        const data = await response.json();
-        const subscription = data.subscription || { subscription_status: 'none', has_premium_access: false };
-        // Check if user has premium access based on subscription_status from Supabase
-        setIsPremiumUser(subscription.has_premium_access || subscription.subscription_status === 'active' || subscription.subscription_status === 'trialing');
-      } else {
-        // If API fails, default to free user
-        setIsPremiumUser(false);
-      }
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        console.log('⚠️ Dashboard: Subscription API timed out (5s)');
-      } else {
-        console.error('❌ Dashboard: Error loading subscription status:', error);
-      }
-      // If subscription loading fails, default to free user (dashboard still works)
-      setIsPremiumUser(false);
-    } finally {
-      console.log('✅ Dashboard: Subscription loading completed');
-      setSubscriptionLoading(false);
-    }
-  };
 
   const calculateAnalytics = (betsData) => {
     if (!betsData.length) return;
@@ -663,17 +616,17 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
             className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 cursor-pointer hover:bg-white/15 transition-colors"
-            onClick={() => !isPremiumUser && router.push('/pricing')}
+            onClick={() => !isPremium && router.push('/pricing')}
           >
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-white/80 font-medium">Status</h3>
               <Trophy className="w-5 h-5 text-yellow-400" />
             </div>
             <p className="text-xl font-bold text-white mb-1">
-              {subscriptionLoading ? 'Loading...' : (isPremiumUser ? 'Premium' : 'Free')}
+              {isPremium ? 'Premium' : 'Free'}
             </p>
             <p className="text-sm text-yellow-400">
-              {subscriptionLoading ? 'Checking status...' : (isPremiumUser ? 'All features unlocked' : 'Click to upgrade')}
+              {isPremium ? 'All features unlocked' : 'Click to upgrade'}
             </p>
           </motion.div>
           <motion.div
@@ -903,7 +856,7 @@ export default function Dashboard() {
               </h3>
               <div className="space-y-3">
                 <button 
-                  onClick={() => isPremiumUser ? setShowUploadSlip(true) : setShowPaywall(true)}
+                  onClick={() => isPremium ? setShowUploadSlip(true) : setShowPaywall(true)}
                   className="w-full bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 p-3 rounded-lg flex items-center justify-between transition-colors"
                 >
                   <span>Bet Slip Upload</span>

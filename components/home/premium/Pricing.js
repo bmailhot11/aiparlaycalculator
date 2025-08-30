@@ -13,15 +13,15 @@ const PRICING_FEATURES = {
     'Educational content'
   ],
   premium: [
-    'Unlimited arbitrage scanning',
-    'Real-time line shopping across 50+ books',
-    'Unlimited AI parlay generation',
-    'Unlimited bet slip analysis',
-    'Advanced Kelly sizing with risk management',
-    'CLV tracking dashboard',
-    'Custom alerts & notifications',
-    'Priority support',
-    'Early access to new features'
+    'AI-powered opportunity scanning across all sports',
+    'Real-time line shopping across 50+ sportsbooks',
+    'Smart parlay generation with +EV focus',
+    'Unlimited bet slip analysis & recommendations',
+    'Advanced Kelly sizing for optimal bankroll growth',
+    'Long-term profit tracking & CLV analysis',
+    'Custom alerts for profitable opportunities',
+    'Priority AI assistant support',
+    'Early access to new profit-finding features'
   ]
 };
 
@@ -29,12 +29,39 @@ export default function Pricing() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const handlePremiumClick = (e) => {
+  const handlePremiumClick = async (e) => {
     e.preventDefault();
+    
     if (!user) {
-      localStorage.setItem('redirectAfterAuth', '/pricing');
+      localStorage.setItem('redirectAfterAuth', '/stripe-checkout');
       router.push('/auth/signin');
-    } else {
+      return;
+    }
+
+    try {
+      // Create Stripe checkout session
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+          plan: 'monthly',
+          userIdentifier: user.uid
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('No checkout URL received');
+        router.push('/pricing');
+      }
+    } catch (error) {
+      console.error('Stripe checkout error:', error);
       router.push('/pricing');
     }
   };
@@ -50,10 +77,10 @@ export default function Pricing() {
           className="text-center mb-16"
         >
           <h2 className="text-premium-text-primary font-semibold mb-4">
-            Simple pricing, powerful tools
+            Your AI betting assistant, affordable pricing
           </h2>
           <p className="body-text max-w-2xl mx-auto">
-            Start free, upgrade when you're ready to unlock the full potential of smart betting.
+            Get professional-grade AI analysis and long-term profit guidance for less than the cost of a single bet.
           </p>
         </motion.div>
 
@@ -183,10 +210,10 @@ export default function Pricing() {
 
           <div className="mt-8 p-4 rounded-premium-md bg-white/5 border border-premium-border max-w-2xl mx-auto">
             <p className="text-xs text-premium-text-muted">
-              Need more convincing? Start with our free tier and upgrade when you see the value. 
+              Join thousands of bettors who trust BetChekr as their AI betting assistant for consistent profits. 
               <Link href="/learn/how-to-use-ai-for-sports-betting" className="text-premium-accent ml-1 hover:underline">
-                Read our guide
-              </Link> to learn how professionals use these tools.
+                Learn how AI improves your betting
+              </Link> and start building long-term success.
             </p>
           </div>
         </motion.div>

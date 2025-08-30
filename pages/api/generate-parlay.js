@@ -40,10 +40,6 @@ export default async function handler(req, res) {
     config.selectedSports = config.sports;
   }
   
-  // Ensure includePlayerProps is properly handled
-  if (config.includePlayerProps === undefined && preferences?.includePlayerProps !== undefined) {
-    config.includePlayerProps = preferences.includePlayerProps;
-  }
   
   if (!config.sport && !config.selectedSports) {
     return res.status(400).json({ 
@@ -131,7 +127,6 @@ function getSportSpecificMarkets(sportKey, useFullMarkets = true) {
   }
   
   // FIXED: Use same simple approach as EV fetcher for reliability
-  // Player props often cause API failures for preseason/out-of-season games
   return sportKey.startsWith('soccer_') ? 'h2h' : 'h2h,spreads,totals';
 }
 
@@ -183,10 +178,9 @@ async function fetchSportSpecificOddsOptimized(sport, selectedSports = null) {
     }
     
     // Get odds for those specific events (5-minute cache)
-    // Include player props for sports that support them
     const soccerSports = ['Soccer', 'MLS', 'UEFA'];
     const markets = soccerSports.includes(sport) ? 'h2h' : 'h2h,spreads,totals';
-    const oddsData = await eventsCache.getOddsForEvents(upcomingEvents, markets, true); // Enable player props
+    const oddsData = await eventsCache.getOddsForEvents(upcomingEvents, markets, false); // Disable player props
     
     console.log(`✅ [${sport} Parlay] Optimized approach: ${upcomingEvents.length} events → ${oddsData.length} games with odds`);
     
@@ -446,14 +440,9 @@ function extractAvailableBets(gameData) {
       
       for (const market of bookmaker.markets) {
         for (const outcome of market.outcomes || []) {
-          // Create a more descriptive selection for player props
           let enhancedSelection = outcome.name;
           
-          // For player props, enhance the description with point/line information
-          if (market.key.startsWith('player_') && outcome.point !== undefined) {
-            // Format: "PlayerName Over 2.5 Assists" instead of just "Over"
-            enhancedSelection = `${outcome.name} ${outcome.point}`;
-          } else if (outcome.point !== undefined && outcome.point !== null) {
+          if (outcome.point !== undefined && outcome.point !== null) {
             // For spreads/totals with points: "Team +7.5" or "Over 45.5 Points"
             if (outcome.name.toLowerCase().includes('over') || outcome.name.toLowerCase().includes('under')) {
               enhancedSelection = `${outcome.name} ${outcome.point} Points`;
@@ -508,38 +497,6 @@ async function generateParlayWithRealOdds(preferences, sportData) {
   let filteredBets = filterBetsByRiskLevel(availableBets, preferences.riskLevel);
   console.log(`🎯 Filtered to ${filteredBets.length} bets matching ${preferences.riskLevel} risk level`);
   
-  // Apply player props filtering if requested
-  if (preferences.includePlayerProps && preferences.legs > 1) {
-    const playerPropBets = filteredBets.filter(bet => bet.market_type && bet.market_type.startsWith('player_'));
-    const mainMarketBets = filteredBets.filter(bet => !bet.market_type || !bet.market_type.startsWith('player_'));
-    
-    const requiredPlayerProps = Math.ceil(preferences.legs * 0.5); // At least 50%
-    
-    console.log(`🎯 [PlayerProps] Need ${requiredPlayerProps}/${preferences.legs} player props. Available: ${playerPropBets.length} player props, ${mainMarketBets.length} main markets`);
-    
-    if (playerPropBets.length >= requiredPlayerProps) {
-      // We have enough player props, balance the selection
-      const selectedPlayerProps = playerPropBets.slice(0, requiredPlayerProps);
-      const remainingSlots = Math.max(0, preferences.legs - requiredPlayerProps);
-      const selectedMainMarkets = mainMarketBets.slice(0, remainingSlots);
-      
-      // Combine the selections, maintaining the highest EV ones
-      filteredBets = [...selectedPlayerProps, ...selectedMainMarkets]
-        .sort((a, b) => (b.expectedValue || 0) - (a.expectedValue || 0));
-        
-      console.log(`✅ [PlayerProps] Balanced selection: ${selectedPlayerProps.length} player props + ${selectedMainMarkets.length} main markets`);
-    } else if (playerPropBets.length > 0) {
-      // Not enough player props, use all available player props and fill with main markets
-      console.log(`⚠️ [PlayerProps] Only ${playerPropBets.length} player props available, using all + main markets`);
-      const remainingSlots = Math.max(0, preferences.legs - playerPropBets.length);
-      const selectedMainMarkets = mainMarketBets.slice(0, remainingSlots);
-      
-      filteredBets = [...playerPropBets, ...selectedMainMarkets]
-        .sort((a, b) => (b.expectedValue || 0) - (a.expectedValue || 0));
-    } else {
-      console.log(`⚠️ [PlayerProps] No player props available, using main markets only`);
-    }
-  }
   
   if (filteredBets.length < preferences.legs) {
     throw new Error(`Not enough betting options for ${preferences.legs} legs at ${preferences.riskLevel} risk level`);
@@ -631,7 +588,6 @@ CORE REQUIREMENTS:
 - Only ONE bet per game - you cannot have multiple bets from the same matchup
 - ALL LEGS MUST BE FROM THE SAME SPORTSBOOK (${selectedSportsbook}) for user convenience
 - Never select conflicting or correlated bets from the same game
-${preferences.includePlayerProps ? `- Include at least ${Math.ceil(preferences.legs * 0.5)} player props (market_type starting with "player_")` : ''}
 
 STRATEGY VARIATIONS (rotate between these approaches):
 1. VALUE-FOCUSED: Target undervalued lines with highest EV

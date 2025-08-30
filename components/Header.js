@@ -22,13 +22,39 @@ export default function Header() {
     }
   };
 
-  const handlePremiumClick = (e) => {
+  const handlePremiumClick = async (e) => {
     e.preventDefault();
+    
     if (!user) {
-      // Store intended destination
-      localStorage.setItem('redirectAfterAuth', '/pricing');
+      localStorage.setItem('redirectAfterAuth', '/stripe-checkout');
       router.push('/auth/signin');
-    } else {
+      return;
+    }
+
+    try {
+      // Create Stripe checkout session
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+          plan: 'monthly',
+          userIdentifier: user.uid
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('No checkout URL received');
+        router.push('/pricing');
+      }
+    } catch (error) {
+      console.error('Stripe checkout error:', error);
       router.push('/pricing');
     }
   };

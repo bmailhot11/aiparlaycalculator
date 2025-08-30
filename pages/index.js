@@ -65,12 +65,39 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handlePremiumClick = (e) => {
+  const handlePremiumClick = async (e) => {
     e.preventDefault();
+    
     if (!user) {
-      localStorage.setItem('redirectAfterAuth', '/pricing');
+      localStorage.setItem('redirectAfterAuth', '/stripe-checkout');
       router.push('/auth/signin');
-    } else {
+      return;
+    }
+
+    try {
+      // Create Stripe checkout session
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+          plan: 'monthly',
+          userIdentifier: user.uid
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('No checkout URL received');
+        router.push('/pricing');
+      }
+    } catch (error) {
+      console.error('Stripe checkout error:', error);
       router.push('/pricing');
     }
   };
@@ -86,8 +113,8 @@ export default function Home() {
   return (
     <div className="betchekr-premium">
       <Head>
-        <title>BetChekr — Find mispriced odds (+EV bets made simple)</title>
-        <meta name="description" content="Beginner-friendly tools to spot +EV bets, remove the vig, compare prices, and size stakes with confidence. Clear math. No hype." />
+        <title>BetChekr — Your AI Betting Assistant for Long-Term Profits</title>
+        <meta name="description" content="AI-powered betting analysis that finds profitable opportunities others miss. Get +EV bets, optimal stake sizing, and consistent profit guidance from your personal betting assistant." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="canonical" href="https://betchekr.com" />
         
@@ -98,7 +125,7 @@ export default function Home() {
             "@type": ["WebSite", "SoftwareApplication"],
             "name": "BetChekr",
             "url": "https://betchekr.com",
-            "description": "Find mispriced odds and bet with an edge using AI-powered sports betting tools",
+            "description": "AI betting assistant that analyzes thousands of lines to find profitable opportunities and guide long-term betting success",
             "applicationCategory": "Sports Betting Tools",
             "operatingSystem": "Web Browser",
             "offers": {
@@ -189,14 +216,9 @@ export default function Home() {
           transition={{ duration: 0.3 }}
           className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-premium-panel border-t border-premium-border backdrop-blur-md lg:hidden"
         >
-          <div className="flex gap-3">
-            <button onClick={handlePremiumClick} className="flex-1 btn-primary py-3 text-center font-semibold">
-              Go Premium
-            </button>
-            <a href="/arbitrage" className="flex-1 btn-secondary py-3 text-center font-semibold">
-              Try Free
-            </a>
-          </div>
+          <button onClick={handlePremiumClick} className="w-full btn-primary py-3 text-center font-semibold">
+            Go Premium
+          </button>
         </motion.div>
 
         {/* Scroll to Top Button */}

@@ -241,12 +241,12 @@ export default function MiddleBetsPage() {
       if (data.opportunities?.length > 0) {
         setNotification({
           type: 'success',
-          message: `🔥 Found ${data.opportunities.length} high-quality middle bet opportunities!`
+          message: `Found ${data.opportunities.length} high-quality middle bet opportunities!`
         });
       } else {
         setNotification({
           type: 'info', 
-          message: '🔍 No middle bet opportunities found at the moment. Try again later!'
+          message: 'No middle bet opportunities found at the moment. Try again later!'
         });
       }
 
@@ -275,64 +275,60 @@ export default function MiddleBetsPage() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className="bg-[#0B0F12] border border-white/8 rounded-2xl p-6 hover:border-[#FACC15]/20 transition-all duration-300"
-      style={{
-        background: 'linear-gradient(135deg, rgba(11,15,18,0.95) 0%, rgba(11,15,18,0.98) 100%)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
-      }}
+      className="bg-[#141C28] border border-[#1F2937] rounded-lg p-6 hover:border-[#F4C430]/20 transition-all duration-300"
     >
       <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
         <div className="flex-1">
-          <h3 className="text-xl font-bold text-[#E6EDF3] mb-2">{middle.matchup}</h3>
+          <h3 className="text-xl font-bold text-[#E5E7EB] mb-2">{middle.matchup}</h3>
           <div className="flex items-center gap-3">
-            <span className="text-[#0EE6B7] text-sm font-medium capitalize">{middle.market_type}</span>
+            <span className="text-[#F4C430] text-sm font-medium capitalize">{middle.market_type}</span>
             <span className="text-2xl">{middle.ev_classification}</span>
           </div>
         </div>
         <div className="flex flex-row md:flex-col gap-4 md:gap-2 md:text-right">
           <div>
-            <p className="text-[#0EE6B7] font-bold text-xl">{middle.hit_probability}</p>
-            <p className="text-[#92A2AD] text-sm">Hit Rate</p>
+            <p className="text-[#F4C430] font-bold text-xl">{middle.hit_probability}</p>
+            <p className="text-[#9CA3AF] text-sm">Hit Rate</p>
           </div>
           <div>
-            <p className="text-[#FACC15] font-bold text-xl">+{(middle.expected_value * 100).toFixed(1)}%</p>
-            <p className="text-[#92A2AD] text-sm">Expected Value</p>
+            <p className="text-green-400 font-bold text-xl">+{(middle.expected_value * 100).toFixed(1)}%</p>
+            <p className="text-[#9CA3AF] text-sm">Expected Value</p>
           </div>
         </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {middle.legs.map((leg, legIndex) => (
-          <div key={legIndex} className="bg-black/40 rounded-xl p-4 border border-white/5">
+          <div key={legIndex} className="bg-[#0F172A] rounded-lg p-4 border border-[#1F2937]">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-[#FACC15] font-medium text-sm">{leg.sportsbook}</span>
-              <span className="text-[#E6EDF3] font-bold text-lg">{leg.odds > 0 ? '+' : ''}{leg.odds}</span>
+              <span className="text-[#F4C430] font-medium text-sm">{leg.sportsbook}</span>
+              <span className="text-[#E5E7EB] font-bold text-lg">{leg.odds > 0 ? '+' : ''}{leg.odds}</span>
             </div>
-            <p className="text-[#E6EDF3] font-semibold mb-1">{leg.selection}</p>
-            <p className="text-[#92A2AD] text-xs">Decimal: {leg.decimal_odds}</p>
+            <p className="text-[#E5E7EB] font-semibold mb-1">{leg.selection}</p>
+            <p className="text-[#9CA3AF] text-xs">Decimal: {leg.decimal_odds}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-gradient-to-r from-[#0EE6B7]/10 to-[#FACC15]/10 rounded-xl p-4 border border-[#0EE6B7]/20">
+      <div className="bg-gradient-to-r from-[#F4C430]/10 to-green-400/10 rounded-lg p-4 border border-[#F4C430]/20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <div>
-            <p className="text-[#0EE6B7] text-xs font-medium mb-1">Middle Window</p>
-            <p className="text-[#E6EDF3] font-bold text-sm">{middle.middle_range}</p>
+            <p className="text-[#F4C430] text-xs font-medium mb-1">Middle Window</p>
+            <p className="text-[#E5E7EB] font-bold text-sm">{middle.middle_range}</p>
           </div>
           <div>
-            <p className="text-[#FACC15] text-xs font-medium mb-1">Gap Size</p>
-            <p className="text-[#E6EDF3] font-bold text-sm">{middle.gap_size} pts</p>
+            <p className="text-green-400 text-xs font-medium mb-1">Gap Size</p>
+            <p className="text-[#E5E7EB] font-bold text-sm">{middle.gap_size} pts</p>
           </div>
           <div>
-            <p className="text-[#0EE6B7] text-xs font-medium mb-1">Hit Numbers</p>
-            <p className="text-[#E6EDF3] font-bold text-sm">
+            <p className="text-[#F4C430] text-xs font-medium mb-1">Hit Numbers</p>
+            <p className="text-[#E5E7EB] font-bold text-sm">
               {middle.middle_window.slice(0, 3).join(', ')}{middle.middle_window.length > 3 ? '...' : ''}
             </p>
           </div>
           <div>
-            <p className="text-[#92A2AD] text-xs font-medium mb-1">Game Time</p>
-            <p className="text-[#E6EDF3] font-bold text-sm">
+            <p className="text-[#9CA3AF] text-xs font-medium mb-1">Game Time</p>
+            <p className="text-[#E5E7EB] font-bold text-sm">
               {new Date(middle.commence_time).toLocaleDateString('en-US', { 
                 month: 'short', 
                 day: 'numeric',
@@ -351,21 +347,13 @@ export default function MiddleBetsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080B0C] text-[#E6EDF3] relative">
-      <div 
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(ellipse at top right, rgba(14, 230, 183, 0.08) 0%, transparent 50%),
-            conic-gradient(from 230deg at 0% 100%, rgba(250, 204, 21, 0.04), transparent 50%),
-            transparent
-          `
-        }}
-      />
-      
-      <Header />
-      
-      <div className="container mx-auto px-4 py-8 relative z-10 max-w-7xl">
+    <div className="betchekr-premium">
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
+        
+        <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Hero Section */}
         <div className="text-center mb-12">
           <motion.div
@@ -374,33 +362,31 @@ export default function MiddleBetsPage() {
             transition={{ duration: 0.8 }}
             className="mb-8"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FACC15]/10 rounded-full mb-6">
-              <Zap className="w-4 h-4 text-[#FACC15]" />
-              <span className="text-[#FACC15] text-sm font-semibold">Advanced Arbitrage Scanner</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#F4C430]/10 rounded-full mb-6">
+              <Zap className="w-4 h-4 text-[#F4C430]" />
+              <span className="text-[#F4C430] text-sm font-semibold">Advanced Arbitrage Scanner</span>
             </div>
             
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-              <span className="bg-gradient-to-r from-[#0EE6B7] to-[#FACC15] bg-clip-text text-transparent">
-                Middle Bet Finder
-              </span>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 text-[#E5E7EB]">
+              Middle Bet Finder
             </h1>
             
-            <p className="text-lg md:text-xl text-[#92A2AD] max-w-3xl mx-auto mb-8">
+            <p className="text-lg md:text-xl text-[#9CA3AF] max-w-3xl mx-auto mb-8">
               Discover guaranteed profit windows with our AI-powered middle bet scanner. 
               Find the best spreads and totals middles with key number coverage.
             </p>
             
             {/* Usage indicator */}
-            <div className="inline-flex items-center gap-2 bg-[#0B0F12] border border-white/8 rounded-full px-6 py-3">
+            <div className="inline-flex items-center gap-2 bg-[#141C28] border border-[#1F2937] rounded-full px-6 py-3">
               {isPremium ? (
                 <>
-                  <Crown className="w-5 h-5 text-[#FACC15]" />
-                  <span className="text-[#FACC15] font-semibold">Premium - Unlimited Searches</span>
+                  <Crown className="w-5 h-5 text-[#F4C430]" />
+                  <span className="text-[#F4C430] font-semibold">Premium - Unlimited Searches</span>
                 </>
               ) : (
                 <>
-                  <Target className="w-5 h-5 text-[#0EE6B7]" />
-                  <span className="text-[#E6EDF3]">
+                  <Target className="w-5 h-5 text-[#F4C430]" />
+                  <span className="text-[#E5E7EB]">
                     {middleUsesLeft === 'unlimited' ? 'Unlimited searches' :
                      middleUsesLeft === null ? 'Loading...' : 
                      middleUsesLeft === 1 ? '1 search remaining today' : 
@@ -421,18 +407,13 @@ export default function MiddleBetsPage() {
               onClick={() => findMiddleBets(true)}
               disabled={isLoading || (!isPremium && middleUsesLeft !== null && middleUsesLeft <= 0)}
               className={`
-                inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-lg
-                transition-all duration-300 transform hover:scale-105
+                inline-flex items-center gap-3 px-8 py-4 rounded-lg font-semibold text-base
+                transition-all duration-300
                 ${isLoading || (!isPremium && middleUsesLeft !== null && middleUsesLeft <= 0)
                   ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-50'
-                  : 'bg-gradient-to-r from-[#FACC15] to-[#EAB308] text-black hover:shadow-lg hover:shadow-[#FACC15]/30'
+                  : 'bg-[#F4C430] text-[#0B0F14] hover:bg-[#e6b829] shadow-[0_6px_16px_rgba(244,196,48,0.35)]'
                 }
               `}
-              style={{
-                boxShadow: isLoading || (!isPremium && middleUsesLeft !== null && middleUsesLeft <= 0) 
-                  ? 'none' 
-                  : '0 8px 24px rgba(250,204,21,0.25)'
-              }}
             >
               {isLoading ? (
                 <>
@@ -455,27 +436,27 @@ export default function MiddleBetsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="mt-8 bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10"
+              className="mt-8 bg-[#141C28] backdrop-blur-md rounded-lg p-6 border border-[#1F2937]"
             >
               <div className="flex items-center gap-2 mb-6">
                 <Filter className="w-5 h-5 text-[#F4C430]" />
-                <h3 className="text-lg font-semibold text-white">Filter Opportunities</h3>
+                <h3 className="text-lg font-semibold text-[#E5E7EB]">Filter Opportunities</h3>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {/* League Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">League</label>
+                  <label className="block text-sm font-medium text-[#9CA3AF] mb-2">League</label>
                   <select
                     value={selectedLeague}
                     onChange={(e) => {
                       setSelectedLeague(e.target.value);
                       filterMiddleData(e.target.value, selectedTeam);
                     }}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:border-[#F4C430] focus:outline-none focus:ring-2 focus:ring-[#F4C430]/20 transition-all"
+                    className="w-full bg-[#0F172A] border border-[#1F2937] rounded-lg px-4 py-3 text-[#E5E7EB] focus:border-[#F4C430]/50 focus:outline-none focus:ring-2 focus:ring-[#F4C430]/20 transition-all"
                   >
                     {allLeagueOptions.map(option => (
-                      <option key={option.key} value={option.key} className="bg-[#1F2937] text-white">
+                      <option key={option.key} value={option.key} className="bg-[#0F172A] text-[#E5E7EB]">
                         {option.label}
                       </option>
                     ))}
@@ -484,19 +465,19 @@ export default function MiddleBetsPage() {
 
                 {/* Team Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">Team</label>
+                  <label className="block text-sm font-medium text-[#9CA3AF] mb-2">Team</label>
                   <select
                     value={selectedTeam}
                     onChange={(e) => {
                       setSelectedTeam(e.target.value);
                       filterMiddleData(selectedLeague, e.target.value);
                     }}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:border-[#F4C430] focus:outline-none focus:ring-2 focus:ring-[#F4C430]/20 transition-all"
+                    className="w-full bg-[#0F172A] border border-[#1F2937] rounded-lg px-4 py-3 text-[#E5E7EB] focus:border-[#F4C430]/50 focus:outline-none focus:ring-2 focus:ring-[#F4C430]/20 transition-all"
                     disabled={availableTeams.length === 0}
                   >
-                    <option value="all" className="bg-[#1F2937] text-white">All Teams</option>
+                    <option value="all" className="bg-[#0F172A] text-[#E5E7EB]">All Teams</option>
                     {availableTeams.map(team => (
-                      <option key={team} value={team} className="bg-[#1F2937] text-white">
+                      <option key={team} value={team} className="bg-[#0F172A] text-[#E5E7EB]">
                         {team}
                       </option>
                     ))}
@@ -505,7 +486,7 @@ export default function MiddleBetsPage() {
               </div>
               
               <div className="flex items-center justify-between text-sm">
-                <div className="text-white/60">
+                <div className="text-[#9CA3AF]">
                   <span>Showing:</span>
                   <span className="text-[#F4C430] font-semibold ml-2">
                     {filteredMiddleData.length} of {middleData.length} opportunities
@@ -565,11 +546,11 @@ export default function MiddleBetsPage() {
             transition={{ duration: 0.5 }}
           >
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-[#E6EDF3] flex items-center gap-3">
-                <Trophy className="w-8 h-8 text-[#FACC15]" />
+              <h2 className="text-2xl md:text-3xl font-bold text-[#E5E7EB] flex items-center gap-3">
+                <Trophy className="w-8 h-8 text-[#F4C430]" />
                 {selectedLeague !== 'all' ? `${selectedLeague} - ` : ''}Found {filteredMiddleData.length} Opportunities
               </h2>
-              <div className="text-sm text-[#92A2AD]">
+              <div className="text-sm text-[#9CA3AF]">
                 Last updated: {new Date().toLocaleTimeString()}
               </div>
             </div>
@@ -585,27 +566,24 @@ export default function MiddleBetsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-16 bg-[#0B0F12] border border-white/8 rounded-2xl p-8"
-          style={{
-            boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
-          }}
+          className="mt-16 bg-[#141C28] border border-[#1F2937] rounded-lg p-8"
         >
-          <h3 className="text-2xl font-bold text-[#E6EDF3] mb-6 flex items-center gap-2">
-            <Info className="w-6 h-6 text-[#FACC15]" />
+          <h3 className="text-2xl font-bold text-[#E5E7EB] mb-6 flex items-center gap-2">
+            <Info className="w-6 h-6 text-[#F4C430]" />
             How Middle Bets Work
           </h3>
-          <div className="grid md:grid-cols-2 gap-8 text-[#92A2AD]">
+          <div className="grid md:grid-cols-2 gap-8 text-[#9CA3AF]">
             <div>
-              <h4 className="text-lg font-semibold text-[#E6EDF3] mb-3 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-[#0EE6B7]" />
+              <h4 className="text-lg font-semibold text-[#E5E7EB] mb-3 flex items-center gap-2">
+                <Activity className="w-5 h-5 text-[#F4C430]" />
                 What Are Middle Bets?
               </h4>
               <p className="mb-4 leading-relaxed">
                 Middle bets occur when you find different spreads or totals on the same game across different sportsbooks, 
                 creating a "window" where both bets can win if the final result lands in the middle.
               </p>
-              <h4 className="text-lg font-semibold text-[#E6EDF3] mb-3 flex items-center gap-2">
-                <Target className="w-5 h-5 text-[#0EE6B7]" />
+              <h4 className="text-lg font-semibold text-[#E5E7EB] mb-3 flex items-center gap-2">
+                <Target className="w-5 h-5 text-[#F4C430]" />
                 Key Numbers
               </h4>
               <p className="leading-relaxed">
@@ -614,16 +592,16 @@ export default function MiddleBetsPage() {
               </p>
             </div>
             <div>
-              <h4 className="text-lg font-semibold text-[#E6EDF3] mb-3 flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-[#FACC15]" />
+              <h4 className="text-lg font-semibold text-[#E5E7EB] mb-3 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-[#F4C430]" />
                 Profit Calculation
               </h4>
               <p className="mb-4 leading-relaxed">
                 We calculate expected value based on historical hit probabilities for each middle window. 
                 Only opportunities with positive EV and realistic profit potential are shown.
               </p>
-              <h4 className="text-lg font-semibold text-[#E6EDF3] mb-3 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-[#FACC15]" />
+              <h4 className="text-lg font-semibold text-[#E5E7EB] mb-3 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-[#F4C430]" />
                 Quality Filters
               </h4>
               <p className="leading-relaxed">
@@ -633,9 +611,10 @@ export default function MiddleBetsPage() {
             </div>
           </div>
         </motion.div>
-      </div>
-
-      <Footer />
+        
+        </main>
+        <Footer />
+      </GradientBG>
     </div>
   );
 }
