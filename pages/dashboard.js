@@ -1,0 +1,862 @@
+import { useState, useEffect, useRef } from 'react';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
+import { motion } from 'framer-motion';
+import { 
+  User, 
+  Camera,
+  Edit3,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Target,
+  BarChart3,
+  PieChart,
+  Calendar,
+  Trophy,
+  AlertCircle,
+  Plus,
+  Minus,
+  Activity,
+  Zap,
+  Brain,
+  LineChart,
+  Settings,
+  Upload
+} from 'lucide-react';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import GradientBG from '../components/theme/GradientBG';
+import { useAuth } from '../contexts/AuthContext';
+import BankrollChart from '../components/profile/BankrollChart';
+import BetHistoryTable from '../components/profile/BetHistoryTable';
+import PerformanceCharts from '../components/profile/PerformanceCharts';
+import WeeklyAIReport from '../components/profile/WeeklyAIReport';
+import ProfileService from '../lib/services/profileService';
+
+export default function Dashboard() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const fileInputRef = useRef(null);
+  
+  // Profile State
+  const [profileImage, setProfileImage] = useState(null);
+  const [bio, setBio] = useState('');
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // Bankroll State
+  const [bankroll, setBankroll] = useState({
+    current: 1000,
+    deposits: [],
+    withdrawals: [],
+    history: []
+  });
+  
+  // Bet History State
+  const [bets, setBets] = useState([]);
+  const [newBet, setNewBet] = useState({
+    sport: '',
+    teams: '',
+    betType: '',
+    odds: '',
+    stake: '',
+    sportsbook: '',
+    status: 'pending'
+  });
+  
+  // Analytics State
+  const [analytics, setAnalytics] = useState({
+    totalBets: 0,
+    winRate: 0,
+    roi: 0,
+    totalProfit: 0,
+    avgStake: 0,
+    clvAvg: 0,
+    favoriteMarket: 'Moneyline',
+    favoriteSportsbook: 'DraftKings'
+  });
+  
+  // UI State
+  const [showAddBet, setShowAddBet] = useState(false);
+  const [showBankrollActions, setShowBankrollActions] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/auth/signin');
+      return;
+    }
+    
+    if (user) {
+      loadUserData();
+    }
+  }, [user, authLoading]);
+
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load user profile using ProfileService (handles Supabase + localStorage)
+      const profileData = await ProfileService.getUserProfile(user.id);
+      
+      if (profileData) {
+        setBio(profileData.bio || '');
+        setProfileImage(profileData.profileImage || null);
+        setBankroll(profileData.bankroll || {
+          current: 1000,
+          deposits: [],
+          withdrawals: [],
+          history: []
+        });
+        setBets(profileData.bets || []);
+        calculateAnalytics(profileData.bets || []);
+        
+        console.log('Profile loaded from:', profileData.source);
+      }
+      
+      // Generate sample data if user has no history
+      if (!profileData.bets || profileData.bets.length === 0) {
+        generateSampleData();
+      }
+      
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      // Fallback to sample data
+      generateSampleData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateSampleData = () => {
+    // Generate sample bankroll history
+    const history = [];
+    let currentBalance = 1000;
+    
+    for (let i = 30; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      
+      // Random daily change
+      const change = (Math.random() - 0.45) * 50;
+      currentBalance += change;
+      
+      history.push({
+        date: date.toISOString().split('T')[0],
+        balance: Math.max(0, currentBalance),
+        change: change
+      });
+    }
+    
+    setBankroll(prev => ({
+      ...prev,
+      history,
+      current: Math.max(0, currentBalance)
+    }));
+
+    // Generate sample bets
+    const sampleBets = [
+      {
+        id: 1,
+        date: new Date().toISOString().split('T')[0],
+        sport: 'NFL',
+        market: 'Moneyline',
+        selection: 'Chiefs ML',
+        odds: '+150',
+        stake: 50,
+        result: 'won',
+        payout: 125,
+        profit: 75
+      },
+      {
+        id: 2,
+        date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+        sport: 'NBA',
+        market: 'Spread',
+        selection: 'Lakers -5.5',
+        odds: '-110',
+        stake: 75,
+        result: 'lost',
+        payout: 0,
+        profit: -75
+      },
+      {
+        id: 3,
+        date: new Date(Date.now() - 172800000).toISOString().split('T')[0],
+        sport: 'MLB',
+        market: 'Total',
+        selection: 'Over 8.5',
+        odds: '+105',
+        stake: 100,
+        result: 'won',
+        payout: 205,
+        profit: 105
+      }
+    ];
+    
+    setBets(sampleBets);
+    calculateAnalytics(sampleBets);
+  };
+
+  const calculateAnalytics = (betsData) => {
+    if (!betsData.length) return;
+    
+    const settled = betsData.filter(bet => bet.result !== 'pending');
+    const won = settled.filter(bet => bet.result === 'won');
+    const totalStaked = settled.reduce((sum, bet) => sum + bet.stake, 0);
+    const totalProfit = settled.reduce((sum, bet) => sum + bet.profit, 0);
+    
+    setAnalytics({
+      totalBets: betsData.length,
+      winRate: settled.length ? (won.length / settled.length * 100) : 0,
+      roi: totalStaked ? (totalProfit / totalStaked * 100) : 0,
+      totalProfit,
+      avgStake: settled.length ? totalStaked / settled.length : 0,
+      clvAvg: 2.3, // Sample CLV
+      favoriteMarket: 'Moneyline',
+      favoriteSportsbook: 'DraftKings'
+    });
+  };
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      try {
+        // Upload to Supabase Storage (with base64 fallback)
+        const uploadResult = await ProfileService.uploadProfileImage(user.id, file);
+        
+        if (uploadResult.success) {
+          setProfileImage(uploadResult.url);
+          await saveUserData({ profileImage: uploadResult.url });
+        }
+      } catch (error) {
+        console.error('Error uploading image:', error);
+      }
+    }
+  };
+
+  const handleBioSave = async () => {
+    if (bio.split(' ').length > 50) {
+      alert('Bio must be 50 words or less');
+      return;
+    }
+    setIsEditingBio(false);
+    await saveUserData({ bio });
+  };
+
+  const handleBankrollAction = async (type, amount, description) => {
+    const transaction = {
+      id: Date.now(),
+      date: new Date().toISOString().split('T')[0],
+      type,
+      amount: parseFloat(amount),
+      description,
+      balance: type === 'deposit' ? bankroll.current + parseFloat(amount) : bankroll.current - parseFloat(amount)
+    };
+
+    const newBankroll = {
+      ...bankroll,
+      current: transaction.balance,
+      [type === 'deposit' ? 'deposits' : 'withdrawals']: [
+        ...bankroll[type === 'deposit' ? 'deposits' : 'withdrawals'],
+        transaction
+      ],
+      history: [...bankroll.history, {
+        date: transaction.date,
+        balance: transaction.balance,
+        change: type === 'deposit' ? parseFloat(amount) : -parseFloat(amount)
+      }]
+    };
+
+    setBankroll(newBankroll);
+    await saveUserData({ bankroll: newBankroll });
+    setShowBankrollActions(false);
+  };
+
+  const addBet = async () => {
+    if (!newBet.teams || !newBet.odds || !newBet.stake) return;
+
+    const bet = {
+      id: Date.now(),
+      date: new Date().toISOString().split('T')[0],
+      ...newBet,
+      stake: parseFloat(newBet.stake),
+      source: 'manual'
+    };
+
+    const updatedBets = [...bets, bet];
+    setBets(updatedBets);
+    calculateAnalytics(updatedBets);
+    await saveUserData({ bets: updatedBets });
+    
+    setNewBet({
+      sport: '',
+      teams: '',
+      betType: '',
+      odds: '',
+      stake: '',
+      sportsbook: '',
+      status: 'pending'
+    });
+    setShowAddBet(false);
+  };
+
+  const saveUserData = async (updates) => {
+    try {
+      // Get current profile data
+      const currentData = localStorage.getItem(`user_profile_${user.id}`);
+      const data = currentData ? JSON.parse(currentData) : {};
+      
+      const updatedData = {
+        ...data,
+        ...updates,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      // Save to both Supabase and localStorage via ProfileService
+      await ProfileService.saveUserProfile(user.id, {
+        profileImage: updatedData.profileImage,
+        bio: updatedData.bio,
+        bankroll: updatedData.bankroll,
+        bets: updatedData.bets,
+        settings: updatedData.settings,
+        lastAIReport: updatedData.lastAIReport
+      });
+      
+      console.log('User data saved successfully');
+    } catch (error) {
+      console.error('Error saving user data:', error);
+    }
+  };
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
+  return (
+    <div className="min-h-screen text-white relative">
+      <Head>
+        <title>Dashboard - BetChekr</title>
+        <meta name="description" content="Your personal betting dashboard and performance tracker" />
+      </Head>
+
+      <GradientBG />
+      <Header />
+      
+      <div className="container mx-auto px-4 py-8 relative z-10">
+        {/* Profile Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/10 backdrop-blur-md rounded-xl p-8 border border-white/20 mb-8"
+        >
+          <div className="flex flex-col md:flex-row items-start gap-6">
+            {/* Profile Picture */}
+            <div className="relative">
+              <div 
+                className="w-24 h-24 bg-gradient-to-br from-blue-400 to-purple-600 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {profileImage ? (
+                  <img 
+                    src={profileImage} 
+                    alt="Profile" 
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  <User className="w-12 h-12 text-white" />
+                )}
+                <div className="absolute -bottom-1 -right-1 bg-blue-500 p-1 rounded-full">
+                  <Camera className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </div>
+
+            {/* Profile Info */}
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-2xl font-bold text-white">
+                  {user.user_metadata?.full_name || user.email?.split('@')[0] || 'Bettor'}
+                </h1>
+                <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-sm font-medium">
+                  Pro Bettor
+                </span>
+              </div>
+              
+              <p className="text-blue-200 mb-4">{user.email}</p>
+              
+              {/* Bio Section */}
+              <div className="mb-4">
+                {isEditingBio ? (
+                  <div className="flex flex-col gap-2">
+                    <textarea
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      placeholder="Tell us about your betting style... (max 50 words)"
+                      className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50 resize-none"
+                      rows={3}
+                      maxLength={300}
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleBioSave}
+                        className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setIsEditingBio(false)}
+                        className="bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <span className="text-white/60 text-sm">
+                        {bio.split(' ').length}/50 words
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div 
+                    className="flex items-center gap-2 cursor-pointer group"
+                    onClick={() => setIsEditingBio(true)}
+                  >
+                    <p className="text-white/80">
+                      {bio || "Click to add a bio about your betting style..."}
+                    </p>
+                    <Edit3 className="w-4 h-4 text-white/60 group-hover:text-white/80" />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Quick Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-white/80 font-medium">Bankroll</h3>
+              <DollarSign className="w-5 h-5 text-green-400" />
+            </div>
+            <p className="text-2xl font-bold text-white mb-1">
+              ${bankroll.current.toFixed(2)}
+            </p>
+            <p className="text-sm text-green-400">+12.5% this month</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-white/80 font-medium">ROI</h3>
+              <TrendingUp className="w-5 h-5 text-green-400" />
+            </div>
+            <p className="text-2xl font-bold text-white mb-1">
+              {analytics.roi > 0 ? '+' : ''}{analytics.roi.toFixed(1)}%
+            </p>
+            <p className="text-sm text-blue-400">
+              ${analytics.totalProfit > 0 ? '+' : ''}{analytics.totalProfit.toFixed(2)} profit
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-white/80 font-medium">Win Rate</h3>
+              <Target className="w-5 h-5 text-yellow-400" />
+            </div>
+            <p className="text-2xl font-bold text-white mb-1">
+              {analytics.winRate.toFixed(1)}%
+            </p>
+            <p className="text-sm text-white/60">
+              {analytics.totalBets} total bets
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-white/80 font-medium">CLV</h3>
+              <BarChart3 className="w-5 h-5 text-purple-400" />
+            </div>
+            <p className="text-2xl font-bold text-white mb-1">
+              +{analytics.clvAvg}%
+            </p>
+            <p className="text-sm text-purple-400">vs closing line</p>
+          </motion.div>
+        </div>
+
+        {/* Main Dashboard Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Charts and Analytics */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Bankroll Chart */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <LineChart className="w-5 h-5 text-blue-400" />
+                  Bankroll Progress
+                </h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowBankrollActions(true)}
+                    className="bg-green-500/20 hover:bg-green-500/30 text-green-400 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Deposit
+                  </button>
+                  <button
+                    onClick={() => setShowBankrollActions(true)}
+                    className="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <Minus className="w-4 h-4" />
+                    Withdraw
+                  </button>
+                </div>
+              </div>
+              <BankrollChart data={bankroll.history} />
+            </motion.div>
+
+            {/* Performance Charts */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+            >
+              <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-purple-400" />
+                Performance Analytics
+              </h2>
+              <PerformanceCharts bets={bets} analytics={analytics} />
+            </motion.div>
+
+            {/* Bet History */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+              className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-yellow-400" />
+                  Bet History
+                </h2>
+                <button
+                  onClick={() => setShowAddBet(true)}
+                  className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg text-white font-medium flex items-center gap-2 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Bet
+                </button>
+              </div>
+              <BetHistoryTable 
+                bets={bets} 
+                onAddBet={async (newBet) => {
+                  const updatedBets = [...bets, newBet];
+                  setBets(updatedBets);
+                  calculateAnalytics(updatedBets);
+                  await saveUserData({ bets: updatedBets });
+                }}
+                onEditBet={async (updatedBet) => {
+                  const updatedBets = bets.map(bet => 
+                    bet.id === updatedBet.id ? updatedBet : bet
+                  );
+                  setBets(updatedBets);
+                  calculateAnalytics(updatedBets);
+                  await saveUserData({ bets: updatedBets });
+                }}
+                onDeleteBet={async (betId) => {
+                  const updatedBets = bets.filter(bet => bet.id !== betId);
+                  setBets(updatedBets);
+                  calculateAnalytics(updatedBets);
+                  await saveUserData({ bets: updatedBets });
+                }}
+              />
+            </motion.div>
+          </div>
+
+          {/* Right Column - AI Reports and Quick Actions */}
+          <div className="space-y-6">
+            {/* AI Weekly Report */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.8 }}
+              className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+            >
+              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-pink-400" />
+                AI Weekly Report
+              </h2>
+              <WeeklyAIReport bets={bets} analytics={analytics} user={user} />
+            </motion.div>
+
+            {/* Quick Stats */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.9 }}
+              className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+            >
+              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-400" />
+                Quick Insights
+              </h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-white/80">Favorite Market</span>
+                  <span className="text-white font-semibold">{analytics.favoriteMarket}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-white/80">Top Sportsbook</span>
+                  <span className="text-white font-semibold">{analytics.favoriteSportsbook}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-white/80">Avg Stake</span>
+                  <span className="text-white font-semibold">${analytics.avgStake.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-white/80">This Week</span>
+                  <span className="text-green-400 font-semibold">+5 bets</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* System Integration */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1.0 }}
+              className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+            >
+              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Settings className="w-5 h-5 text-blue-400" />
+                System Integrations
+              </h3>
+              <div className="space-y-3">
+                <button 
+                  onClick={() => router.push('/arbitrage')}
+                  className="w-full bg-green-500/20 hover:bg-green-500/30 text-green-400 p-3 rounded-lg flex items-center justify-between transition-colors"
+                >
+                  <span>Arbitrage Scanner</span>
+                  <Target className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => router.push('/middle-bets')}
+                  className="w-full bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 p-3 rounded-lg flex items-center justify-between transition-colors"
+                >
+                  <span>Middle Bets</span>
+                  <Activity className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => router.push('/ai-parlay')}
+                  className="w-full bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 p-3 rounded-lg flex items-center justify-between transition-colors"
+                >
+                  <span>AI Parlays</span>
+                  <TrendingUp className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      {/* Add Bet Modal */}
+      {showAddBet && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 w-full max-w-md"
+          >
+            <h3 className="text-xl font-bold text-white mb-4">Add New Bet</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Sport"
+                  value={newBet.sport}
+                  onChange={(e) => setNewBet(prev => ({ ...prev, sport: e.target.value }))}
+                  className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
+                />
+                <input
+                  type="text"
+                  placeholder="Bet Type"
+                  value={newBet.betType}
+                  onChange={(e) => setNewBet(prev => ({ ...prev, betType: e.target.value }))}
+                  className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
+                />
+              </div>
+              <input
+                type="text"
+                placeholder="Teams (e.g., Lakers vs Warriors)"
+                value={newBet.teams}
+                onChange={(e) => setNewBet(prev => ({ ...prev, teams: e.target.value }))}
+                className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50 w-full"
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Odds (e.g., +150)"
+                  value={newBet.odds}
+                  onChange={(e) => setNewBet(prev => ({ ...prev, odds: e.target.value }))}
+                  className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
+                />
+                <input
+                  type="number"
+                  placeholder="Stake ($)"
+                  value={newBet.stake}
+                  onChange={(e) => setNewBet(prev => ({ ...prev, stake: e.target.value }))}
+                  className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
+                />
+              </div>
+              <input
+                type="text"
+                placeholder="Sportsbook"
+                value={newBet.sportsbook}
+                onChange={(e) => setNewBet(prev => ({ ...prev, sportsbook: e.target.value }))}
+                className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50 w-full"
+              />
+            </div>
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={addBet}
+                className="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+              >
+                Add Bet
+              </button>
+              <button
+                onClick={() => setShowAddBet(false)}
+                className="flex-1 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Bankroll Actions Modal */}
+      {showBankrollActions && (
+        <BankrollModal
+          onClose={() => setShowBankrollActions(false)}
+          onAction={handleBankrollAction}
+        />
+      )}
+
+      <Footer />
+    </div>
+  );
+}
+
+// Bankroll Modal Component
+function BankrollModal({ onClose, onAction }) {
+  const [actionType, setActionType] = useState('deposit');
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+
+  const handleSubmit = () => {
+    if (!amount || parseFloat(amount) <= 0) return;
+    onAction(actionType, amount, description);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 w-full max-w-md"
+      >
+        <h3 className="text-xl font-bold text-white mb-4">Bankroll Transaction</h3>
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActionType('deposit')}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                actionType === 'deposit' 
+                  ? 'bg-green-500 text-white' 
+                  : 'bg-white/10 text-white/60 hover:text-white'
+              }`}
+            >
+              Deposit
+            </button>
+            <button
+              onClick={() => setActionType('withdrawal')}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                actionType === 'withdrawal' 
+                  ? 'bg-red-500 text-white' 
+                  : 'bg-white/10 text-white/60 hover:text-white'
+              }`}
+            >
+              Withdrawal
+            </button>
+          </div>
+          <input
+            type="number"
+            placeholder="Amount ($)"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50 w-full"
+          />
+          <input
+            type="text"
+            placeholder="Description (optional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50 w-full"
+          />
+        </div>
+        <div className="flex gap-4 mt-6">
+          <button
+            onClick={handleSubmit}
+            className="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+          >
+            {actionType === 'deposit' ? 'Add Funds' : 'Withdraw'}
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}

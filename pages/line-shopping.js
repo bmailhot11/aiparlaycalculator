@@ -24,7 +24,6 @@ export default function LineShopping() {
   const [selectedTeam, setSelectedTeam] = useState('');
   const [selectedGame, setSelectedGame] = useState('');
   const [marketType, setMarketType] = useState('all');
-  const [edgeFilter, setEdgeFilter] = useState('0');
   const [timeFilter, setTimeFilter] = useState('7d');
   const [loading, setLoading] = useState(false);
   const [lines, setLines] = useState([]);
@@ -57,12 +56,6 @@ export default function LineShopping() {
     { value: 'all', label: 'All Games' }
   ];
 
-  const edgeFilters = [
-    { value: '0', label: 'All Lines' },
-    { value: '2', label: '2%+ Edge' },
-    { value: '5', label: '5%+ Edge' },
-    { value: '10', label: '10%+ Edge' }
-  ];
 
   // Fetch available teams when sport changes
   const fetchTeams = async (sport) => {
@@ -74,7 +67,7 @@ export default function LineShopping() {
       
       if (data.success) {
         setAvailableTeams(data.teams || []);
-        setAvailableGames(data.games || []);
+        setAvailableGames(data.games || []); // All games initially
       } else {
         setAvailableTeams([]);
         setAvailableGames([]);
@@ -84,6 +77,27 @@ export default function LineShopping() {
       setAvailableTeams([]);
       setAvailableGames([]);
     }
+  };
+
+  // Filter games based on selected team
+  const getFilteredGames = () => {
+    if (!selectedTeam || !Array.isArray(availableGames)) {
+      return availableGames; // Show all games if no team selected
+    }
+    
+    // Filter games that include the selected team
+    return availableGames.filter(game => {
+      if (!game?.label) return false;
+      const gameLabel = game.label.toLowerCase();
+      const teamName = selectedTeam.toLowerCase();
+      return gameLabel.includes(teamName);
+    });
+  };
+
+  // Handle team selection - clear game selection when team changes
+  const handleTeamChange = (team) => {
+    setSelectedTeam(team);
+    setSelectedGame(''); // Clear game selection when team changes
   };
 
   // Fetch line shopping data
@@ -102,7 +116,6 @@ export default function LineShopping() {
         ...(selectedTeam && { team: selectedTeam }),
         ...(selectedGame && { game: selectedGame }),
         ...(marketType !== 'all' && { market: marketType }),
-        ...(edgeFilter !== '0' && { minEdge: edgeFilter }),
         ...(timeFilter !== 'all' && { timeFilter })
       });
 
@@ -134,8 +147,7 @@ export default function LineShopping() {
   useEffect(() => {
     if (selectedSport) {
       fetchTeams(selectedSport);
-      setSelectedTeam('');
-      setSelectedGame('');
+      handleTeamChange(''); // Use the handler to properly clear team and game
       setLines([]);
     }
   }, [selectedSport]);
@@ -275,7 +287,7 @@ export default function LineShopping() {
                       <label className="block text-[#9CA3AF] text-sm mb-2">Team</label>
                       <select
                         value={selectedTeam}
-                        onChange={(e) => setSelectedTeam(e.target.value)}
+                        onChange={(e) => handleTeamChange(e.target.value)}
                         className="w-full px-4 py-3 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50 min-h-[44px] text-sm sm:text-base"
                       >
                         <option value="">All Teams</option>
@@ -285,16 +297,17 @@ export default function LineShopping() {
                       </select>
                     </div>
 
-                    {/* Game Filter */}
+                    {/* Game Filter - Shows games filtered by selected team */}
                     <div>
-                      <label className="block text-[#9CA3AF] text-sm mb-2">Specific Game</label>
+                      <label className="block text-[#9CA3AF] text-sm mb-2">Specific Game{selectedTeam ? ` (${selectedTeam} games)` : ''}</label>
                       <select
                         value={selectedGame}
                         onChange={(e) => setSelectedGame(e.target.value)}
                         className="w-full px-4 py-3 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50 min-h-[44px] text-sm sm:text-base"
+                        disabled={!selectedTeam} // Disable if no team selected
                       >
-                        <option value="">All Games</option>
-                        {Array.isArray(availableGames) && availableGames.map(game => (
+                        <option value="">{selectedTeam ? `All ${selectedTeam} Games` : 'Select a team first'}</option>
+                        {getFilteredGames().map(game => (
                           <option key={game?.id || Math.random()} value={game?.id || ''}>{game?.label || 'Unknown Game'}</option>
                         ))}
                       </select>
@@ -314,19 +327,6 @@ export default function LineShopping() {
                       </select>
                     </div>
 
-                    {/* Edge Filter */}
-                    <div>
-                      <label className="block text-[#9CA3AF] text-sm mb-2">Minimum Edge</label>
-                      <select
-                        value={edgeFilter}
-                        onChange={(e) => setEdgeFilter(e.target.value)}
-                        className="w-full px-4 py-3 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50 min-h-[44px] text-sm sm:text-base"
-                      >
-                        {edgeFilters.map(filter => (
-                          <option key={filter.value} value={filter.value}>{filter.label}</option>
-                        ))}
-                      </select>
-                    </div>
 
                     {/* Market Type Filter */}
                     <div>
@@ -456,7 +456,7 @@ export default function LineShopping() {
             </div>
           )}
 
-          {selectedSport && !loading && lines.length === 0 && (selectedTeam || selectedGame || marketType !== 'all' || edgeFilter !== '0' || timeFilter !== 'all') && (
+          {selectedSport && !loading && lines.length === 0 && (selectedTeam || selectedGame || marketType !== 'all' || timeFilter !== 'all') && (
             <div className="text-center py-12">
               <Search className="w-12 h-12 text-[#6B7280] mx-auto mb-4" />
               <p className="text-[#9CA3AF]">No lines found. Try a different search.</p>
