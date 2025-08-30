@@ -4,7 +4,6 @@ import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { 
   User, 
-  Camera,
   Edit3,
   TrendingUp,
   TrendingDown,
@@ -40,10 +39,8 @@ export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const { isPremium } = useContext(PremiumContext);
   const router = useRouter();
-  const fileInputRef = useRef(null);
   
   // Profile State
-  const [profileImage, setProfileImage] = useState(null);
   const [bio, setBio] = useState('');
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -118,7 +115,6 @@ export default function Dashboard() {
       if (profileData) {
         console.log('🔄 Dashboard: Processing profile data...');
         setBio(profileData.bio || '');
-        setProfileImage(profileData.profileImage || null);
         setBankroll(profileData.bankroll || {
           current: 0,
           deposits: [],
@@ -164,22 +160,6 @@ export default function Dashboard() {
     });
   };
 
-  const handleImageUpload = async (event) => {
-    const file = event.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      try {
-        // Upload to Supabase Storage (with base64 fallback)
-        const uploadResult = await ProfileService.uploadProfileImage(user.id, file);
-        
-        if (uploadResult.success) {
-          setProfileImage(uploadResult.url);
-          await saveUserData({ profileImage: uploadResult.url });
-        }
-      } catch (error) {
-        console.error('Error uploading image:', error);
-      }
-    }
-  };
 
   const handleBioSave = async () => {
     if (bio.split(' ').length > 50) {
@@ -430,7 +410,6 @@ export default function Dashboard() {
       
       // Save to both Supabase and localStorage via ProfileService
       await ProfileService.saveUserProfile(user.id, {
-        profileImage: updatedData.profileImage,
         bio: updatedData.bio,
         bankroll: updatedData.bankroll,
         bets: updatedData.bets,
@@ -446,20 +425,23 @@ export default function Dashboard() {
 
   if (authLoading || loading) {
     return (
-      <>
+      <div className="betchekr-premium">
         <Head>
           <title>Dashboard - BetChekr</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
         </Head>
-        <GradientBG />
-        <Header />
-        <div className="container mx-auto px-4 pt-4 sm:pt-20 pb-8 relative z-10">
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+        <GradientBG>
+          <div className="premium-header sticky top-0 z-50">
+            <Header />
           </div>
-        </div>
-        <Footer />
-      </>
+          <main className="max-w-7xl mx-auto px-4 py-8">
+            <div className="flex items-center justify-center py-20">
+              <div className="w-8 h-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          </main>
+          <Footer />
+        </GradientBG>
+      </div>
     );
   }
 
@@ -469,17 +451,19 @@ export default function Dashboard() {
   const hasContent = bets.length > 0 || bankroll.current > 0 || analytics.totalBets > 0;
 
   return (
-    <div className="text-white relative">
+    <div className="betchekr-premium">
       <Head>
         <title>Dashboard - BetChekr</title>
         <meta name="description" content="Your personal betting dashboard and performance tracker" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
       </Head>
 
-      <GradientBG />
-      <Header />
-      
-      <div className="container mx-auto px-4 pt-4 sm:pt-20 pb-8 relative z-10">
+      <GradientBG>
+        <div className="premium-header sticky top-0 z-50">
+          <Header />
+        </div>
+        
+        <main className="max-w-7xl mx-auto px-4 py-8">
         {!hasContent ? (
           /* Placeholder when no content */
           <div className="flex items-center justify-center py-20">
@@ -519,34 +503,7 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white/10 backdrop-blur-md rounded-xl p-8 border border-white/20 mb-8"
         >
-          <div className="flex flex-col md:flex-row items-start gap-6">
-            {/* Profile Picture */}
-            <div className="relative">
-              <div 
-                className="w-24 h-24 bg-gradient-to-br from-blue-400 to-purple-600 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {profileImage ? (
-                  <img 
-                    src={profileImage} 
-                    alt="Profile" 
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <User className="w-12 h-12 text-white" />
-                )}
-                <div className="absolute -bottom-1 -right-1 bg-blue-500 p-1 rounded-full">
-                  <Camera className="w-4 h-4 text-white" />
-                </div>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-            </div>
+          <div className="flex flex-col items-start gap-6">
 
             {/* Profile Info */}
             <div className="flex-1">
@@ -859,20 +816,20 @@ export default function Dashboard() {
           >
             <h3 className="text-xl font-bold text-white mb-4">Add New Bet</h3>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <input
                   type="text"
                   placeholder="Sport"
                   value={newBet.sport}
                   onChange={(e) => setNewBet(prev => ({ ...prev, sport: e.target.value }))}
-                  className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
+                  className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50 text-base min-h-[44px]"
                 />
                 <input
                   type="text"
                   placeholder="Bet Type"
                   value={newBet.betType}
                   onChange={(e) => setNewBet(prev => ({ ...prev, betType: e.target.value }))}
-                  className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50"
+                  className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50 text-base min-h-[44px]"
                 />
               </div>
               <input
@@ -965,7 +922,9 @@ export default function Dashboard() {
         />
       )}
 
-      <Footer />
+        </main>
+        <Footer />
+      </GradientBG>
     </div>
   );
 }

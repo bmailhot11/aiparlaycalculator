@@ -8,18 +8,16 @@ import SiteTheme from '../components/theme/SiteTheme';
 const PremiumContext = createContext({
   isPremium: false,
   setIsPremium: () => {},
-  premiumLoading: false,
   checkPremiumStatus: () => {}
 });
 
 function MyApp({ Component, pageProps }) {
   const [isPremium, setIsPremium] = useState(false);
-  const [premiumLoading, setPremiumLoading] = useState(false); // ✅ REMOVED LOADING: Set to false by default
+  // Remove premiumLoading state completely - it was causing delays
 
   // Simplified premium check with proper error handling
   const checkPremiumStatus = async () => {
     try {
-      setPremiumLoading(true);
       console.log('🔍 Checking premium status...');
       
       const userIdentifier = localStorage.getItem('userIdentifier');
@@ -30,7 +28,6 @@ function MyApp({ Component, pageProps }) {
       if (localPremium === 'true') {
         console.log('📱 Using cached premium status');
         setIsPremium(true);
-        setPremiumLoading(false);
         return true;
       }
       
@@ -39,7 +36,6 @@ function MyApp({ Component, pageProps }) {
         console.log('ℹ️ No user identification - free user');
         setIsPremium(false);
         localStorage.setItem('isPremium', 'false');
-        setPremiumLoading(false);
         return false;
       }
 
@@ -64,13 +60,11 @@ function MyApp({ Component, pageProps }) {
           console.log('✅ Premium status response:', data);
           setIsPremium(data.isPremium);
           localStorage.setItem('isPremium', data.isPremium.toString());
-          setPremiumLoading(false);
           return data.isPremium;
         } else {
           console.error('❌ Premium status check failed:', response.status);
           setIsPremium(false);
           localStorage.setItem('isPremium', 'false');
-          setPremiumLoading(false);
           return false;
         }
       } catch (fetchError) {
@@ -85,14 +79,12 @@ function MyApp({ Component, pageProps }) {
           setIsPremium(false);
           localStorage.setItem('isPremium', 'false');
         }
-        setPremiumLoading(false);
         return localPremium === 'true';
       }
     } catch (error) {
       console.error('❌ Premium status error:', error);
       setIsPremium(false);
       localStorage.setItem('isPremium', 'false');
-      setPremiumLoading(false);
       return false;
     }
   };
@@ -119,11 +111,9 @@ function MyApp({ Component, pageProps }) {
         if (localPremium === 'true') {
           console.log('✅ Premium user detected - setting status immediately');
           setIsPremium(true);
-          setPremiumLoading(false);
         } else {
           console.log('ℹ️ Free user detected - setting status immediately');
           setIsPremium(false);
-          setPremiumLoading(false);
           localStorage.setItem('isPremium', 'false');
         }
 
@@ -134,40 +124,17 @@ function MyApp({ Component, pageProps }) {
         console.error('Error initializing premium status:', error);
         setIsPremium(false);
         localStorage.setItem('isPremium', 'false');
-        setPremiumLoading(false);
       }
     };
 
     initializePremiumStatus();
   }, []); // Only run once on mount
 
-  // 🚀 FIX: Add emergency timeout to prevent infinite loading
-  useEffect(() => {
-    const emergencyTimeout = setTimeout(() => {
-      if (premiumLoading) {
-        console.warn('⚠️ Emergency timeout: Premium check took too long, stopping loading');
-        setPremiumLoading(false);
-        
-        // Use cached status or default to free
-        const localPremium = localStorage.getItem('isPremium');
-        if (localPremium === 'true') {
-          setIsPremium(true);
-          console.log('📱 Emergency fallback: Using cached premium status');
-        } else {
-          setIsPremium(false);
-          localStorage.setItem('isPremium', 'false');
-          console.log('📱 Emergency fallback: Setting to free user');
-        }
-      }
-    }, 10000); // 10 second emergency timeout
-
-    return () => clearTimeout(emergencyTimeout);
-  }, [premiumLoading]);
+  // Removed emergency timeout - it was causing the 10-second delay
 
   const premiumContextValue = {
     isPremium,
     setIsPremium,
-    premiumLoading,
     checkPremiumStatus
   };
 
