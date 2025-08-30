@@ -18,15 +18,29 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
+    // Get initial session with timeout for faster loading
     const getInitialSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error getting session:', error);
+      try {
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session timeout')), 3000)
+        );
+        
+        const sessionPromise = supabase.auth.getSession();
+        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
+        
+        if (error) {
+          console.error('Error getting session:', error);
+        }
+        setSession(session);
+        setUser(session?.user || null);
+        setLoading(false);
+      } catch (error) {
+        console.warn('Session check timed out, continuing without auth:', error.message);
+        setSession(null);
+        setUser(null);
+        setLoading(false);
       }
-      setSession(session);
-      setUser(session?.user || null);
-      setLoading(false);
     };
 
     getInitialSession();
@@ -58,7 +72,7 @@ export const AuthProvider = ({ children }) => {
       
       // Add timeout to prevent hanging 
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile upsert timeout')), 5000)
+        setTimeout(() => reject(new Error('Profile upsert timeout')), 2000)
       );
       
       const upsertPromise = supabase
@@ -86,7 +100,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       if (error.message === 'Profile upsert timeout') {
-        console.warn('⚠️ AuthContext: Profile upsert timed out (5s) - continuing...');
+        console.warn('⚠️ AuthContext: Profile upsert timed out (2s) - continuing...');
       } else {
         console.error('❌ AuthContext: Error in createOrUpdateUserProfile:', error);
       }

@@ -43,9 +43,9 @@ function MyApp({ Component, pageProps }) {
         return false;
       }
 
-      // Try to check with server
+      // Try to check with server with reduced timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
       
       try {
         let url = '/api/check-premium-status?';
@@ -127,14 +127,8 @@ function MyApp({ Component, pageProps }) {
           localStorage.setItem('isPremium', 'false');
         }
 
-        // ✅ BACKGROUND VERIFICATION: Optionally verify with server without blocking UI
-        if (premiumEmail && checkPremiumStatus) {
-          console.log('🔍 Background verification for premium email:', premiumEmail);
-          checkPremiumStatus().catch(error => {
-            console.warn('Background premium check failed:', error);
-            // Don't change UI state on background check failure
-          });
-        }
+        // ✅ BACKGROUND VERIFICATION: Skip background check on initial load for speed
+        // Only verify if user actually tries to use premium features
         
       } catch (error) {
         console.error('Error initializing premium status:', error);

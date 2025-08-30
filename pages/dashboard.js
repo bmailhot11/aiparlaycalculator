@@ -608,27 +608,8 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Quick Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
           
-          {/* Premium Status Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 cursor-pointer hover:bg-white/15 transition-colors"
-            onClick={() => !isPremium && router.push('/pricing')}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-white/80 font-medium">Status</h3>
-              <Trophy className="w-5 h-5 text-yellow-400" />
-            </div>
-            <p className="text-xl font-bold text-white mb-1">
-              {isPremium ? 'Premium' : 'Free'}
-            </p>
-            <p className="text-sm text-yellow-400">
-              {isPremium ? 'All features unlocked' : 'Click to upgrade'}
-            </p>
-          </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -812,36 +793,6 @@ export default function Dashboard() {
               <WeeklyAIReport bets={bets} analytics={analytics} user={user} />
             </motion.div>
 
-            {/* Quick Stats */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.9 }}
-              className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
-            >
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-yellow-400" />
-                Quick Insights
-              </h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-white/80">Favorite Market</span>
-                  <span className="text-white font-semibold">{analytics.favoriteMarket}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-white/80">Top Sportsbook</span>
-                  <span className="text-white font-semibold">{analytics.favoriteSportsbook}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-white/80">Avg Stake</span>
-                  <span className="text-white font-semibold">${analytics.avgStake.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-white/80">This Week</span>
-                  <span className="text-green-400 font-semibold">+5 bets</span>
-                </div>
-              </div>
-            </motion.div>
 
             {/* System Integration */}
             <motion.div
@@ -955,19 +906,35 @@ export default function Dashboard() {
                 className="bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-white/50 w-full"
               />
             </div>
-            <div className="flex gap-4 mt-6">
-              <button
-                onClick={addBet}
-                className="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg text-white font-medium transition-colors"
-              >
-                Add Bet
-              </button>
-              <button
-                onClick={() => setShowAddBet(false)}
-                className="flex-1 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg text-white font-medium transition-colors"
-              >
-                Cancel
-              </button>
+            <div className="space-y-3 mt-6">
+              <div className="flex gap-4">
+                <button
+                  onClick={addBet}
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+                >
+                  Add Bet
+                </button>
+                <button
+                  onClick={() => setShowAddBet(false)}
+                  className="flex-1 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+              
+              {/* Upload Slip Option */}
+              <div className="border-t border-white/20 pt-3">
+                <button
+                  onClick={() => {
+                    setShowAddBet(false);
+                    isPremium ? setShowUploadSlip(true) : setShowPaywall(true);
+                  }}
+                  className="w-full bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 p-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload Bet Slip Instead
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>

@@ -152,13 +152,6 @@ export default function Hero({ data }) {
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button onClick={handlePremiumClick} className="btn-primary px-8 py-3 text-base font-semibold inline-flex items-center gap-2 group">
-                Go Premium
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </button>
-              
-            </div>
           </motion.div>
 
           {/* Right Preview Cards */}

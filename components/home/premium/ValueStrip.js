@@ -115,12 +115,7 @@ export default function ValueStrip() {
           transition={{ delay: 0.4 }}
           className="text-center mt-16"
         >
-          <div className="inline-flex flex-col sm:flex-row gap-4">
-            <Link href="/arbitrage">
-              <button className="btn-primary px-8 py-3 text-base font-semibold">
-                Try It Live
-              </button>
-            </Link>
+          <div className="text-center">
             <Link href="/learn/how-to-use-ai-for-sports-betting">
               <button className="btn-secondary px-8 py-3 text-base font-semibold">
                 Read Our Guide

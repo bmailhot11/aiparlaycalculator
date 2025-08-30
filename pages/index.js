@@ -2,17 +2,20 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import dynamic from 'next/dynamic';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import GradientBG from '../components/theme/GradientBG';
-import Hero from '../components/home/premium/Hero';
-import ValueStrip from '../components/home/premium/ValueStrip';
-import FeatureTabs from '../components/home/premium/FeatureTabs';
-import Proof from '../components/home/premium/Proof';
-import Pricing from '../components/home/premium/Pricing';
-import FAQ from '../components/home/premium/FAQ';
-import { fetchLivePreviewData } from '../lib/adapters/premium-data-adapters';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchLivePreviewData } from '../lib/adapters/premium-data-adapters';
+
+// Lazy load heavy components to improve initial page load
+const Hero = dynamic(() => import('../components/home/premium/Hero'), { ssr: true });
+const ValueStrip = dynamic(() => import('../components/home/premium/ValueStrip'), { ssr: false });
+const FeatureTabs = dynamic(() => import('../components/home/premium/FeatureTabs'), { ssr: false });
+const Proof = dynamic(() => import('../components/home/premium/Proof'), { ssr: false });
+const Pricing = dynamic(() => import('../components/home/premium/Pricing'), { ssr: false });
+const FAQ = dynamic(() => import('../components/home/premium/FAQ'), { ssr: false });
 import { AlertTriangle, ArrowUp } from 'lucide-react';
 
 export default function Home() {
