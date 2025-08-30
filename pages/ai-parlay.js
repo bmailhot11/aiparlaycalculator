@@ -28,9 +28,10 @@ export default function AIParlayPage() {
   const { isPremium } = useContext(PremiumContext);
   const { user } = useAuth();
   const router = useRouter();
-  const [selectedSports, setSelectedSports] = useState(['NFL']);
+  const [selectedSport, setSelectedSport] = useState('NFL');
+  const [selectedLeague, setSelectedLeague] = useState('All Games');
   const [parlaySize, setParlaySize] = useState('3');
-  const [riskLevel, setRiskLevel] = useState('medium');
+  const [riskLevel, setRiskLevel] = useState('moderate');
   const [includePlayerProps, setIncludePlayerProps] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedParlay, setGeneratedParlay] = useState(null);
@@ -59,7 +60,15 @@ export default function AIParlayPage() {
     '/api/placeholder/200/150'
   ];
 
-  const sports = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB'];
+  // Sport and league options
+  const sportOptions = {
+    'NFL': ['All Games', 'Primetime', 'Division Games', 'Favorites', 'Underdogs'],
+    'NBA': ['All Games', 'National TV', 'Division', 'Home Favorites', 'Road Dogs'],
+    'NHL': ['All Games', 'Division', 'Original Six', 'Favorites', 'Totals'],
+    'MLB': ['All Games', 'Division', 'Day Games', 'Night Games', 'Run Lines'],
+    'NCAAF': ['All Games', 'Top 25', 'Conference', 'Ranked vs Ranked'],
+    'NCAAB': ['All Games', 'Top 25', 'Conference', 'Tournament']
+  };
 
   useEffect(() => {
     if (!isPremium && user) {
@@ -107,17 +116,21 @@ export default function AIParlayPage() {
     reasoning: 'This parlay combines strong home favorites with a well-researched total. The Chiefs have excellent ATS record at home, Lakers are undervalued coming off rest, and the Celtics-Heat matchup has consistently gone over in recent meetings.'
   };
 
-  const handleSportToggle = (sport) => {
-    if (selectedSports.includes(sport)) {
-      setSelectedSports(selectedSports.filter(s => s !== sport));
-    } else {
-      setSelectedSports([...selectedSports, sport]);
-    }
+  const handleSportChange = (sport) => {
+    setSelectedSport(sport);
+    setSelectedLeague('All Games'); // Reset to all games when sport changes
   };
 
   const handleGenerateParlay = async () => {
-    if (selectedSports.length === 0) {
-      alert('Please select at least one sport');
+    // Check if user is signed in first
+    if (!user) {
+      localStorage.setItem('redirectAfterAuth', '/ai-parlay');
+      router.push('/auth/signin');
+      return;
+    }
+    
+    if (!selectedSport) {
+      alert('Please select a sport');
       return;
     }
 
@@ -130,7 +143,7 @@ export default function AIParlayPage() {
       
       // Track usage before processing
       try {
-        const userIdentifier = currentUser?.id || `anon_${Date.now()}`;
+        const userIdentifier = user?.id || `anon_${Date.now()}`;
         const trackResponse = await fetch('/api/track-usage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -161,19 +174,17 @@ export default function AIParlayPage() {
       // Use enhanced EV endpoint if enabled, otherwise use regular endpoint
       const endpoint = useEnhancedEV ? '/api/generate-parlay-ev' : '/api/generate-parlay';
       
-      const response = await apiFetch(endpoint, {
+      const response = await apiFetch('/api/generate-parlay-optimized', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          preferences: {
-            sport: selectedSports[0], // Use first selected sport
-            riskLevel,
-            legs: parseInt(parlaySize),
-            includePlayerProps: includePlayerProps
-          },
-          isPremium
+          sport: selectedSport,
+          league: selectedLeague || 'All Games',
+          riskLevel,
+          legs: parseInt(parlaySize),
+          includePlayerProps: includePlayerProps
         }),
       });
 
@@ -207,12 +218,12 @@ export default function AIParlayPage() {
         
         // Track the AI-generated parlay
         await trackAIBet({
-          user_id: currentUser?.id,
+          user_id: user?.id,
           bet_type: 'ai_parlay',
           source_type: 'generated',
           original_data: {
             preferences: {
-              sport: selectedSports[0],
+              sport: selectedSport,
               riskLevel,
               legs: parseInt(parlaySize)
             }
@@ -243,7 +254,7 @@ export default function AIParlayPage() {
       try {
         // Format parlay data for the BetChekr template
         const improvedBets = generatedParlay.legs.map((leg, index) => ({
-          league: getLeagueFromSportSelection(selectedSports[0]),
+          league: selectedLeague || selectedSport,
           matchup: leg.game || `${leg.selection} Match`,
           market: getBetTypeDisplayForTemplate(leg.bet_type, leg.point),
           selection: leg.selection,
@@ -283,7 +294,7 @@ export default function AIParlayPage() {
 
           // Track download action
           await trackAIBet({
-            user_id: currentUser?.id,
+            user_id: user?.id,
             bet_type: 'ai_parlay',
             source_type: 'generated',
             recommended_legs: improvedBets,
@@ -329,7 +340,7 @@ export default function AIParlayPage() {
       try {
         // Format parlay data for the BetChekr template
         const improvedBets = generatedParlay.legs.map((leg, index) => ({
-          league: getLeagueFromSportSelection(selectedSports[0]),
+          league: selectedLeague || selectedSport,
           matchup: leg.game || `${leg.selection} Match`,
           market: getBetTypeDisplayForTemplate(leg.bet_type, leg.point),
           selection: leg.selection,
@@ -371,7 +382,7 @@ export default function AIParlayPage() {
 
           // Track share action
           await trackAIBet({
-            user_id: currentUser?.id,
+            user_id: user?.id,
             bet_type: 'ai_parlay',
             source_type: 'generated',
             recommended_legs: improvedBets,
@@ -614,17 +625,17 @@ export default function AIParlayPage() {
                 <h3 className="text-[#E5E7EB] font-semibold">Customize Your AI Parlay</h3>
               </div>
               
-              {/* Sports Selection */}
+              {/* Sport Selection - Single Select */}
               <div className="space-y-3">
-                <label className="block text-[#9CA3AF] text-sm font-medium">Select Sports</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                  {sports.map(sport => (
+                <label className="block text-[#9CA3AF] text-sm font-medium">Select Sport</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  {Object.keys(sportOptions).map(sport => (
                     <button
                       key={sport}
-                      onClick={() => handleSportToggle(sport)}
+                      onClick={() => handleSportChange(sport)}
                       className={`py-3 px-3 rounded-lg font-medium transition-all text-xs sm:text-sm min-h-[44px] ${
-                        selectedSports.includes(sport)
-                          ? 'bg-[#F4C430] text-[#0B0F14]'
+                        selectedSport === sport
+                          ? 'bg-[#F4C430] text-[#0B0F14] shadow-lg'
                           : 'bg-[#1F2937] text-[#9CA3AF] hover:bg-[#253044]'
                       }`}
                     >
@@ -633,6 +644,28 @@ export default function AIParlayPage() {
                   ))}
                 </div>
               </div>
+              
+              {/* League/Filter Selection - Shows after sport is selected */}
+              {selectedSport && (
+                <div className="space-y-3">
+                  <label className="block text-[#9CA3AF] text-sm font-medium">Filter Games (Optional)</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                    {sportOptions[selectedSport].map(league => (
+                      <button
+                        key={league}
+                        onClick={() => setSelectedLeague(league)}
+                        className={`py-2 px-3 rounded-lg text-xs font-medium transition-all ${
+                          selectedLeague === league
+                            ? 'bg-[#253044] text-[#F4C430] border border-[#F4C430]'
+                            : 'bg-[#1F2937] text-[#6B7280] hover:text-[#9CA3AF] hover:bg-[#253044]'
+                        }`}
+                      >
+                        {league}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               {/* Configuration Options */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -695,7 +728,7 @@ export default function AIParlayPage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <button 
                   onClick={handleGenerateParlay}
-                  disabled={isGenerating || selectedSports.length === 0}
+                  disabled={isGenerating || !selectedSport}
                   className="btn btn-primary flex-1 min-h-[44px] py-4 px-6 text-sm sm:text-base"
                 >
                   {isGenerating ? (

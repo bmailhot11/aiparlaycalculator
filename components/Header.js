@@ -34,9 +34,11 @@ export default function Header() {
   };
   
   const navLinks = [
+    { href: '/dashboard', label: 'Dashboard' },
     { href: '/line-shopping', label: 'Line Shopping' },
     { href: '/ai-parlay', label: 'AI-Generated Parlay' },
     { href: '/arbitrage', label: 'Arbitrage Opportunities' },
+    { href: '/middle-bets', label: 'Middle Bets' },
     { href: '/daily-picks', label: 'Daily Picks' },
     { href: '/learn', label: 'Learn' },
     { href: '/results', label: 'Results' }
@@ -191,7 +193,18 @@ export default function Header() {
                 Premium
               </div>
             )}
-            {!user && (
+            {user ? (
+              <button 
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleSignOut();
+                }}
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-medium text-[#9CA3AF] hover:text-red-400 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign out
+              </button>
+            ) : (
               <Link href="/auth/signin" className="block w-full text-center px-4 py-3 text-sm font-medium text-[#9CA3AF] hover:text-[#F4C430] transition-colors">
                 Sign in
               </Link>
