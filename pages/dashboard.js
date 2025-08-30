@@ -559,6 +559,7 @@ export default function Dashboard() {
             </motion.div>
           </div>
         ) : (
+        <>
         {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -940,7 +941,7 @@ export default function Dashboard() {
             </motion.div>
           </div>
         </div>
-      </div>
+        </>
         )}
       </div>
 
