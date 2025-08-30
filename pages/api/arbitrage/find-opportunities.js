@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { sport, includeAllSports = false, maxResults = 100 } = req.body;
+  const { sport, includeAllSports = true, maxResults = 1000 } = req.body;
 
   try {
     if (includeAllSports || !sport) {
@@ -33,10 +33,14 @@ export default async function handler(req, res) {
 }
 
 // Find arbitrage across ALL available sports
-async function findAllSportsArbitrageOpportunities(maxResults = 100) {
+async function findAllSportsArbitrageOpportunities(maxResults = 1000) {
   const allSports = [
     'NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'MLS', 'UEFA', 'Soccer', 
-    'UFC', 'Boxing', 'Tennis', 'Golf', 'Formula1', 'NASCAR', 'Cricket'
+    'UFC', 'Boxing', 'Tennis', 'Golf', 'Formula1', 'NASCAR', 'Cricket',
+    'Australian Football', 'Gaelic Football', 'Hurling', 'Ice Hockey',
+    'American Football', 'Basketball', 'Baseball', 'Football', 'Rugby',
+    'Volleyball', 'Table Tennis', 'Darts', 'Snooker', 'Cycling',
+    'Motorsport', 'MMA', 'Wrestling', 'Handball', 'Water Polo'
   ];
   
   const allOpportunities = [];
@@ -90,7 +94,7 @@ async function findAllSportsArbitrageOpportunities(maxResults = 100) {
   };
 }
 
-async function findArbitrageOpportunities(sport, maxResults = 100) {
+async function findArbitrageOpportunities(sport, maxResults = 1000) {
   try {
     // Step 1: Get upcoming events
     const upcomingEvents = await eventsCache.cacheUpcomingEvents(sport);
@@ -134,8 +138,8 @@ async function findArbitrageOpportunities(sport, maxResults = 100) {
     // Sort by profit percentage (highest first)
     opportunities.sort((a, b) => parseFloat(b.profit_percentage) - parseFloat(a.profit_percentage));
 
-    // Limit results to prevent huge responses
-    const limitedOpportunities = opportunities.slice(0, maxResults);
+    // Return all opportunities (no artificial limits)
+    const limitedOpportunities = opportunities; // Remove slice limit
 
     return {
       success: true,

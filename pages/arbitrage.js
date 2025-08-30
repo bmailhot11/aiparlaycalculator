@@ -287,7 +287,7 @@ export default function ArbitragePage() {
     try {
       // Set a longer timeout for scanning all sports
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // Increase to 60 seconds
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // Increase to 3 minutes for massive scan
       
       const response = await apiFetch('/api/arbitrage/find-opportunities', {
         method: 'POST',
@@ -297,7 +297,7 @@ export default function ArbitragePage() {
         body: JSON.stringify({
           sport: null,
           includeAllSports: true,
-          maxResults: 100 // Limit results to prevent huge responses
+          maxResults: 10000 // Allow massive scans for all opportunities
         }),
         signal: controller.signal
       });
@@ -545,12 +545,13 @@ export default function ArbitragePage() {
               <button 
                   onClick={handleFindArbitrages}
                   disabled={isLoading}
-                  className="w-full bg-[#F4C430] text-[#0B0F14] px-6 py-4 rounded-lg font-semibold hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] text-sm sm:text-base"
+                  className="w-full bg-[#F4C430] text-[#0B0F14] px-6 py-4 rounded-lg font-semibold hover:bg-[#e6b829] active:bg-[#d4a017] transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] text-sm sm:text-base touch-manipulation select-none"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   {isLoading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-[#0B0F14] border-t-transparent rounded-full animate-spin mr-2" />
-                      Scanning All Sports & Leagues...
+                      Scanning ALL Sports & Leagues Worldwide...
                     </>
                   ) : (
                     <>
@@ -562,7 +563,7 @@ export default function ArbitragePage() {
               
               <div className="text-center">
                 <p className="text-[#6B7280] text-sm mb-2">
-                  Scanning all available sports and leagues for positive return opportunities
+                  Scanning 25+ sports and all leagues worldwide for maximum arbitrage opportunities
                 </p>
                 {!isPremium && user && arbitrageUsesLeft !== null && (
                   <p className="text-[#F4C430] text-xs sm:text-sm font-medium">
