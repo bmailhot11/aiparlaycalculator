@@ -77,12 +77,23 @@ export default function Dashboard() {
     favoriteSportsbook: 'DraftKings'
   });
   
+  // Subscription State
+  const [subscriptionStatus, setSubscriptionStatus] = useState({
+    status: 'none',
+    trial_end_date: null,
+    current_period_end: null,
+    cancel_at_period_end: false,
+    days_remaining: 0
+  });
+
   // UI State
   const [showAddBet, setShowAddBet] = useState(false);
   const [showBankrollActions, setShowBankrollActions] = useState(false);
   const [showUploadSlip, setShowUploadSlip] = useState(false);
   const [uploadedSlip, setUploadedSlip] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const slipInputRef = useRef(null);
 
   useEffect(() => {
@@ -118,6 +129,9 @@ export default function Dashboard() {
         console.log('Profile loaded from:', profileData.source);
       }
       
+      // Load subscription status
+      await loadSubscriptionStatus();
+      
       // Don't generate sample data - show empty state instead
       
     } catch (error) {
@@ -128,7 +142,66 @@ export default function Dashboard() {
     }
   };
 
-  // Removed generateSampleData - show empty states instead
+  // Load subscription status
+  const loadSubscriptionStatus = async () => {
+    try {
+      const response = await fetch('/api/subscription/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptionStatus(data.subscription || {
+          status: 'none',
+          trial_end_date: null,
+          current_period_end: null,
+          cancel_at_period_end: false,
+          days_remaining: 0
+        });
+      }
+    } catch (error) {
+      console.error('Error loading subscription status:', error);
+    }
+  };
+
+  // Handle subscription cancellation
+  const handleCancelSubscription = async (immediately = false) => {
+    if (!confirm(immediately ? 
+      'Are you sure you want to cancel your subscription immediately? You will lose access right now.' :
+      'Are you sure you want to cancel your subscription? You\'ll keep access until the end of your current billing period.'
+    )) {
+      return;
+    }
+
+    try {
+      setIsCancelling(true);
+      const response = await fetch('/api/cancel-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId: user.id,
+          immediately 
+        })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert(result.message);
+        await loadSubscriptionStatus(); // Refresh status
+        setShowSubscriptionModal(false);
+      } else {
+        alert(result.error || 'Failed to cancel subscription');
+      }
+    } catch (error) {
+      console.error('Error canceling subscription:', error);
+      alert('Failed to cancel subscription. Please try again.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   const calculateAnalytics = (betsData) => {
     if (!betsData.length) return;
@@ -546,7 +619,33 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Quick Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          
+          {/* Subscription Status Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 cursor-pointer hover:bg-white/15 transition-colors"
+            onClick={() => setShowSubscriptionModal(true)}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-white/80 font-medium">Subscription</h3>
+              <Settings className="w-5 h-5 text-blue-400" />
+            </div>
+            <p className="text-xl font-bold text-white mb-1">
+              {subscriptionStatus.status === 'trialing' && 'Free Trial'}
+              {subscriptionStatus.status === 'active' && 'Premium'}
+              {subscriptionStatus.status === 'canceled' && subscriptionStatus.cancel_at_period_end && 'Ending Soon'}
+              {subscriptionStatus.status === 'none' && 'Free'}
+            </p>
+            <p className="text-sm text-blue-400">
+              {subscriptionStatus.status === 'trialing' && `${subscriptionStatus.days_remaining} days left`}
+              {subscriptionStatus.status === 'active' && `${subscriptionStatus.days_remaining} days left`}
+              {subscriptionStatus.status === 'canceled' && subscriptionStatus.cancel_at_period_end && `${subscriptionStatus.days_remaining} days left`}
+              {subscriptionStatus.status === 'none' && 'Click to upgrade'}
+            </p>
+          </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -906,6 +1005,15 @@ export default function Dashboard() {
         />
       )}
 
+      {showSubscriptionModal && (
+        <SubscriptionModal
+          onClose={() => setShowSubscriptionModal(false)}
+          subscriptionStatus={subscriptionStatus}
+          onCancel={handleCancelSubscription}
+          isCancelling={isCancelling}
+        />
+      )}
+
       <Footer />
     </div>
   );
@@ -1117,6 +1225,124 @@ function BetSlipUploadModal({ onClose, onUpload, isAnalyzing }) {
             className="flex-1 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg text-white font-medium transition-colors disabled:opacity-50"
           >
             Cancel
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+// Subscription Management Modal
+function SubscriptionModal({ onClose, subscriptionStatus, onCancel, isCancelling }) {
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "trialing": return "text-blue-400";
+      case "active": return "text-green-400";
+      case "canceled": return "text-red-400";
+      default: return "text-white/60";
+    }
+  };
+
+  const canCancel = ["trialing", "active"].includes(subscriptionStatus.status);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 w-full max-w-md"
+      >
+        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+          <Settings className="w-5 h-5" />
+          Subscription Management
+        </h3>
+
+        <div className="space-y-4 mb-6">
+          <div className="p-4 bg-white/5 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-white/80 font-medium">Status</span>
+              <span className={`font-semibold ${getStatusColor(subscriptionStatus.status)}`}>
+                {subscriptionStatus.status === "trialing" && "Free Trial"}
+                {subscriptionStatus.status === "active" && "Premium Active"}
+                {subscriptionStatus.status === "canceled" && "Canceled"}
+                {subscriptionStatus.status === "none" && "Free Account"}
+              </span>
+            </div>
+            
+            {subscriptionStatus.days_remaining > 0 && (
+              <div className="text-sm text-white/60">
+                <strong>{subscriptionStatus.days_remaining}</strong> days remaining
+              </div>
+            )}
+          </div>
+
+          {subscriptionStatus.status === "trialing" && (
+            <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                <span className="text-blue-400 font-medium">Free Trial Active</span>
+              </div>
+              <div className="text-sm text-white/80">
+                Your trial ends on {formatDate(subscriptionStatus.trial_end_date)}.<br/>
+                After that, you will be charged $9.99/month unless you cancel.
+              </div>
+            </div>
+          )}
+
+          {subscriptionStatus.cancel_at_period_end && (
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="w-4 h-4 text-red-400" />
+                <span className="text-red-400 font-medium">Subscription Ending</span>
+              </div>
+              <div className="text-sm text-white/80">
+                Your subscription will end on {formatDate(subscriptionStatus.current_period_end)}.<br/>
+                You will keep access until then.
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {subscriptionStatus.status === "none" && (
+            <button
+              onClick={() => window.location.href = "/pricing"}
+              className="w-full bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <Trophy className="w-4 h-4" />
+              Upgrade to Premium
+            </button>
+          )}
+
+          {canCancel && !subscriptionStatus.cancel_at_period_end && (
+            <>
+              <button
+                onClick={() => onCancel(false)}
+                disabled={isCancelling}
+                className="w-full bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCancelling ? "Processing..." : "Cancel at Period End"}
+              </button>
+              
+              <button
+                onClick={() => onCancel(true)}
+                disabled={isCancelling}
+                className="w-full bg-red-700 hover:bg-red-800 px-4 py-2 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                {isCancelling ? "Processing..." : "Cancel Immediately"}
+              </button>
+            </>
+          )}
+
+          <button
+            onClick={onClose}
+            className="w-full bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+          >
+            Close
           </button>
         </div>
       </motion.div>

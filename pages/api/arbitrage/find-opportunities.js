@@ -1,5 +1,6 @@
 // Enhanced Arbitrage Finder API
 const eventsCache = require('../../../lib/events-cache.js');
+const { findStrictArbitrage } = require('../../../lib/strict-arbitrage-detector.js');
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -363,8 +364,46 @@ function findTotalsArbitrageFixed(allOdds, game, marketKey, displayName) {
 }
 
 // Helper functions
+function toDecimal(american) {
+  return american > 0 ? 1 + american / 100 : 1 + 100 / Math.abs(american);
+}
+
 function convertToDecimal(americanOdds) {
   return toDecimal(americanOdds);
+}
+
+function getMarketDisplayName(marketKey) {
+  const displayNames = {
+    'h2h': 'Moneyline',
+    'spreads': 'Point Spread',
+    'totals': 'Over/Under',
+    // NFL markets
+    'player_pass_tds': 'Passing TDs',
+    'player_pass_yds': 'Passing Yards',
+    'player_rush_yds': 'Rushing Yards',
+    'player_rush_tds': 'Rushing TDs',
+    'player_receptions': 'Receptions',
+    'player_reception_yds': 'Receiving Yards',
+    'player_reception_tds': 'Receiving TDs',
+    // NBA markets
+    'player_points': 'Points',
+    'player_rebounds': 'Rebounds',
+    'player_assists': 'Assists',
+    'player_threes': '3-Pointers Made',
+    'player_blocks': 'Blocks',
+    'player_steals': 'Steals',
+    // NHL markets
+    'player_goals': 'Goals',
+    'player_shots_on_goal': 'Shots on Goal',
+    // MLB markets (corrected to batter_)
+    'batter_hits': 'Hits',
+    'batter_home_runs': 'Home Runs',
+    'batter_rbis': 'RBIs',
+    'batter_total_bases': 'Total Bases',
+    'pitcher_strikeouts': 'Strikeouts'
+  };
+  
+  return displayNames[marketKey] || marketKey;
 }
 
 function calculateOptimalStakes(bestOdds, totalStake) {

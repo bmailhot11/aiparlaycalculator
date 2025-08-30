@@ -157,7 +157,7 @@ const FEATURE_TABS = [
     title: 'Upload & analyze your bets',
     description: 'Take a photo of your bet slip. We\'ll tell you if the price was fair and suggest improvements.',
     ctaText: 'Analyze Bet Slip',
-    ctaLink: '/analyze-slip',
+    ctaLink: '/dashboard',
     demo: () => (
       <div className="text-center py-8">
         <div className="w-20 h-20 mx-auto mb-4 rounded-premium-lg bg-premium-accent/10 flex items-center justify-center">
