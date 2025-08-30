@@ -46,6 +46,7 @@ export default function MiddleBetsPage() {
     { key: 'NBA', label: 'NBA' },
     { key: 'NHL', label: 'NHL' },
     { key: 'MLB', label: 'MLB' },
+    { key: 'UFC', label: 'UFC/MMA' },
     { key: 'NCAAF', label: 'College Football' },
     { key: 'NCAAB', label: 'College Basketball' },
     { key: 'soccer', label: 'Soccer' },
@@ -66,6 +67,7 @@ export default function MiddleBetsPage() {
         // Check if the matchup or sport contains the selected league
         return matchupLower.includes(leagueLower) || 
                sportLower.includes(leagueLower) ||
+               (league === 'UFC' && (matchupLower.includes('ufc') || matchupLower.includes('mma'))) ||
                (league === 'NCAAF' && (matchupLower.includes('college') && matchupLower.includes('football'))) ||
                (league === 'NCAAB' && (matchupLower.includes('college') && matchupLower.includes('basketball')));
       });
