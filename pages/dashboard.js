@@ -177,7 +177,10 @@ export default function Dashboard() {
   };
 
   const handleSlipUpload = async (file) => {
-    if (!file) return;
+    if (!file) {
+      console.error('No file provided for upload');
+      return;
+    }
     
     setIsAnalyzing(true);
     
@@ -189,14 +192,17 @@ export default function Dashboard() {
         reader.readAsDataURL(file);
       });
       
+      // Extract base64 from data URL (remove data:image/jpeg;base64, prefix)
+      const base64String = base64Data.split(',')[1] || base64Data;
+      
       // Analyze the slip using the API
-      const response = await fetch('/api/analyze-slip-v2', {
+      const response = await fetch('/api/analyze-slip', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          image: base64Data,
+          imageBase64: base64String,
           userIdentifier: user?.id || 'anonymous'
         }),
       });
@@ -204,31 +210,38 @@ export default function Dashboard() {
       const result = await response.json();
       
       if (result.success && result.analysis) {
-        // Convert analysis result to bet format and add to tracking
+        // Convert analysis result to bet format and add to tracking  
         const parsedBets = parseSlipAnalysisIntoBets(result.analysis);
         
-        // Add each bet to the user's tracking
-        for (const bet of parsedBets) {
-          const newBet = {
-            id: Date.now() + Math.random(),
-            date: new Date().toISOString().split('T')[0],
-            sport: bet.sport || 'Unknown',
-            market: bet.market || 'Unknown',
-            selection: bet.selection,
-            odds: bet.odds,
-            stake: bet.stake || 0,
-            result: 'pending',
-            payout: 0,
-            profit: 0,
-            sportsbook: bet.sportsbook || 'Unknown',
-            source: 'slip_upload',
-            metadata: {
-              originalAnalysis: result.analysis,
-              uploadedAt: new Date().toISOString()
-            }
-          };
-          
-          setBets(prev => [newBet, ...prev]);
+        if (parsedBets.length > 0) {
+          // Add each bet to the user's tracking
+          for (const bet of parsedBets) {
+            const newBet = {
+              id: Date.now() + Math.random(),
+              date: new Date().toISOString().split('T')[0],
+              sport: bet.sport || 'Unknown',
+              market: bet.market || 'Unknown',
+              selection: bet.selection || 'Unknown bet',
+              odds: bet.odds || '+100',
+              stake: bet.stake || 0,
+              result: 'pending',
+              payout: 0,
+              profit: 0,
+              sportsbook: bet.sportsbook || 'Unknown',
+              source: 'slip_upload',
+              metadata: {
+                originalAnalysis: result.analysis,
+                uploadedAt: new Date().toISOString()
+              }
+            };
+            
+            setBets(prev => [newBet, ...prev]);
+          }
+        } else {
+          alert('No bets could be extracted from the slip. Please try again or add bets manually.');
+          setShowUploadSlip(false);
+          setIsAnalyzing(false);
+          return;
         }
         
         calculateAnalytics([...bets, ...parsedBets]);
@@ -239,11 +252,12 @@ export default function Dashboard() {
         // Show success message
         alert(`Successfully added ${parsedBets.length} bet(s) to your tracking!`);
       } else {
-        alert('Failed to analyze slip. Please try again.');
+        console.error('API response:', result);
+        alert(`Failed to analyze slip: ${result.message || 'Unknown error'}. Please try again.`);
       }
     } catch (error) {
       console.error('Error analyzing slip:', error);
-      alert('Error analyzing slip. Please try again.');
+      alert(`Error analyzing slip: ${error.message || 'Network or processing error'}. Please try again.`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -252,30 +266,45 @@ export default function Dashboard() {
   const parseSlipAnalysisIntoBets = (analysis) => {
     const bets = [];
     
-    if (analysis.legs && Array.isArray(analysis.legs)) {
-      analysis.legs.forEach((leg, index) => {
+    // The API returns analysis.bet_slip_details.extracted_bets
+    const extractedBets = analysis?.bet_slip_details?.extracted_bets || [];
+    const sportsbook = analysis?.bet_slip_details?.sportsbook || 'Unknown';
+    const totalStake = analysis?.bet_slip_details?.total_stake || 0;
+    
+    if (extractedBets && Array.isArray(extractedBets)) {
+      extractedBets.forEach((bet, index) => {
+        // Parse stake from string like "$50" to number
+        const parseStake = (stakeStr) => {
+          if (typeof stakeStr === 'number') return stakeStr;
+          if (typeof stakeStr === 'string') {
+            const match = stakeStr.match(/[\d\.]+/);
+            return match ? parseFloat(match[0]) : 0;
+          }
+          return 0;
+        };
+        
         bets.push({
-          sport: leg.sport || 'Unknown',
-          market: leg.market || leg.bet_type || 'Unknown',
-          selection: leg.selection || leg.team || `Leg ${index + 1}`,
-          odds: leg.odds || leg.american_odds || '+100',
-          stake: analysis.total_stake ? (analysis.total_stake / analysis.legs.length) : 0,
-          sportsbook: analysis.sportsbook || 'Unknown'
+          sport: bet.sport || detectSportFromTeams(bet.home_team, bet.away_team),
+          market: bet.bet_type || 'Unknown',
+          selection: bet.bet_selection || `${bet.home_team || bet.away_team || 'Unknown'} bet`,
+          odds: bet.odds || '+100',
+          stake: parseStake(bet.stake) || (totalStake ? totalStake / extractedBets.length : 0),
+          sportsbook: sportsbook
         });
-      });
-    } else if (analysis.matchup && analysis.selection) {
-      // Single bet
-      bets.push({
-        sport: analysis.sport || 'Unknown',
-        market: analysis.market || analysis.bet_type || 'Unknown',
-        selection: analysis.selection,
-        odds: analysis.odds || analysis.american_odds || '+100',
-        stake: analysis.total_stake || 0,
-        sportsbook: analysis.sportsbook || 'Unknown'
       });
     }
     
     return bets;
+  };
+  
+  const detectSportFromTeams = (homeTeam, awayTeam) => {
+    // Simple sport detection based on common team names
+    const teams = `${homeTeam} ${awayTeam}`.toLowerCase();
+    if (teams.includes('lakers') || teams.includes('warriors') || teams.includes('celtics')) return 'NBA';
+    if (teams.includes('chiefs') || teams.includes('patriots') || teams.includes('cowboys')) return 'NFL';
+    if (teams.includes('yankees') || teams.includes('dodgers') || teams.includes('red sox')) return 'MLB';
+    if (teams.includes('rangers') || teams.includes('bruins') || teams.includes('kings')) return 'NHL';
+    return 'Unknown';
   };
 
   const exportBettingData = async () => {
