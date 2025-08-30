@@ -1,6 +1,4 @@
-// Real Daily Picks Generator using Events Cache Data
-// This generates picks based on actual odds data from the same source as line shopping/arbitrage
-
+// Fixed Daily Picks Generator - Properly saves legs to database
 import { supabase } from '../../../utils/supabaseClient';
 const eventsCache = require('../../../lib/events-cache.js');
 
@@ -10,9 +8,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log('🎯 Generating daily picks from real Supabase data...');
+    console.log('🎯 Generating daily picks with FIXED leg saving...');
     
-    // Step 1: Get best odds from materialized view
     const opportunities = await findBestOpportunities();
     
     if (opportunities.length === 0) {
@@ -24,16 +21,19 @@ export default async function handler(req, res) {
     
     console.log(`Found ${opportunities.length} opportunities with positive edge`);
     
-    // Step 2: Generate picks from opportunities
     const picks = generatePicksFromOpportunities(opportunities);
     
-    // Step 3: Save to database
+    // Save to database with proper leg saving
     if (picks.single || picks.parlay2 || picks.parlay4) {
       try {
         await savePicksToDatabase(picks);
-        console.log('✅ Picks saved to database');
+        console.log('✅ Picks saved to database with legs');
       } catch (dbError) {
         console.error('⚠️ Failed to save to database:', dbError.message);
+        return res.status(500).json({
+          success: false,
+          error: 'Database save failed: ' + dbError.message
+        });
       }
     }
     
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       ...picks,
       metadata: {
         totalOpportunities: opportunities.length,
-        source: 'supabase_real_odds',
+        source: 'supabase_real_odds_fixed',
         generated: new Date().toISOString()
       }
     });
@@ -56,20 +56,19 @@ export default async function handler(req, res) {
   }
 }
 
+// Same opportunity finding logic but with better validation
 async function findBestOpportunities() {
   const opportunities = [];
   
   try {
-    console.log('📊 Using same data source as line shopping and arbitrage...');
+    console.log('📊 Finding opportunities with realistic validation...');
     
-    // Use the exact same approach as your working functions
     const sportsToCheck = ['NFL', 'NBA', 'NHL', 'MLB', 'NCAAF'];
     
     for (const sport of sportsToCheck) {
       try {
         console.log(`🏈 Checking ${sport} for opportunities...`);
         
-        // Step 1: Get upcoming events (same as line shopping/arbitrage)
         const upcomingEvents = await eventsCache.cacheUpcomingEvents(sport);
         
         if (!upcomingEvents || upcomingEvents.length === 0) {
@@ -79,7 +78,6 @@ async function findBestOpportunities() {
         
         console.log(`  ✅ Found ${upcomingEvents.length} upcoming events for ${sport}`);
         
-        // Step 2: Get odds for these events (same as line shopping/arbitrage)
         const oddsData = await eventsCache.getOddsForEvents(upcomingEvents, 'h2h,spreads,totals', true);
         
         if (!oddsData || oddsData.length === 0) {
@@ -89,7 +87,6 @@ async function findBestOpportunities() {
         
         console.log(`  ✅ Got odds for ${oddsData.length} games in ${sport}`);
         
-        // Step 3: Find edges in the odds data
         const sportOpportunities = findEdgesInOddsData(oddsData, sport);
         opportunities.push(...sportOpportunities);
         
@@ -100,53 +97,23 @@ async function findBestOpportunities() {
       }
     }
     
-    // Also check AI generated bets as additional source
-    console.log('🤖 Checking AI generated bets for additional opportunities...');
-    const { data: aiBets, error: aiError } = await supabase
-      .from('ai_generated_bets')
-      .select('*')
-      .eq('status', 'pending')
-      .gte('confidence_score', 0.7)
-      .order('expected_value', { ascending: false })
-      .limit(10);
+    // Filter out unrealistic opportunities
+    const realisticOpportunities = opportunities.filter(opp => {
+      return (
+        opp.edgePercentage >= 1 && // At least 1% edge
+        opp.edgePercentage <= 25 && // Max 25% edge (realistic)
+        opp.bestOdds >= -2000 && // No crazy favorites
+        opp.bestOdds <= 2000 && // No crazy underdogs
+        !opp.bestSportsbook.includes('Betfair') // Skip betting exchange odds
+      );
+    });
     
-    if (aiError) {
-      console.log('⚠️ Error fetching AI bets:', aiError.message);
-    } else {
-      console.log(`✅ Found ${aiBets?.length || 0} high-confidence AI bets`);
-      
-      if (aiBets && aiBets.length > 0) {
-        aiBets.forEach(bet => {
-          if (bet.recommended_legs && Array.isArray(bet.recommended_legs)) {
-            bet.recommended_legs.forEach(leg => {
-              if (leg.odds && (bet.expected_value > 0 || bet.confidence_score > 0.8)) {
-                opportunities.push({
-                  gameId: `ai_${bet.id}_${leg.leg_index || 0}`,
-                  sport: leg.league || leg.sport || 'NBA',
-                  homeTeam: leg.home_team || extractHomeTeam(leg.matchup || leg.game),
-                  awayTeam: leg.away_team || extractAwayTeam(leg.matchup || leg.game),
-                  commenceTime: leg.commence_time || new Date().toISOString(),
-                  marketType: leg.market || leg.bet_type || 'spread',
-                  selection: leg.selection,
-                  bestOdds: parseAmericanOdds(leg.odds),
-                  bestSportsbook: leg.sportsbook || 'AI Recommended',
-                  decimalOdds: leg.decimal_odds || americanToDecimal(leg.odds),
-                  edgePercentage: bet.expected_value || 3,
-                  confidence: bet.confidence_score,
-                  source: 'ai_generated'
-                });
-              }
-            });
-          }
-        });
-      }
-    }
+    console.log(`🎯 Filtered to ${realisticOpportunities.length} realistic opportunities`);
     
     // Sort by edge percentage
-    opportunities.sort((a, b) => b.edgePercentage - a.edgePercentage);
+    realisticOpportunities.sort((a, b) => b.edgePercentage - a.edgePercentage);
     
-    console.log(`🎯 Total opportunities found: ${opportunities.length}`);
-    return opportunities;
+    return realisticOpportunities;
     
   } catch (error) {
     console.error('Error finding opportunities:', error);
@@ -154,12 +121,18 @@ async function findBestOpportunities() {
   }
 }
 
-// New function to find edges in odds data (same structure as your working APIs)
 function findEdgesInOddsData(oddsData, sport) {
   const opportunities = [];
   
   for (const game of oddsData) {
     if (!game.bookmakers || game.bookmakers.length < 2) continue;
+    
+    // Only process games within next 7 days
+    const gameTime = new Date(game.commence_time);
+    const now = new Date();
+    const daysDifference = (gameTime - now) / (1000 * 60 * 60 * 24);
+    
+    if (daysDifference > 7 || daysDifference < 0) continue;
     
     // Process each market
     for (const bookmaker of game.bookmakers) {
@@ -178,7 +151,7 @@ function findEdgesInOddsData(oddsData, sport) {
           
           const edge = calculateEdge(outcome.price, fairOdd);
           
-          if (edge > 1) { // Minimum 1% edge (lowered threshold for testing)
+          if (edge > 2) { // Minimum 2% edge
             opportunities.push({
               gameId: game.id,
               sport: sport,
@@ -225,28 +198,6 @@ function calculateNoVigMarket(outcomes) {
   return fairOdds;
 }
 
-function calculateNoVigOdds(marketOdds) {
-  const fairOdds = {};
-  
-  // Calculate total implied probability
-  let totalImplied = 0;
-  marketOdds.forEach(odd => {
-    const implied = 1 / (odd.odds_decimal || americanToDecimal(odd.odds_american));
-    totalImplied += implied;
-  });
-  
-  // Remove vig and calculate fair odds
-  const vig = totalImplied - 1;
-  marketOdds.forEach(odd => {
-    const implied = 1 / (odd.odds_decimal || americanToDecimal(odd.odds_american));
-    const fairImplied = implied / totalImplied;
-    const fairDecimal = 1 / fairImplied;
-    fairOdds[odd.outcome_name] = decimalToAmerican(fairDecimal);
-  });
-  
-  return fairOdds;
-}
-
 function calculateEdge(bestOdds, fairOdds) {
   const bestDecimal = americanToDecimal(bestOdds);
   const fairDecimal = americanToDecimal(fairOdds);
@@ -282,7 +233,7 @@ function generatePicksFromOpportunities(opportunities) {
     const usedGames = new Set();
     
     for (const opp of opportunities) {
-      const gameKey = opp.gameId.split('_')[0]; // Get base game ID
+      const gameKey = opp.gameId.split('_')[0];
       if (!usedGames.has(gameKey)) {
         parlayLegs.push(opp);
         usedGames.add(gameKey);
@@ -335,76 +286,7 @@ function generatePicksFromOpportunities(opportunities) {
   return picks;
 }
 
-// Helper functions
-function americanToDecimal(americanOdds) {
-  const odds = typeof americanOdds === 'string' ? 
-    parseInt(americanOdds.replace('+', '')) : americanOdds;
-  
-  if (odds > 0) {
-    return ((odds / 100) + 1);
-  } else {
-    return ((100 / Math.abs(odds)) + 1);
-  }
-}
-
-function decimalToAmerican(decimalOdds) {
-  if (decimalOdds >= 2) {
-    return Math.round((decimalOdds - 1) * 100);
-  } else {
-    return Math.round(-100 / (decimalOdds - 1));
-  }
-}
-
-function parseAmericanOdds(oddsStr) {
-  if (typeof oddsStr === 'number') return oddsStr;
-  if (typeof oddsStr === 'string') {
-    return parseInt(oddsStr.replace('+', ''));
-  }
-  return 100;
-}
-
-function extractTeamFromOutcome(outcome, type) {
-  // Try to extract team name from outcome string
-  if (!outcome) return type === 'home' ? 'Home Team' : 'Away Team';
-  
-  // Common patterns
-  if (outcome.includes(' @ ')) {
-    const parts = outcome.split(' @ ');
-    return type === 'home' ? parts[1] : parts[0];
-  }
-  
-  if (outcome.includes(' vs ')) {
-    const parts = outcome.split(' vs ');
-    return type === 'home' ? parts[0] : parts[1];
-  }
-  
-  // For simple team names
-  return outcome;
-}
-
-function extractHomeTeam(matchup) {
-  if (!matchup) return 'Home Team';
-  if (matchup.includes('@')) {
-    return matchup.split('@')[1]?.trim();
-  }
-  if (matchup.includes(' vs ')) {
-    return matchup.split(' vs ')[0]?.trim();
-  }
-  return matchup;
-}
-
-function extractAwayTeam(matchup) {
-  if (!matchup) return 'Away Team';
-  if (matchup.includes('@')) {
-    return matchup.split('@')[0]?.trim();
-  }
-  if (matchup.includes(' vs ')) {
-    return matchup.split(' vs ')[1]?.trim();
-  }
-  return matchup;
-}
-
-// Save picks to database (same as before)
+// FIXED: Save picks to database with proper leg saving and error handling
 async function savePicksToDatabase(picks) {
   const today = new Date().toISOString().split('T')[0];
   const publishTime = new Date();
@@ -435,7 +317,7 @@ async function savePicksToDatabase(picks) {
       no_bet_reason: null,
       metadata: {
         generated_at: new Date().toISOString(),
-        source: 'generate-real'
+        source: 'generate-real-fixed'
       }
     })
     .select()
@@ -446,23 +328,31 @@ async function savePicksToDatabase(picks) {
     throw recoError;
   }
   
+  console.log(`✅ Created daily_recos: ${dailyReco.id}`);
+  
   let singleBetId = null;
   let parlay2Id = null;
   let parlay4Id = null;
   
   // Save single bet
   if (picks.single) {
+    console.log('💾 Saving single bet...');
     singleBetId = await saveBetToDatabase(dailyReco.id, 'single', picks.single);
+    console.log(`✅ Single bet saved: ${singleBetId}`);
   }
   
   // Save 2-leg parlay
   if (picks.parlay2) {
+    console.log('💾 Saving 2-leg parlay...');
     parlay2Id = await saveBetToDatabase(dailyReco.id, 'parlay2', picks.parlay2);
+    console.log(`✅ 2-leg parlay saved: ${parlay2Id}`);
   }
   
   // Save 4-leg parlay
   if (picks.parlay4) {
+    console.log('💾 Saving 4-leg parlay...');
     parlay4Id = await saveBetToDatabase(dailyReco.id, 'parlay4', picks.parlay4);
+    console.log(`✅ 4-leg parlay saved: ${parlay4Id}`);
   }
   
   // Update daily_recos with bet IDs
@@ -475,40 +365,49 @@ async function savePicksToDatabase(picks) {
     })
     .eq('id', dailyReco.id);
   
-  console.log(`Saved picks to database: Daily Reco ID=${dailyReco.id}`);
+  console.log(`✅ Saved picks to database: Daily Reco ID=${dailyReco.id}`);
   return dailyReco.id;
 }
 
+// FIXED: Proper bet saving with detailed logging and error handling
 async function saveBetToDatabase(dailyRecoId, betType, bet) {
-  // Save the bet record
-  const { data: betRecord, error: betError } = await supabase
-    .from('reco_bets')
-    .insert({
-      reco_id: dailyRecoId,  // Fixed: use reco_id not daily_reco_id
-      bet_type: betType,
-      total_legs: bet.legs.length,
-      status: 'active',
-      combined_odds: bet.totalOdds,
-      decimal_odds: americanToDecimal(bet.totalOdds),
-      edge_percentage: parseFloat(bet.edgePercentage),
-      estimated_payout: parseFloat(bet.potentialPayout.replace('$', ''))
-    })
-    .select()
-    .single();
-  
-  if (betError) {
-    console.error(`Error saving ${betType} bet:`, betError);
-    throw betError;
-  }
-  
-  // Save each leg
-  for (let i = 0; i < bet.legs.length; i++) {
-    const leg = bet.legs[i];
+  try {
+    console.log(`📝 Saving ${betType} bet with ${bet.legs.length} legs...`);
     
-    const { error: legError } = await supabase
-      .from('reco_bet_legs')
+    // Save the bet record first - using only the core fields that work
+    const { data: betRecord, error: betError } = await supabase
+      .from('reco_bets')
       .insert({
-        reco_bet_id: betRecord.id,
+        reco_id: dailyRecoId,
+        is_parlay: bet.legs.length > 1,
+        parlay_legs: bet.legs.length,
+        sport: bet.legs[0]?.sport || 'NBA',
+        league: bet.legs[0]?.sport || 'NBA',
+        market: bet.legs[0]?.marketType || 'h2h',
+        selection: bet.legs[0]?.selection || 'TBD',
+        odds_american: bet.totalOdds,
+        stake: 100, // Default stake for tracking
+        bet_type: betType,
+        status: 'active'
+      })
+      .select()
+      .single();
+
+    if (betError) {
+      console.error(`❌ Error saving ${betType} bet:`, betError);
+      throw betError;
+    }
+
+    console.log(`✅ Bet record saved: ${betRecord.id}`);
+
+    // Now save each leg individually with proper error handling
+    for (let i = 0; i < bet.legs.length; i++) {
+      const leg = bet.legs[i];
+      
+      console.log(`  📝 Saving leg ${i + 1}/${bet.legs.length}: ${leg.awayTeam} @ ${leg.homeTeam}`);
+
+      const legData = {
+        bet_id: betRecord.id,
         leg_index: i,
         sport: leg.sport || 'NBA',
         game_id: leg.gameId || `game_${Date.now()}_${i}`,
@@ -517,21 +416,52 @@ async function saveBetToDatabase(dailyRecoId, betType, bet) {
         commence_time: leg.commenceTime || new Date().toISOString(),
         market_type: leg.marketType,
         selection: leg.selection,
-        selection_key: leg.selection?.toLowerCase().replace(/\s+/g, '_'),
         best_sportsbook: leg.bestSportsbook,
         best_odds: leg.bestOdds,
         decimal_odds: leg.decimalOdds,
         fair_odds: leg.fairOdds || leg.decimalOdds,
         edge_percentage: leg.edgePercentage,
         no_vig_probability: (100 / leg.decimalOdds)
-      });
-    
-    if (legError) {
-      console.error(`Error saving leg ${i} for ${betType}:`, legError);
-      throw legError;
+      };
+
+      const { error: legError } = await supabase
+        .from('reco_bet_legs')
+        .insert(legData);
+
+      if (legError) {
+        console.error(`❌ Error saving leg ${i + 1}:`, legError);
+        console.error('❌ Leg data:', legData);
+        throw legError;
+      }
+      
+      console.log(`  ✅ Leg ${i + 1} saved successfully`);
     }
+
+    console.log(`🎉 Successfully saved ${betType} bet with ${bet.legs.length} legs`);
+    return betRecord.id;
+
+  } catch (error) {
+    console.error(`❌ Error in saveBetToDatabase for ${betType}:`, error);
+    throw error;
   }
+}
+
+// Helper functions
+function americanToDecimal(americanOdds) {
+  const odds = typeof americanOdds === 'string' ? 
+    parseInt(americanOdds.replace('+', '')) : americanOdds;
   
-  console.log(`Saved ${betType} bet with ${bet.legs.length} legs`);
-  return betRecord.id;
+  if (odds > 0) {
+    return ((odds / 100) + 1);
+  } else {
+    return ((100 / Math.abs(odds)) + 1);
+  }
+}
+
+function decimalToAmerican(decimalOdds) {
+  if (decimalOdds >= 2) {
+    return Math.round((decimalOdds - 1) * 100);
+  } else {
+    return Math.round(-100 / (decimalOdds - 1));
+  }
 }
