@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useContext } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
@@ -33,9 +33,12 @@ import BetHistoryTable from '../components/profile/BetHistoryTable';
 import PerformanceCharts from '../components/profile/PerformanceCharts';
 import WeeklyAIReport from '../components/profile/WeeklyAIReport';
 import ProfileService from '../lib/services/profileService';
+import Paywall from '../components/Paywall';
+import { PremiumContext } from './_app';
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
+  const { isPremium } = useContext(PremiumContext);
   const router = useRouter();
   const fileInputRef = useRef(null);
   
@@ -77,14 +80,10 @@ export default function Dashboard() {
     favoriteSportsbook: 'DraftKings'
   });
   
-  // Subscription State
-  const [subscriptionStatus, setSubscriptionStatus] = useState({
-    status: 'none',
-    trial_end_date: null,
-    current_period_end: null,
-    cancel_at_period_end: false,
-    days_remaining: 0
-  });
+  // Premium/Subscription State
+  const [isPremiumUser, setIsPremiumUser] = useState(false);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   // UI State
   const [showAddBet, setShowAddBet] = useState(false);
@@ -92,8 +91,6 @@ export default function Dashboard() {
   const [showUploadSlip, setShowUploadSlip] = useState(false);
   const [uploadedSlip, setUploadedSlip] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
   const slipInputRef = useRef(null);
 
   useEffect(() => {
@@ -107,14 +104,26 @@ export default function Dashboard() {
     }
   }, [user, authLoading]);
 
+  // Load subscription status separately (non-blocking)
+  useEffect(() => {
+    if (user) {
+      loadSubscriptionStatus();
+    }
+  }, [user]);
+
   const loadUserData = async () => {
     try {
+      console.log('🔄 Dashboard: Starting loadUserData for user:', user.id);
       setLoading(true);
       
-      // Load user profile using ProfileService (handles Supabase + localStorage)
+      console.log('🔄 Dashboard: Calling ProfileService.getUserProfile...');
+      const startTime = Date.now();
       const profileData = await ProfileService.getUserProfile(user.id);
+      const endTime = Date.now();
+      console.log(`✅ Dashboard: ProfileService completed in ${endTime - startTime}ms`);
       
       if (profileData) {
+        console.log('🔄 Dashboard: Processing profile data...');
         setBio(profileData.bio || '');
         setProfileImage(profileData.profileImage || null);
         setBankroll(profileData.bankroll || {
@@ -124,25 +133,24 @@ export default function Dashboard() {
           history: []
         });
         setBets(profileData.bets || []);
+        
+        console.log('🔄 Dashboard: Calculating analytics...');
         calculateAnalytics(profileData.bets || []);
         
-        console.log('Profile loaded from:', profileData.source);
+        console.log('✅ Dashboard: Profile loaded from:', profileData.source);
       }
       
-      // Load subscription status
-      await loadSubscriptionStatus();
-      
-      // Don't generate sample data - show empty state instead
+      console.log('✅ Dashboard: loadUserData completed successfully');
       
     } catch (error) {
-      console.error('Error loading user data:', error);
-      // Don't generate sample data - show empty state instead
+      console.error('❌ Dashboard: Error in loadUserData:', error);
     } finally {
+      console.log('🔄 Dashboard: Setting loading to false');
       setLoading(false);
     }
   };
 
-  // Load subscription status
+  // Load subscription status (non-blocking)
   const loadSubscriptionStatus = async () => {
     try {
       const response = await fetch('/api/subscription/status', {
@@ -153,53 +161,19 @@ export default function Dashboard() {
       
       if (response.ok) {
         const data = await response.json();
-        setSubscriptionStatus(data.subscription || {
-          status: 'none',
-          trial_end_date: null,
-          current_period_end: null,
-          cancel_at_period_end: false,
-          days_remaining: 0
-        });
+        const subscription = data.subscription || { subscription_status: 'none', has_premium_access: false };
+        // Check if user has premium access based on subscription_status from Supabase
+        setIsPremiumUser(subscription.has_premium_access || subscription.subscription_status === 'active' || subscription.subscription_status === 'trialing');
+      } else {
+        // If API fails, default to free user
+        setIsPremiumUser(false);
       }
     } catch (error) {
       console.error('Error loading subscription status:', error);
-    }
-  };
-
-  // Handle subscription cancellation
-  const handleCancelSubscription = async (immediately = false) => {
-    if (!confirm(immediately ? 
-      'Are you sure you want to cancel your subscription immediately? You will lose access right now.' :
-      'Are you sure you want to cancel your subscription? You\'ll keep access until the end of your current billing period.'
-    )) {
-      return;
-    }
-
-    try {
-      setIsCancelling(true);
-      const response = await fetch('/api/cancel-subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId: user.id,
-          immediately 
-        })
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
-        alert(result.message);
-        await loadSubscriptionStatus(); // Refresh status
-        setShowSubscriptionModal(false);
-      } else {
-        alert(result.error || 'Failed to cancel subscription');
-      }
-    } catch (error) {
-      console.error('Error canceling subscription:', error);
-      alert('Failed to cancel subscription. Please try again.');
+      // If subscription loading fails, default to free user (dashboard still works)
+      setIsPremiumUser(false);
     } finally {
-      setIsCancelling(false);
+      setSubscriptionLoading(false);
     }
   };
 
@@ -622,29 +596,23 @@ export default function Dashboard() {
         {/* Quick Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           
-          {/* Subscription Status Card */}
+          {/* Premium Status Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
             className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 cursor-pointer hover:bg-white/15 transition-colors"
-            onClick={() => setShowSubscriptionModal(true)}
+            onClick={() => !isPremiumUser && router.push('/pricing')}
           >
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-white/80 font-medium">Subscription</h3>
-              <Settings className="w-5 h-5 text-blue-400" />
+              <h3 className="text-white/80 font-medium">Status</h3>
+              <Trophy className="w-5 h-5 text-yellow-400" />
             </div>
             <p className="text-xl font-bold text-white mb-1">
-              {subscriptionStatus.status === 'trialing' && 'Free Trial'}
-              {subscriptionStatus.status === 'active' && 'Premium'}
-              {subscriptionStatus.status === 'canceled' && subscriptionStatus.cancel_at_period_end && 'Ending Soon'}
-              {subscriptionStatus.status === 'none' && 'Free'}
+              {subscriptionLoading ? 'Loading...' : (isPremiumUser ? 'Premium' : 'Free')}
             </p>
-            <p className="text-sm text-blue-400">
-              {subscriptionStatus.status === 'trialing' && `${subscriptionStatus.days_remaining} days left`}
-              {subscriptionStatus.status === 'active' && `${subscriptionStatus.days_remaining} days left`}
-              {subscriptionStatus.status === 'canceled' && subscriptionStatus.cancel_at_period_end && `${subscriptionStatus.days_remaining} days left`}
-              {subscriptionStatus.status === 'none' && 'Click to upgrade'}
+            <p className="text-sm text-yellow-400">
+              {subscriptionLoading ? 'Checking status...' : (isPremiumUser ? 'All features unlocked' : 'Click to upgrade')}
             </p>
           </motion.div>
           <motion.div
@@ -874,7 +842,7 @@ export default function Dashboard() {
               </h3>
               <div className="space-y-3">
                 <button 
-                  onClick={() => setShowUploadSlip(true)}
+                  onClick={() => isPremiumUser ? setShowUploadSlip(true) : setShowPaywall(true)}
                   className="w-full bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 p-3 rounded-lg flex items-center justify-between transition-colors"
                 >
                   <span>Bet Slip Upload</span>
@@ -1006,12 +974,11 @@ export default function Dashboard() {
         />
       )}
 
-      {showSubscriptionModal && (
-        <SubscriptionModal
-          onClose={() => setShowSubscriptionModal(false)}
-          subscriptionStatus={subscriptionStatus}
-          onCancel={handleCancelSubscription}
-          isCancelling={isCancelling}
+      {/* Premium Paywall */}
+      {showPaywall && (
+        <Paywall 
+          feature="premium dashboard features"
+          usageLimit="Upgrade to unlock unlimited access"
         />
       )}
 
@@ -1226,124 +1193,6 @@ function BetSlipUploadModal({ onClose, onUpload, isAnalyzing }) {
             className="flex-1 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg text-white font-medium transition-colors disabled:opacity-50"
           >
             Cancel
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-// Subscription Management Modal
-function SubscriptionModal({ onClose, subscriptionStatus, onCancel, isCancelling }) {
-  const formatDate = (dateString) => {
-    if (!dateString) return "";
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "trialing": return "text-blue-400";
-      case "active": return "text-green-400";
-      case "canceled": return "text-red-400";
-      default: return "text-white/60";
-    }
-  };
-
-  const canCancel = ["trialing", "active"].includes(subscriptionStatus.status);
-
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 w-full max-w-md"
-      >
-        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-          <Settings className="w-5 h-5" />
-          Subscription Management
-        </h3>
-
-        <div className="space-y-4 mb-6">
-          <div className="p-4 bg-white/5 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-white/80 font-medium">Status</span>
-              <span className={`font-semibold ${getStatusColor(subscriptionStatus.status)}`}>
-                {subscriptionStatus.status === "trialing" && "Free Trial"}
-                {subscriptionStatus.status === "active" && "Premium Active"}
-                {subscriptionStatus.status === "canceled" && "Canceled"}
-                {subscriptionStatus.status === "none" && "Free Account"}
-              </span>
-            </div>
-            
-            {subscriptionStatus.days_remaining > 0 && (
-              <div className="text-sm text-white/60">
-                <strong>{subscriptionStatus.days_remaining}</strong> days remaining
-              </div>
-            )}
-          </div>
-
-          {subscriptionStatus.status === "trialing" && (
-            <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                <span className="text-blue-400 font-medium">Free Trial Active</span>
-              </div>
-              <div className="text-sm text-white/80">
-                Your trial ends on {formatDate(subscriptionStatus.trial_end_date)}.<br/>
-                After that, you will be charged $9.99/month unless you cancel.
-              </div>
-            </div>
-          )}
-
-          {subscriptionStatus.cancel_at_period_end && (
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="w-4 h-4 text-red-400" />
-                <span className="text-red-400 font-medium">Subscription Ending</span>
-              </div>
-              <div className="text-sm text-white/80">
-                Your subscription will end on {formatDate(subscriptionStatus.current_period_end)}.<br/>
-                You will keep access until then.
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3">
-          {subscriptionStatus.status === "none" && (
-            <button
-              onClick={() => window.location.href = "/pricing"}
-              className="w-full bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              <Trophy className="w-4 h-4" />
-              Upgrade to Premium
-            </button>
-          )}
-
-          {canCancel && !subscriptionStatus.cancel_at_period_end && (
-            <>
-              <button
-                onClick={() => onCancel(false)}
-                disabled={isCancelling}
-                className="w-full bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isCancelling ? "Processing..." : "Cancel at Period End"}
-              </button>
-              
-              <button
-                onClick={() => onCancel(true)}
-                disabled={isCancelling}
-                className="w-full bg-red-700 hover:bg-red-800 px-4 py-2 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-              >
-                {isCancelling ? "Processing..." : "Cancel Immediately"}
-              </button>
-            </>
-          )}
-
-          <button
-            onClick={onClose}
-            className="w-full bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg text-white font-medium transition-colors"
-          >
-            Close
           </button>
         </div>
       </motion.div>
