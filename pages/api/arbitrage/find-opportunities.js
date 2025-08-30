@@ -175,150 +175,15 @@ function findAllMarketArbitrage(game) {
   return opportunities;
 }
 
+// Old function kept for backward compatibility - now delegates to strict detector
 function findMarketArbitrage(game, marketKey) {
-  const opportunities = [];
-  
-  // Get all bookmakers with this market
-  const marketBooks = game.bookmakers.filter(book => 
-    book.markets?.some(market => market.key === marketKey)
-  );
-  
-  if (marketBooks.length < 2) return opportunities;
-  
-  // Handle different market types
-  if (marketKey === 'h2h') {
-    return findTwoWayMarketArbitrage(game, marketKey, 'Moneyline');
-  } else if (marketKey === 'spreads') {
-    return findPointMarketArbitrage(game, marketKey, 'Point Spread');
-  } else if (marketKey === 'totals') {
-    return findPointMarketArbitrage(game, marketKey, 'Total Points');
-  } else if (marketKey.includes('alternate_')) {
-    return findPointMarketArbitrage(game, marketKey, `Alternate ${marketKey.replace('alternate_', '').replace('_', ' ')}`);
-  } else if (marketKey.startsWith('player_')) {
-    return findPlayerPropArbitrage(game, marketKey);
-  } else {
-    // Generic two-way market handling
-    return findTwoWayMarketArbitrage(game, marketKey, marketKey.replace('_', ' ').toUpperCase());
-  }
+  const displayName = getMarketDisplayName(marketKey);
+  return findStrictArbitrage(game, marketKey, displayName);
 }
 
-function findTwoWayMarketArbitrage(game, marketKey, displayName) {
-  const opportunities = [];
-  
-  const marketBooks = game.bookmakers.filter(book => 
-    book.markets?.some(market => market.key === marketKey)
-  );
-  
-  // Collect all odds
-  const allOdds = [];
-  marketBooks.forEach(book => {
-    const market = book.markets.find(m => m.key === marketKey);
-    if (market?.outcomes) {
-      market.outcomes.forEach(outcome => {
-        const decimal = convertToDecimal(outcome.price);
-        allOdds.push({
-          sportsbook: book.title,
-          selection: outcome.name,
-          point: outcome.point,
-          american_odds: outcome.price,
-          decimal_odds: decimal,
-          implied_prob: 1 / decimal
-        });
-      });
-    }
-  });
-  
-  // For spreads/totals: Group by point AND ensure opposite selections
-  // For other markets: Group all and find opposing outcomes
-  if (marketKey === 'spreads') {
-    return findSpreadArbitrageFixed(allOdds, game, marketKey, displayName);
-  } else if (marketKey === 'totals') {
-    return findTotalsArbitrageFixed(allOdds, game, marketKey, displayName);
-  } else {
-    // Regular two-way markets (h2h, props, etc.)
-    const uniqueOutcomes = [...new Set(allOdds.map(o => o.selection))];
-    
-    if (uniqueOutcomes.length >= 2) {
-      const bestOdds = uniqueOutcomes.map(outcome => {
-        const outcomeOdds = allOdds.filter(o => o.selection === outcome);
-        return outcomeOdds.reduce((best, current) => 
-          current.decimal_odds > best.decimal_odds ? current : best
-        );
-      });
-      
-      // Filter out unrealistic odds (likely stale/suspended markets)
-      const maxRealisticOdds = 50.0;
-      if (bestOdds.some(odd => odd.decimal_odds > maxRealisticOdds)) return opportunities;
-      
-      const totalImpliedProb = bestOdds.reduce((sum, odd) => sum + odd.implied_prob, 0);
-      
-      // Filter out unrealistic arbitrage margins (>20% profit is suspicious)
-      const profitMargin = ((1 - totalImpliedProb) * 100);
-      if (profitMargin > 20) return opportunities;
-      
-      if (totalImpliedProb < 1) {
-        const profitMargin = ((1 - totalImpliedProb) * 100);
-        
-        // Calculate proper stake distribution using the formula
-        const T = 100; // Total stake
-        const d1 = bestOdds[0].decimal_odds;
-        const d2 = bestOdds[1].decimal_odds;
-        const s1 = (T * d2) / (d1 + d2);
-        const s2 = (T * d1) / (d1 + d2);
-        const guaranteedProfit = T * ((d1 * d2) / (d1 + d2) - 1);
-        
-        opportunities.push({
-          id: `${game.id || game.away_team + game.home_team}_${marketKey}_${Date.now()}`,
-          sport: game.sport || 'Unknown',
-          game_id: game.id,
-          matchup: `${game.away_team} @ ${game.home_team}`,
-          market_type: marketKey,
-          market_display: displayName,
-          commence_time: game.commence_time,
-          legs: bestOdds.map(odd => ({
-            sportsbook: odd.sportsbook,
-            selection: odd.selection,
-            american_odds: odd.american_odds,
-            decimal_odds: odd.decimal_odds.toFixed(3),
-            implied_prob: (odd.implied_prob * 100).toFixed(2) + '%'
-          })),
-          profit_percentage: profitMargin.toFixed(2),
-          total_implied_prob: (totalImpliedProb * 100).toFixed(2) + '%',
-          investment_needed: T,
-          guaranteed_profit: guaranteedProfit.toFixed(2),
-          stake_distribution: [
-            {
-              sportsbook: bestOdds[0].sportsbook,
-              selection: bestOdds[0].selection,
-              stake: `$${s1.toFixed(2)}`,
-              payout: `$${(s1 * d1).toFixed(2)}`
-            },
-            {
-              sportsbook: bestOdds[1].sportsbook,
-              selection: bestOdds[1].selection,
-              stake: `$${s2.toFixed(2)}`,
-              payout: `$${(s2 * d2).toFixed(2)}`
-            }
-          ],
-          risk_level: 'Low',
-          time_sensitivity: 'High'
-        });
-      }
-    }
-  }
-  
-  return opportunities;
-}
+// Legacy functions removed - now using strict arbitrage detector
 
-function findPointMarketArbitrage(game, marketKey, displayName) {
-  return findTwoWayMarketArbitrage(game, marketKey, displayName);
-}
-
-function findPlayerPropArbitrage(game, marketKey) {
-  const propName = marketKey.replace('player_', '').replace('_', ' ').toUpperCase();
-  return findTwoWayMarketArbitrage(game, marketKey, `Player ${propName}`);
-}
-
+// Old spread arbitrage function - replaced by strict detector
 function findSpreadArbitrageFixed(allOdds, game, marketKey, displayName) {
   const opportunities = [];
   
@@ -495,8 +360,7 @@ function findTotalsArbitrageFixed(allOdds, game, marketKey, displayName) {
 
 // Helper functions
 function convertToDecimal(americanOdds) {
-  const odds = parseInt(americanOdds.toString().replace('+', ''));
-  return odds > 0 ? (odds / 100) + 1 : (100 / Math.abs(odds)) + 1;
+  return toDecimal(americanOdds);
 }
 
 function calculateOptimalStakes(bestOdds, totalStake) {
