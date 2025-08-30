@@ -285,9 +285,62 @@ function determineBetResult(leg, gameResult) {
  * Fetch closing odds for CLV calculation
  */
 async function fetchClosingOdds(leg) {
-  // For now, return null - would need to implement historical odds tracking
-  // In a full implementation, you'd store odds snapshots throughout the day
-  return null;
+  const historicalDataService = require('../../../lib/historical-data-service');
+  
+  try {
+    // Use the historical data service to get closing odds
+    const closingData = await historicalDataService.getClosingOdds(
+      leg.game_id,
+      leg.market_type,
+      leg.selection,
+      leg.sportsbook
+    );
+    
+    if (closingData) {
+      // Return the American odds format expected by the grading system
+      return closingData.odds;
+    }
+    
+    // Fallback: Try to get from the most recent odds snapshot
+    // This would need to be close to game time
+    const gameTime = new Date(leg.commence_time);
+    const twoHoursBefore = new Date(gameTime.getTime() - 2 * 60 * 60 * 1000);
+    
+    // Query cache_data for recent odds
+    const { supabase } = require('../../../utils/supabaseClient');
+    const { data: recentOdds } = await supabase
+      .from('cache_data')
+      .select('data')
+      .eq('sport', leg.sport)
+      .gte('updated_at', twoHoursBefore.toISOString())
+      .lte('updated_at', gameTime.toISOString())
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (recentOdds && recentOdds.data) {
+      // Parse the odds data to find matching game and selection
+      for (const game of recentOdds.data) {
+        if (game.home_team === leg.home_team && game.away_team === leg.away_team) {
+          for (const bookmaker of game.bookmakers || []) {
+            const market = bookmaker.markets?.find(m => m.key === leg.market_type);
+            const outcome = market?.outcomes?.find(o => 
+              o.name === leg.selection || o.description === leg.selection
+            );
+            
+            if (outcome) {
+              return outcome.price;
+            }
+          }
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`Error fetching closing odds for leg ${leg.id}:`, error);
+    return null;
+  }
 }
 
 /**

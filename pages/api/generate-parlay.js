@@ -1246,7 +1246,7 @@ async function generateValidatedFallbackParlay(availableBets, preferences, sport
   // Process the parlay with betting math using processed legs
   let parlayAnalysis;
   try {
-    parlayAnalysis = bettingMath.processParlay(processedLegs, null);
+    parlayAnalysis = await bettingMath.processParlay(processedLegs, null);
   } catch (error) {
     console.error('Error in processParlay:', error);
     // Fallback to simple calculations
@@ -1272,6 +1272,90 @@ async function generateValidatedFallbackParlay(availableBets, preferences, sport
   if (hasConflictingBets(selectedBets)) {
     console.log('Fallback parlay validation failed - conflicts detected');
     throw new Error('Could not generate conflict-free parlay with available bets');
+  }
+  
+  // Save parlay to database for tracking
+  try {
+    const { supabase } = require('../../utils/supabaseClient');
+    
+    // Create daily_reco entry if doesn't exist for today
+    const today = new Date().toISOString().split('T')[0];
+    const { data: dailyReco } = await supabase
+      .from('daily_recos')
+      .select('id')
+      .eq('reco_date', today)
+      .single();
+    
+    let dailyRecoId;
+    if (!dailyReco) {
+      const { data: newReco } = await supabase
+        .from('daily_recos')
+        .insert({ 
+          reco_date: today,
+          generated_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+      dailyRecoId = newReco?.id;
+    } else {
+      dailyRecoId = dailyReco.id;
+    }
+    
+    // Save the parlay
+    if (dailyRecoId) {
+      const { data: savedBet } = await supabase
+        .from('reco_bets')
+        .insert({
+          daily_reco_id: dailyRecoId,
+          bet_type: `parlay${selectedBets.length}`,
+          sport: preferences.sport || 'mixed',
+          home_team: selectedBets[0]?.home_team || selectedBets[0]?.game?.split('@')[1]?.trim(),
+          away_team: selectedBets[0]?.away_team || selectedBets[0]?.game?.split('@')[0]?.trim(),
+          market: selectedBets[0]?.market_type,
+          selection: selectedBets.map(s => s.selection).join(' + '),
+          combined_odds: parlayAnalysis.parlay.odds.american,
+          decimal_odds: parlayAnalysis.parlay.odds.decimal,
+          ev_percentage: parlayAnalysis.parlay.metrics.evPercent,
+          confidence_score: parlayAnalysis.parlay.metrics.smartScore,
+          kelly_size: parlayAnalysis.parlay.metrics.kellyFractional,
+          reasoning: 'User generated parlay via AI',
+          status: 'active',
+          metadata: {
+            user_generated: true,
+            risk_level: preferences.riskLevel,
+            correlation_factor: parlayAnalysis.parlay.probability.correlationFactor
+          }
+        })
+        .select('id')
+        .single();
+      
+      // Save individual legs
+      if (savedBet?.id) {
+        const legInserts = selectedBets.map((leg, index) => ({
+          reco_bet_id: savedBet.id,
+          leg_index: index,
+          sport: leg.sport || preferences.sport,
+          home_team: leg.home_team || leg.game?.split('@')[1]?.trim(),
+          away_team: leg.away_team || leg.game?.split('@')[0]?.trim(),
+          market_type: leg.market_type || leg.bet_type,
+          selection: leg.selection,
+          best_odds: leg.odds,
+          decimal_odds: leg.decimal_odds,
+          best_book: leg.sportsbook,
+          ev_percentage: parlayAnalysis.legs[index]?.metrics?.evPercent || 0,
+          commence_time: leg.commence_time || new Date().toISOString()
+        }));
+        
+        await supabase
+          .from('reco_bet_legs')
+          .insert(legInserts);
+        
+        console.log(`✅ Saved parlay ${savedBet.id} with ${legInserts.length} legs to database`);
+      }
+    }
+  } catch (saveError) {
+    console.error('Failed to save parlay to database:', saveError);
+    // Don't fail the request, just log the error
   }
   
   // Build response using betting math calculations  

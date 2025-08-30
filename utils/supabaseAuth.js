@@ -13,7 +13,11 @@ export const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true, // Enable session persistence for auth
     autoRefreshToken: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    // Use custom domain for auth redirects
+    redirectTo: process.env.NODE_ENV === 'production' 
+      ? 'https://betchekr.com/auth/callback' 
+      : 'http://localhost:3006/auth/callback'
   }
 });
 

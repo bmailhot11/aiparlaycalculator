@@ -9,6 +9,18 @@
     {
       "path": "/api/daily-picks/publish",
       "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/collect-odds-data",
+      "schedule": "0 */4 * * *"
+    },
+    {
+      "path": "/api/daily-picks/grade-bets",
+      "schedule": "0 3,6 * * *"
+    },
+    {
+      "path": "/api/clv/collect-closing-lines",
+      "schedule": "*/30 10-23 * * *"
     }
   ],
   "functions": {
@@ -20,6 +32,12 @@
     },
     "pages/api/daily-picks/grade-bets.js": {
       "maxDuration": 300
+    },
+    "pages/api/collect-odds-data.js": {
+      "maxDuration": 60
+    },
+    "pages/api/clv/collect-closing-lines.js": {
+      "maxDuration": 60
     }
   },
   "headers": [

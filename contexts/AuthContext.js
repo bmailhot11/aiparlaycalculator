@@ -129,10 +129,13 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: process.env.NODE_ENV === 'production' 
+            ? 'https://betchekr.com/auth/callback'
+            : `${window.location.origin}/auth/callback`,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent'
+            prompt: 'consent',
+            approval_prompt: 'force'
           }
         }
       });

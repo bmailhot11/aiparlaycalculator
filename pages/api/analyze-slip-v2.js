@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     }
     
     // Analyze the slip using betting math
-    const analysis = bettingMath.analyzeSlip(legs, sportData);
+    const analysis = await bettingMath.analyzeSlip(legs, sportData);
     
     // Add CLV analysis for completed games
     let clvAnalysis = null;
