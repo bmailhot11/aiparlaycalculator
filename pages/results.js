@@ -31,7 +31,6 @@ export default function ResultsPage() {
   const [error, setError] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
   const [showMethodology, setShowMethodology] = useState(false);
-  const [selectedBetType, setSelectedBetType] = useState('all'); // 'all', '1leg', '2leg', '4leg'
 
   useEffect(() => {
     fetchResults();
@@ -84,29 +83,6 @@ export default function ResultsPage() {
             </p>
           </motion.div>
 
-          {/* Bet Type Selector */}
-          <div className="flex justify-center mb-6">
-            <div className="inline-flex rounded-lg bg-[#1F2937] p-1">
-              {[
-                { key: 'all', label: 'All Bets' },
-                { key: '1leg', label: '1-Leg (Singles)' },
-                { key: '2leg', label: '2-Leg Parlays' },
-                { key: '4leg', label: '4-Leg Parlays' }
-              ].map(betType => (
-                <button
-                  key={betType.key}
-                  onClick={() => setSelectedBetType(betType.key)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                    selectedBetType === betType.key
-                      ? 'bg-[#F4C430] text-[#0B0F14]'
-                      : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#374151]'
-                  }`}
-                >
-                  {betType.label}
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* Period Selector */}
           <div className="flex justify-center mb-8">
@@ -168,7 +144,6 @@ export default function ResultsPage() {
               <KPIDashboard 
                 kpis={results.kpis} 
                 period={selectedPeriod} 
-                selectedBetType={selectedBetType}
               />
 
               {/* Bankroll Chart */}
@@ -197,7 +172,7 @@ export default function ResultsPage() {
 /**
  * KPI Dashboard Component
  */
-function KPIDashboard({ kpis, period, selectedBetType }) {
+function KPIDashboard({ kpis, period }) {
   if (!kpis) return null;
 
   const periodKPIs = kpis.period;
@@ -213,7 +188,7 @@ function KPIDashboard({ kpis, period, selectedBetType }) {
       <div className="card">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-[#E5E7EB]">
-            {getBetTypeLabel(selectedBetType)} Performance ({period === 365 ? '1 Year' : `${period} Days`})
+            Performance ({period === 365 ? '1 Year' : `${period} Days`})
           </h2>
           <div className="text-[#6B7280] text-sm">
             Last updated: {new Date().toLocaleDateString()}
@@ -609,15 +584,3 @@ function getBetTypeDisplayForTemplate(betType) {
   return displayNames[betType] || betType;
 }
 
-/**
- * Get display label for bet type
- */
-function getBetTypeLabel(betType) {
-  const labels = {
-    'all': 'Overall',
-    '1leg': 'Singles',
-    '2leg': '2-Leg Parlays', 
-    '4leg': '4-Leg Parlays'
-  };
-  return labels[betType] || 'Overall';
-}
