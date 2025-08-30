@@ -36,30 +36,42 @@ export default function MiddleBetsPage() {
   const [allowAnonymous, setAllowAnonymous] = useState(true);
 
   // Filter states
-  const [selectedSport, setSelectedSport] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState('');
-  const [selectedGame, setSelectedGame] = useState('');
-  const [timeFilter, setTimeFilter] = useState('7d');
-  const [availableTeams, setAvailableTeams] = useState([]);
-  const [availableGames, setAvailableGames] = useState([]);
+  const [selectedLeague, setSelectedLeague] = useState('all');
+  const [filteredMiddleData, setFilteredMiddleData] = useState([]);
 
-  // Sport options
-  const sportsOptions = [
+  // League options
+  const leagueOptions = [
+    { key: 'all', label: 'All Leagues' },
     { key: 'NFL', label: 'NFL' },
     { key: 'NBA', label: 'NBA' },
     { key: 'NHL', label: 'NHL' },
     { key: 'MLB', label: 'MLB' },
     { key: 'NCAAF', label: 'College Football' },
-    { key: 'NCAAB', label: 'College Basketball' }
+    { key: 'NCAAB', label: 'College Basketball' },
+    { key: 'soccer', label: 'Soccer' },
+    { key: 'tennis', label: 'Tennis' }
   ];
 
-  // Time filters
-  const timeFilters = [
-    { value: '1d', label: 'Next 24 Hours' },
-    { value: '3d', label: 'Next 3 Days' },
-    { value: '7d', label: 'Next Week' },
-    { value: 'all', label: 'All Games' }
-  ];
+  // Filter function
+  const filterMiddleData = (league) => {
+    if (league === 'all') {
+      setFilteredMiddleData(middleData);
+    } else {
+      const filtered = middleData.filter(middle => {
+        // Extract sport/league from matchup or other fields
+        const matchupLower = middle.matchup?.toLowerCase() || '';
+        const sportLower = middle.sport?.toLowerCase() || '';
+        const leagueLower = league.toLowerCase();
+        
+        // Check if the matchup or sport contains the selected league
+        return matchupLower.includes(leagueLower) || 
+               sportLower.includes(leagueLower) ||
+               (league === 'NCAAF' && (matchupLower.includes('college') && matchupLower.includes('football'))) ||
+               (league === 'NCAAB' && (matchupLower.includes('college') && matchupLower.includes('basketball')));
+      });
+      setFilteredMiddleData(filtered);
+    }
+  };
 
   // Check middle bet usage on component mount
   useEffect(() => {
@@ -152,6 +164,7 @@ export default function MiddleBetsPage() {
 
       const data = await response.json();
       setMiddleData(data.opportunities || []);
+      setFilteredMiddleData(data.opportunities || []);
 
       if (data.opportunities?.length > 0) {
         setNotification({
@@ -363,6 +376,41 @@ export default function MiddleBetsPage() {
               )}
             </button>
           </motion.div>
+
+          {/* Filter Section */}
+          {middleData.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mt-8 bg-[#0B0F12] border border-white/8 rounded-2xl p-6"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Filter className="w-5 h-5 text-[#FACC15]" />
+                <h3 className="text-lg font-semibold text-[#E6EDF3]">Filter by League</h3>
+              </div>
+              <div className="flex flex-wrap gap-4 items-center">
+                <select
+                  value={selectedLeague}
+                  onChange={(e) => {
+                    setSelectedLeague(e.target.value);
+                    filterMiddleData(e.target.value);
+                  }}
+                  className="bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-[#E6EDF3] focus:border-[#0EE6B7] focus:outline-none transition-colors"
+                >
+                  {leagueOptions.map(option => (
+                    <option key={option.key} value={option.key}>{option.label}</option>
+                  ))}
+                </select>
+                <div className="text-sm text-[#92A2AD] flex items-center gap-2">
+                  <span>Showing:</span>
+                  <span className="text-[#0EE6B7] font-semibold">
+                    {filteredMiddleData.length} of {middleData.length} opportunities
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* Notification */}
@@ -395,7 +443,7 @@ export default function MiddleBetsPage() {
         )}
 
         {/* Results Section */}
-        {middleData.length > 0 && (
+        {filteredMiddleData.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -404,7 +452,7 @@ export default function MiddleBetsPage() {
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl md:text-3xl font-bold text-[#E6EDF3] flex items-center gap-3">
                 <Trophy className="w-8 h-8 text-[#FACC15]" />
-                Found {middleData.length} Opportunities
+                {selectedLeague !== 'all' ? `${selectedLeague} - ` : ''}Found {filteredMiddleData.length} Opportunities
               </h2>
               <div className="text-sm text-[#92A2AD]">
                 Last updated: {new Date().toLocaleTimeString()}
@@ -412,7 +460,7 @@ export default function MiddleBetsPage() {
             </div>
 
             <div className="grid gap-6">
-              {middleData.map((middle, index) => renderMiddleOpportunity(middle, index))}
+              {filteredMiddleData.map((middle, index) => renderMiddleOpportunity(middle, index))}
             </div>
           </motion.div>
         )}
