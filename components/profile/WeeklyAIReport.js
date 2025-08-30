@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, AlertTriangle, Target, Lightbulb, Calendar, Loader2 } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertTriangle, Target, Lightbulb, Calendar, Loader2, Clock } from 'lucide-react';
+
+const getNextMonday = () => {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7;
+  const nextMonday = new Date(now);
+  nextMonday.setDate(now.getDate() + daysUntilMonday);
+  nextMonday.setHours(12, 0, 0, 0);
+  return nextMonday.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+};
 
 export default function WeeklyAIReport({ bets = [], bankrollData = [], user }) {
   const [report, setReport] = useState(null);
@@ -234,18 +244,10 @@ export default function WeeklyAIReport({ bets = [], bankrollData = [], user }) {
           <TrendingUp className="w-6 h-6 text-[#F4C430]" />
           <h3 className="text-lg font-semibold text-[#E5E7EB]">AI Weekly Report</h3>
         </div>
-        <button
-          onClick={generateReport}
-          disabled={loading || bets.length === 0}
-          className="flex items-center gap-2 bg-[#F4C430] text-[#0B0F14] px-4 py-2 rounded-lg font-medium hover:bg-[#e6b829] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Lightbulb className="w-4 h-4" />
-          )}
-          {loading ? 'Analyzing...' : 'Generate Report'}
-        </button>
+        <div className="flex items-center gap-2 text-sm text-[#9CA3AF]">
+          <Clock className="w-4 h-4" />
+          <span>Auto-generates Mondays at noon</span>
+        </div>
       </div>
 
       {!report && bets.length === 0 && (
@@ -258,9 +260,10 @@ export default function WeeklyAIReport({ bets = [], bankrollData = [], user }) {
 
       {!report && bets.length > 0 && (
         <div className="text-center py-8 text-[#9CA3AF]">
-          <BarChart3 className="w-16 h-16 mx-auto mb-4 opacity-50" />
-          <p className="mb-4">AI insights are ready to be generated</p>
-          <p className="text-sm mb-4">Click "Generate Report" to get personalized AI analysis of your betting patterns</p>
+          <Clock className="w-16 h-16 mx-auto mb-4 opacity-50" />
+          <p className="mb-4">Your AI report will be generated automatically</p>
+          <p className="text-sm mb-4">Reports are generated every Monday at noon EST</p>
+          <p className="text-xs">Next report: {getNextMonday()}</p>
         </div>
       )}
 
@@ -352,7 +355,7 @@ export default function WeeklyAIReport({ bets = [], bankrollData = [], user }) {
           {lastGenerated && (
             <div className="text-center pt-4 border-t border-[#374151]">
               <p className="text-xs text-[#6B7280]">
-                📅 Reports generate every Monday at noon • Next update: {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                📅 Reports generate every Monday at noon • Next update: {getNextMonday()}
               </p>
             </div>
           )}

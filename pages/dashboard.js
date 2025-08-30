@@ -47,7 +47,7 @@ export default function Dashboard() {
   
   // Bankroll State
   const [bankroll, setBankroll] = useState({
-    current: 1000,
+    current: 0,
     deposits: [],
     withdrawals: [],
     history: []
@@ -114,89 +114,17 @@ export default function Dashboard() {
         console.log('Profile loaded from:', profileData.source);
       }
       
-      // Generate sample data if user has no history
-      if (!profileData.bets || profileData.bets.length === 0) {
-        generateSampleData();
-      }
+      // Don't generate sample data - show empty state instead
       
     } catch (error) {
       console.error('Error loading user data:', error);
-      // Fallback to sample data
-      generateSampleData();
+      // Don't generate sample data - show empty state instead
     } finally {
       setLoading(false);
     }
   };
 
-  const generateSampleData = () => {
-    // Generate sample bankroll history
-    const history = [];
-    let currentBalance = 1000;
-    
-    for (let i = 30; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      
-      // Random daily change
-      const change = (Math.random() - 0.45) * 50;
-      currentBalance += change;
-      
-      history.push({
-        date: date.toISOString().split('T')[0],
-        balance: Math.max(0, currentBalance),
-        change: change
-      });
-    }
-    
-    setBankroll(prev => ({
-      ...prev,
-      history,
-      current: Math.max(0, currentBalance)
-    }));
-
-    // Generate sample bets
-    const sampleBets = [
-      {
-        id: 1,
-        date: new Date().toISOString().split('T')[0],
-        sport: 'NFL',
-        market: 'Moneyline',
-        selection: 'Chiefs ML',
-        odds: '+150',
-        stake: 50,
-        result: 'won',
-        payout: 125,
-        profit: 75
-      },
-      {
-        id: 2,
-        date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-        sport: 'NBA',
-        market: 'Spread',
-        selection: 'Lakers -5.5',
-        odds: '-110',
-        stake: 75,
-        result: 'lost',
-        payout: 0,
-        profit: -75
-      },
-      {
-        id: 3,
-        date: new Date(Date.now() - 172800000).toISOString().split('T')[0],
-        sport: 'MLB',
-        market: 'Total',
-        selection: 'Over 8.5',
-        odds: '+105',
-        stake: 100,
-        result: 'won',
-        payout: 205,
-        profit: 105
-      }
-    ];
-    
-    setBets(sampleBets);
-    calculateAnalytics(sampleBets);
-  };
+  // Removed generateSampleData - show empty states instead
 
   const calculateAnalytics = (betsData) => {
     if (!betsData.length) return;
@@ -459,7 +387,9 @@ export default function Dashboard() {
             <p className="text-2xl font-bold text-white mb-1">
               ${bankroll.current.toFixed(2)}
             </p>
-            <p className="text-sm text-green-400">+12.5% this month</p>
+            <p className="text-sm text-white/60">
+              {bankroll.history.length > 0 ? 'This month' : 'No data yet'}
+            </p>
           </motion.div>
 
           <motion.div

@@ -22,7 +22,19 @@ ChartJS.register(
   Filler
 );
 
+import { TrendingUp } from 'lucide-react';
+
 export default function BankrollChart({ data = [] }) {
+  // Show empty state if no data
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-64 flex flex-col items-center justify-center text-white/60">
+        <TrendingUp className="w-12 h-12 mb-3 opacity-50" />
+        <p className="text-sm">No bankroll history yet</p>
+        <p className="text-xs mt-1">Start tracking your deposits and withdrawals</p>
+      </div>
+    );
+  }
   const chartData = {
     labels: data.map(item => {
       const date = new Date(item.date);
