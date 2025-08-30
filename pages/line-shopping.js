@@ -46,7 +46,8 @@ export default function LineShopping() {
     { value: 'all', label: 'All' },
     { value: 'h2h', label: 'ML' },
     { value: 'spreads', label: 'Spread' },
-    { value: 'totals', label: 'Total' }
+    { value: 'totals', label: 'Total' },
+    { value: 'player_props', label: 'Player Props' }
   ];
 
   const timeFilters = [
@@ -297,22 +298,6 @@ export default function LineShopping() {
                       </select>
                     </div>
 
-                    {/* Game Filter - Shows games filtered by selected team */}
-                    <div>
-                      <label className="block text-[#9CA3AF] text-sm mb-2">Specific Game{selectedTeam ? ` (${selectedTeam} games)` : ''}</label>
-                      <select
-                        value={selectedGame}
-                        onChange={(e) => setSelectedGame(e.target.value)}
-                        className="w-full px-4 py-3 bg-[#0F172A] border border-[#1F2937] rounded-lg text-[#E5E7EB] focus:outline-none focus:border-[#F4C430]/50 min-h-[44px] text-sm sm:text-base"
-                        disabled={!selectedTeam} // Disable if no team selected
-                      >
-                        <option value="">{selectedTeam ? `All ${selectedTeam} Games` : 'Select a team first'}</option>
-                        {getFilteredGames().map(game => (
-                          <option key={game?.id || Math.random()} value={game?.id || ''}>{game?.label || 'Unknown Game'}</option>
-                        ))}
-                      </select>
-                    </div>
-
                     {/* Time Filter */}
                     <div>
                       <label className="block text-[#9CA3AF] text-sm mb-2">Time Frame</label>
@@ -326,7 +311,6 @@ export default function LineShopping() {
                         ))}
                       </select>
                     </div>
-
 
                     {/* Market Type Filter */}
                     <div>
