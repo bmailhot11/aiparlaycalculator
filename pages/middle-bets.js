@@ -58,10 +58,15 @@ export default function MiddleBetsPage() {
 
   // Check middle bet usage on component mount
   useEffect(() => {
+    console.log('Middle Bets Auth State:', { user, isPremium, middleUsesLeft });
+    
     if (user && !isPremium) {
       checkMiddleUsage();
     } else if (isPremium) {
       setMiddleUsesLeft('unlimited');
+    } else if (!user) {
+      // If no user, ensure we have a default state
+      setMiddleUsesLeft(1);
     }
   }, [user, isPremium]);
 
@@ -125,7 +130,7 @@ export default function MiddleBetsPage() {
 
   const findMiddleBets = async (includeAllSports = true) => {
     if (!user) {
-      router.push('/login');
+      router.push('/auth/signin?redirect=/middle-bets');
       return;
     }
 

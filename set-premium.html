@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Set Premium Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            max-width: 600px;
+            margin: 0 auto;
+            background: #1a1a1a;
+            color: white;
+        }
+        button {
+            padding: 15px 30px;
+            margin: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .premium {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .free {
+            background: #444;
+            color: white;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        .status {
+            padding: 20px;
+            margin: 20px 0;
+            background: #2a2a2a;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        .success {
+            color: #4caf50;
+        }
+        .info {
+            color: #2196f3;
+        }
+        code {
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Premium Status Manager</h1>
+    
+    <div class="status">
+        <h2>Current Status</h2>
+        <p>isPremium: <code id="currentPremium">checking...</code></p>
+        <p>premiumEmail: <code id="currentEmail">checking...</code></p>
+        <p>userIdentifier: <code id="currentId">checking...</code></p>
+    </div>
+
+    <div>
+        <h2>Quick Actions</h2>
+        <button class="premium" onclick="setPremiumUser()">
+            👑 Set as Premium User
+        </button>
+        <button class="free" onclick="setFreeUser()">
+            🆓 Set as Free User
+        </button>
+        <button class="free" onclick="clearAll()">
+            🗑️ Clear All Data
+        </button>
+    </div>
+
+    <div class="status">
+        <h2>Custom Email</h2>
+        <input type="email" id="emailInput" placeholder="Enter premium email" style="padding: 10px; width: 300px; background: #333; color: white; border: 1px solid #555; border-radius: 4px;">
+        <button onclick="setCustomEmail()" style="background: #4caf50; color: white; padding: 10px 20px;">
+            Set Email
+        </button>
+    </div>
+
+    <div id="message" class="status" style="display: none;"></div>
+
+    <script>
+        function updateStatus() {
+            document.getElementById('currentPremium').textContent = localStorage.getItem('isPremium') || 'not set';
+            document.getElementById('currentEmail').textContent = localStorage.getItem('premiumEmail') || 'not set';
+            document.getElementById('currentId').textContent = localStorage.getItem('userIdentifier') || 'not set';
+        }
+
+        function showMessage(msg, type = 'success') {
+            const messageDiv = document.getElementById('message');
+            messageDiv.style.display = 'block';
+            messageDiv.className = 'status ' + type;
+            messageDiv.innerHTML = `<strong>${type === 'success' ? '✅' : 'ℹ️'}</strong> ${msg}`;
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        function setPremiumUser() {
+            // Set all necessary values for premium
+            localStorage.setItem('isPremium', 'true');
+            localStorage.setItem('premiumEmail', 'premium@user.com');
+            
+            // Ensure user identifier exists
+            if (!localStorage.getItem('userIdentifier')) {
+                const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                localStorage.setItem('userIdentifier', id);
+            }
+            
+            updateStatus();
+            showMessage('Set as Premium User! Refresh the app to see changes.');
+        }
+
+        function setFreeUser() {
+            localStorage.setItem('isPremium', 'false');
+            localStorage.removeItem('premiumEmail');
+            
+            // Ensure user identifier exists
+            if (!localStorage.getItem('userIdentifier')) {
+                const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                localStorage.setItem('userIdentifier', id);
+            }
+            
+            updateStatus();
+            showMessage('Set as Free User! Refresh the app to see changes.');
+        }
+
+        function setCustomEmail() {
+            const email = document.getElementById('emailInput').value;
+            if (email) {
+                localStorage.setItem('premiumEmail', email);
+                localStorage.setItem('isPremium', 'true');
+                
+                // Ensure user identifier exists
+                if (!localStorage.getItem('userIdentifier')) {
+                    const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    localStorage.setItem('userIdentifier', id);
+                }
+                
+                updateStatus();
+                showMessage(`Set premium email to: ${email}`);
+            }
+        }
+
+        function clearAll() {
+            localStorage.removeItem('isPremium');
+            localStorage.removeItem('premiumEmail');
+            localStorage.removeItem('userIdentifier');
+            
+            // Also clear any auth-related items
+            localStorage.removeItem('redirectAfterAuth');
+            localStorage.removeItem('auth_redirect');
+            
+            updateStatus();
+            showMessage('Cleared all premium and auth data!', 'info');
+        }
+
+        // Initialize on load
+        updateStatus();
+    </script>
+</body>
+</html>
