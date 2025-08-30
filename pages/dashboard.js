@@ -493,16 +493,30 @@ export default function Dashboard() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-      </div>
+      <>
+        <Head>
+          <title>Dashboard - BetChekr</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+        </Head>
+        <GradientBG />
+        <Header />
+        <div className="container mx-auto px-4 pt-4 sm:pt-20 pb-8 relative z-10">
+          <div className="flex items-center justify-center py-20">
+            <div className="w-8 h-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+        </div>
+        <Footer />
+      </>
     );
   }
 
   if (!user) return null;
 
+  // Check if user has any content to display
+  const hasContent = bets.length > 0 || bankroll.current > 0 || analytics.totalBets > 0;
+
   return (
-    <div className="min-h-screen text-white relative">
+    <div className="text-white relative">
       <Head>
         <title>Dashboard - BetChekr</title>
         <meta name="description" content="Your personal betting dashboard and performance tracker" />
@@ -513,6 +527,38 @@ export default function Dashboard() {
       <Header />
       
       <div className="container mx-auto px-4 pt-4 sm:pt-20 pb-8 relative z-10">
+        {!hasContent ? (
+          /* Placeholder when no content */
+          <div className="flex items-center justify-center py-20">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white/10 backdrop-blur-md rounded-xl p-8 border border-white/20 text-center max-w-md mx-auto"
+            >
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Welcome to your Dashboard</h2>
+              <p className="text-white/70 mb-6">Start tracking your bets and manage your bankroll to see your performance analytics.</p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => setShowAddBet(true)}
+                  className="w-full bg-blue-500 hover:bg-blue-600 px-6 py-3 rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Your First Bet
+                </button>
+                <button
+                  onClick={() => setShowBankrollActions(true)}
+                  className="w-full bg-green-500 hover:bg-green-600 px-6 py-3 rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <DollarSign className="w-4 h-4" />
+                  Set Initial Bankroll
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        ) : (
         {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -894,6 +940,8 @@ export default function Dashboard() {
             </motion.div>
           </div>
         </div>
+      </div>
+        )}
       </div>
 
       {/* Add Bet Modal */}
