@@ -37,15 +37,23 @@ export default function MiddleBetsPage() {
 
   // Filter states
   const [selectedLeague, setSelectedLeague] = useState('all');
+  const [selectedTeam, setSelectedTeam] = useState('all');
   const [filteredMiddleData, setFilteredMiddleData] = useState([]);
+  const [availableTeams, setAvailableTeams] = useState([]);
 
-  // League options
-  const leagueOptions = [
+  // Major sports leagues (prioritized)
+  const majorLeagueOptions = [
     { key: 'all', label: 'All Leagues' },
     { key: 'NFL', label: 'NFL' },
     { key: 'NBA', label: 'NBA' },
     { key: 'NHL', label: 'NHL' },
     { key: 'MLB', label: 'MLB' },
+    { key: 'MLS', label: 'MLS' }
+  ];
+
+  // All league options (including others)
+  const allLeagueOptions = [
+    ...majorLeagueOptions,
     { key: 'UFC', label: 'UFC/MMA' },
     { key: 'NCAAF', label: 'College Football' },
     { key: 'NCAAB', label: 'College Basketball' },
@@ -53,25 +61,74 @@ export default function MiddleBetsPage() {
     { key: 'tennis', label: 'Tennis' }
   ];
 
-  // Filter function
-  const filterMiddleData = (league) => {
-    if (league === 'all') {
-      setFilteredMiddleData(middleData);
-    } else {
-      const filtered = middleData.filter(middle => {
-        // Extract sport/league from matchup or other fields
+  // Extract teams from middle data for team filter
+  const extractTeamsFromData = (data, league = 'all') => {
+    const teams = new Set();
+    
+    data.forEach(middle => {
+      if (league !== 'all') {
+        // Filter by league first
         const matchupLower = middle.matchup?.toLowerCase() || '';
         const sportLower = middle.sport?.toLowerCase() || '';
         const leagueLower = league.toLowerCase();
         
-        // Check if the matchup or sport contains the selected league
+        const matchesLeague = matchupLower.includes(leagueLower) || 
+               sportLower.includes(leagueLower) ||
+               (league === 'UFC' && (matchupLower.includes('ufc') || matchupLower.includes('mma'))) ||
+               (league === 'NCAAF' && (matchupLower.includes('college') && matchupLower.includes('football'))) ||
+               (league === 'NCAAB' && (matchupLower.includes('college') && matchupLower.includes('basketball'))) ||
+               (league === 'MLS' && (matchupLower.includes('mls') || sportLower.includes('soccer')));
+        
+        if (!matchesLeague) return;
+      }
+      
+      // Extract team names from matchup (format: "Team A @ Team B" or "Team A vs Team B")
+      const matchup = middle.matchup || '';
+      const teams_split = matchup.split(/\s@\s|\svs\s/);
+      if (teams_split.length === 2) {
+        teams.add(teams_split[0].trim());
+        teams.add(teams_split[1].trim());
+      }
+    });
+    
+    return Array.from(teams).sort();
+  };
+
+  // Enhanced filter function
+  const filterMiddleData = (league = selectedLeague, team = selectedTeam) => {
+    let filtered = middleData;
+    
+    // Filter by league
+    if (league !== 'all') {
+      filtered = filtered.filter(middle => {
+        const matchupLower = middle.matchup?.toLowerCase() || '';
+        const sportLower = middle.sport?.toLowerCase() || '';
+        const leagueLower = league.toLowerCase();
+        
         return matchupLower.includes(leagueLower) || 
                sportLower.includes(leagueLower) ||
                (league === 'UFC' && (matchupLower.includes('ufc') || matchupLower.includes('mma'))) ||
                (league === 'NCAAF' && (matchupLower.includes('college') && matchupLower.includes('football'))) ||
-               (league === 'NCAAB' && (matchupLower.includes('college') && matchupLower.includes('basketball')));
+               (league === 'NCAAB' && (matchupLower.includes('college') && matchupLower.includes('basketball'))) ||
+               (league === 'MLS' && (matchupLower.includes('mls') || sportLower.includes('soccer')));
       });
-      setFilteredMiddleData(filtered);
+    }
+    
+    // Filter by team
+    if (team !== 'all') {
+      filtered = filtered.filter(middle => {
+        const matchup = middle.matchup || '';
+        return matchup.toLowerCase().includes(team.toLowerCase());
+      });
+    }
+    
+    setFilteredMiddleData(filtered);
+    
+    // Update available teams when league changes
+    if (league !== selectedLeague) {
+      const teams = extractTeamsFromData(middleData, league);
+      setAvailableTeams(teams);
+      setSelectedTeam('all'); // Reset team filter when league changes
     }
   };
 
@@ -99,6 +156,15 @@ export default function MiddleBetsPage() {
       setMiddleUsesLeft('unlimited');
     }
   }, [user, isPremium]);
+
+  // Update available teams when league changes
+  useEffect(() => {
+    if (middleData.length > 0) {
+      const teams = extractTeamsFromData(middleData, selectedLeague);
+      setAvailableTeams(teams);
+      setSelectedTeam('all');
+    }
+  }, [selectedLeague, middleData]);
 
   const checkMiddleUsage = () => {
     try {
@@ -167,6 +233,10 @@ export default function MiddleBetsPage() {
       const data = await response.json();
       setMiddleData(data.opportunities || []);
       setFilteredMiddleData(data.opportunities || []);
+      
+      // Extract teams for filter
+      const teams = extractTeamsFromData(data.opportunities || [], selectedLeague);
+      setAvailableTeams(teams);
 
       if (data.opportunities?.length > 0) {
         setNotification({
@@ -385,31 +455,74 @@ export default function MiddleBetsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="mt-8 bg-[#0B0F12] border border-white/8 rounded-2xl p-6"
+              className="mt-8 bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10"
             >
-              <div className="flex items-center gap-2 mb-4">
-                <Filter className="w-5 h-5 text-[#FACC15]" />
-                <h3 className="text-lg font-semibold text-[#E6EDF3]">Filter by League</h3>
+              <div className="flex items-center gap-2 mb-6">
+                <Filter className="w-5 h-5 text-[#F4C430]" />
+                <h3 className="text-lg font-semibold text-white">Filter Opportunities</h3>
               </div>
-              <div className="flex flex-wrap gap-4 items-center">
-                <select
-                  value={selectedLeague}
-                  onChange={(e) => {
-                    setSelectedLeague(e.target.value);
-                    filterMiddleData(e.target.value);
-                  }}
-                  className="bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-[#E6EDF3] focus:border-[#0EE6B7] focus:outline-none transition-colors"
-                >
-                  {leagueOptions.map(option => (
-                    <option key={option.key} value={option.key}>{option.label}</option>
-                  ))}
-                </select>
-                <div className="text-sm text-[#92A2AD] flex items-center gap-2">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* League Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-white/80 mb-2">League</label>
+                  <select
+                    value={selectedLeague}
+                    onChange={(e) => {
+                      setSelectedLeague(e.target.value);
+                      filterMiddleData(e.target.value, selectedTeam);
+                    }}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:border-[#F4C430] focus:outline-none focus:ring-2 focus:ring-[#F4C430]/20 transition-all"
+                  >
+                    {allLeagueOptions.map(option => (
+                      <option key={option.key} value={option.key} className="bg-[#1F2937] text-white">
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Team Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-white/80 mb-2">Team</label>
+                  <select
+                    value={selectedTeam}
+                    onChange={(e) => {
+                      setSelectedTeam(e.target.value);
+                      filterMiddleData(selectedLeague, e.target.value);
+                    }}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:border-[#F4C430] focus:outline-none focus:ring-2 focus:ring-[#F4C430]/20 transition-all"
+                    disabled={availableTeams.length === 0}
+                  >
+                    <option value="all" className="bg-[#1F2937] text-white">All Teams</option>
+                    {availableTeams.map(team => (
+                      <option key={team} value={team} className="bg-[#1F2937] text-white">
+                        {team}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between text-sm">
+                <div className="text-white/60">
                   <span>Showing:</span>
-                  <span className="text-[#0EE6B7] font-semibold">
+                  <span className="text-[#F4C430] font-semibold ml-2">
                     {filteredMiddleData.length} of {middleData.length} opportunities
                   </span>
                 </div>
+                {(selectedLeague !== 'all' || selectedTeam !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setSelectedLeague('all');
+                      setSelectedTeam('all');
+                      filterMiddleData('all', 'all');
+                    }}
+                    className="text-[#F4C430] hover:text-[#F4C430]/80 font-medium transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                )}
               </div>
             </motion.div>
           )}

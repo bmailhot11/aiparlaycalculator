@@ -17,6 +17,10 @@ const KEY_NUMBERS = {
   nhl: {
     spreads: [1.5, 2.5], 
     totals: [5.5, 6.5]
+  },
+  mls: {
+    spreads: [1, 2],
+    totals: [2.5, 3.5]
   }
 };
 
@@ -37,6 +41,10 @@ const HIT_PROBABILITIES = {
   nhl: {
     spreads: { 1.5: 0.095, 2.5: 0.078 },
     totals: { 5.5: 0.088, 6.5: 0.091 }
+  },
+  mls: {
+    spreads: { 1: 0.082, 2: 0.071 },
+    totals: { 2.5: 0.092, 3.5: 0.086 }
   }
 };
 
@@ -53,8 +61,8 @@ async function handler(req, res) {
     // Get upcoming events
     let upcomingEvents = [];
     if (includeAllSports) {
-      // Get events from multiple sports
-      const sports = ['NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB'];
+      // Get events from multiple sports (prioritize major leagues)
+      const sports = ['NFL', 'NBA', 'MLB', 'NHL', 'MLS', 'NCAAF', 'NCAAB'];
       const allEvents = [];
       
       for (const sportKey of sports) {
