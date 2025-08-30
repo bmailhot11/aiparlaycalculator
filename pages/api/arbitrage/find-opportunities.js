@@ -33,15 +33,11 @@ export default async function handler(req, res) {
   }
 }
 
-// Find arbitrage across ALL available sports
+// Find arbitrage across major sports only to prevent timeouts
 async function findAllSportsArbitrageOpportunities(maxResults = 1000) {
+  // Limit to major active sports to prevent timeout
   const allSports = [
-    'NFL', 'NBA', 'NHL', 'MLB', 'NCAAF', 'NCAAB', 'MLS', 'UEFA', 'Soccer', 
-    'UFC', 'Boxing', 'Tennis', 'Golf', 'Formula1', 'NASCAR', 'Cricket',
-    'Australian Football', 'Gaelic Football', 'Hurling', 'Ice Hockey',
-    'American Football', 'Basketball', 'Baseball', 'Football', 'Rugby',
-    'Volleyball', 'Table Tennis', 'Darts', 'Snooker', 'Cycling',
-    'Motorsport', 'MMA', 'Wrestling', 'Handball', 'Water Polo'
+    'NBA', 'NFL', 'NHL', 'MLB', 'NCAAB', 'Soccer'
   ];
   
   const allOpportunities = [];
@@ -50,8 +46,8 @@ async function findAllSportsArbitrageOpportunities(maxResults = 1000) {
 
   console.log(`🌍 [All Sports Arbitrage] Scanning ${allSports.length} sports for opportunities...`);
 
-  // Process sports in parallel for faster results
-  const sportsPromises = allSports.map(async (sport) => {
+  // Process sports sequentially to prevent overwhelming the API
+  for (const sport of allSports) {
     try {
       const result = await findArbitrageOpportunities(sport);
       sportsResults[sport] = {
@@ -65,15 +61,17 @@ async function findAllSportsArbitrageOpportunities(maxResults = 1000) {
       }
       
       totalGamesChecked += result.total_games_checked || 0;
-      return result;
+      
+      // Early exit if we found enough opportunities
+      if (allOpportunities.length >= maxResults) {
+        console.log(`🎯 Early exit: Found ${allOpportunities.length} opportunities, stopping scan`);
+        break;
+      }
     } catch (error) {
       console.log(`⚠️ [${sport}] Error: ${error.message}`);
       sportsResults[sport] = { opportunities: 0, games_checked: 0, error: error.message };
-      return { opportunities: [], total_games_checked: 0 };
     }
-  });
-
-  await Promise.all(sportsPromises);
+  }
 
   // Sort all opportunities by profit percentage
   allOpportunities.sort((a, b) => parseFloat(b.profit_percentage) - parseFloat(a.profit_percentage));
@@ -419,3 +417,4 @@ function calculateOptimalStakes(bestOdds, totalStake) {
     };
   });
 }
+

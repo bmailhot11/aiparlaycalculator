@@ -285,9 +285,9 @@ export default function ArbitragePage() {
     setIsLoading(true);
     
     try {
-      // Set a longer timeout for scanning all sports
+      // Set reasonable timeout for scanning sports
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 180000); // Increase to 3 minutes for massive scan
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
       
       const response = await apiFetch('/api/arbitrage/find-opportunities', {
         method: 'POST',

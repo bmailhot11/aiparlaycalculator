@@ -118,7 +118,7 @@ export default function Dashboard() {
         setBio(profileData.bio || '');
         setProfileImage(profileData.profileImage || null);
         setBankroll(profileData.bankroll || {
-          current: 1000,
+          current: 0,
           deposits: [],
           withdrawals: [],
           history: []
@@ -523,7 +523,7 @@ export default function Dashboard() {
       <GradientBG />
       <Header />
       
-      <div className="container mx-auto px-4 py-8 relative z-10">
+      <div className="container mx-auto px-4 pt-20 pb-8 relative z-10">
         {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

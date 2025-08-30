@@ -204,26 +204,6 @@ export default function SignIn() {
               </div>
             )}
 
-            {/* Google Sign In Button */}
-            <button
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-              className="w-full bg-white text-gray-900 px-4 py-3 min-h-[48px] rounded-lg font-medium text-sm sm:text-base flex items-center justify-center gap-3 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4 sm:mb-6"
-            >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Chrome className="w-5 h-5" />
-              )}
-              Continue with Google
-            </button>
-
-            {/* Divider */}
-            <div className="flex items-center gap-4 mb-4 sm:mb-6">
-              <div className="flex-1 h-px bg-[#374151]"></div>
-              <span className="text-[#9CA3AF] text-sm">or</span>
-              <div className="flex-1 h-px bg-[#374151]"></div>
-            </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
@@ -378,18 +358,6 @@ export default function SignIn() {
               </div>
             )}
 
-            {/* Premium upgrade option */}
-            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-[#374151]">
-              <div className="text-center">
-                <p className="text-[#9CA3AF] text-xs sm:text-sm mb-3">
-                  Want unlimited access to all features?
-                </p>
-                <Link href="/pricing" className="inline-flex items-center gap-2 px-4 py-3 min-h-[44px] bg-gradient-to-r from-[#F4C430] to-[#e6b829] text-[#0B0F14] font-semibold text-sm sm:text-base rounded-lg hover:opacity-90 transition-opacity">
-                  <Crown className="w-4 h-4" />
-                  Go Premium - $9.99/mo
-                </Link>
-              </div>
-            </div>
           </div>
         </div>
         </div>
