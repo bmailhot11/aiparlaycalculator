@@ -153,11 +153,20 @@ export default function Dashboard() {
   // Load subscription status (non-blocking)
   const loadSubscriptionStatus = async () => {
     try {
+      console.log('🔄 Dashboard: Loading subscription status...');
+      
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch('/api/subscription/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
+        body: JSON.stringify({ userId: user.id }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         const data = await response.json();
@@ -169,10 +178,15 @@ export default function Dashboard() {
         setIsPremiumUser(false);
       }
     } catch (error) {
-      console.error('Error loading subscription status:', error);
+      if (error.name === 'AbortError') {
+        console.log('⚠️ Dashboard: Subscription API timed out (5s)');
+      } else {
+        console.error('❌ Dashboard: Error loading subscription status:', error);
+      }
       // If subscription loading fails, default to free user (dashboard still works)
       setIsPremiumUser(false);
     } finally {
+      console.log('✅ Dashboard: Subscription loading completed');
       setSubscriptionLoading(false);
     }
   };

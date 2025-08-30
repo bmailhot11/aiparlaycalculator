@@ -54,7 +54,14 @@ export const AuthProvider = ({ children }) => {
   // Create or update user profile in database
   const createOrUpdateUserProfile = async (user) => {
     try {
-      const { data, error } = await supabase
+      console.log('📊 AuthContext: Creating/updating user profile...');
+      
+      // Add timeout to prevent hanging 
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile upsert timeout')), 5000)
+      );
+      
+      const upsertPromise = supabase
         .from('user_profiles')
         .upsert({
           user_id: user.id,
@@ -70,11 +77,19 @@ export const AuthProvider = ({ children }) => {
           onConflict: 'user_id'
         });
 
+      const { data, error } = await Promise.race([upsertPromise, timeoutPromise]);
+
       if (error) {
-        console.error('Error creating/updating user profile:', error);
+        console.error('❌ AuthContext: Error creating/updating user profile:', error);
+      } else {
+        console.log('✅ AuthContext: User profile updated successfully');
       }
     } catch (error) {
-      console.error('Error in createOrUpdateUserProfile:', error);
+      if (error.message === 'Profile upsert timeout') {
+        console.warn('⚠️ AuthContext: Profile upsert timed out (5s) - continuing...');
+      } else {
+        console.error('❌ AuthContext: Error in createOrUpdateUserProfile:', error);
+      }
     }
   };
 
