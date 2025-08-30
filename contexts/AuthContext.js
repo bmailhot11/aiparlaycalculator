@@ -123,26 +123,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Sign in with Google
+  // Sign in with Google (direct OAuth bypassing Supabase proxy)
   const signInWithGoogle = async () => {
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: process.env.NODE_ENV === 'production' 
-            ? 'https://betchekr.com/auth/callback'
-            : `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-            approval_prompt: 'force'
-          }
-        }
-      });
-
-      if (error) throw error;
+      // Store current location for redirect after auth
+      const redirectPath = window.location.pathname + window.location.search;
       
-      return { success: true, data };
+      // Redirect directly to our Google OAuth handler
+      window.location.href = `/api/auth/google?redirect=${encodeURIComponent(redirectPath)}`;
+      
+      return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
     }
