@@ -50,51 +50,55 @@ export default async function handler(req, res) {
 
     const googleUser = await userResponse.json();
 
-    // Create or sign in user with Supabase using the Google user info
-    const { data: authData, error: authError } = await supabaseAuth.auth.admin.generateLink({
-      type: 'signup',
-      email: googleUser.email,
-      password: Math.random().toString(36), // Random password, user won't use it
-      options: {
-        data: {
+    // Check if user already exists
+    const { data: existingUsers } = await supabaseAuth.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(u => u.email === googleUser.email);
+
+    let user;
+    if (existingUser) {
+      // Update existing user
+      const { data: updatedUser } = await supabaseAuth.auth.admin.updateUserById(existingUser.id, {
+        user_metadata: {
           full_name: googleUser.name,
           avatar_url: googleUser.picture,
           provider: 'google',
           provider_id: googleUser.id,
         },
-      },
-    });
-
-    if (authError) {
-      // Try to sign in instead
-      const { data: signInData, error: signInError } = await supabaseAuth.auth.signInWithPassword({
-        email: googleUser.email,
-        password: Math.random().toString(36), // This will fail, but we'll handle it
       });
+      user = updatedUser.user;
+    } else {
+      // Create new user
+      const { data: newUser } = await supabaseAuth.auth.admin.createUser({
+        email: googleUser.email,
+        email_confirm: true,
+        user_metadata: {
+          full_name: googleUser.name,
+          avatar_url: googleUser.picture,
+          provider: 'google',
+          provider_id: googleUser.id,
+        },
+      });
+      user = newUser.user;
+    }
 
-      if (signInError) {
-        // Create a session manually using admin API
-        const { data: user } = await supabaseAuth.auth.admin.createUser({
-          email: googleUser.email,
-          email_confirm: true,
-          user_metadata: {
-            full_name: googleUser.name,
-            avatar_url: googleUser.picture,
-            provider: 'google',
-            provider_id: googleUser.id,
-          },
-        });
+    if (user) {
+      // Create a proper Supabase session
+      const sessionData = {
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        expires_in: tokens.expires_in,
+        token_type: 'bearer',
+        user: user
+      };
 
-        if (user) {
-          // Set session cookies manually
-          const maxAge = 60 * 60 * 24 * 7; // 7 days
-          
-          res.setHeader('Set-Cookie', [
-            `sb-access-token=${tokens.access_token}; Max-Age=${maxAge}; Path=/; HttpOnly; Secure; SameSite=Lax`,
-            `sb-refresh-token=${tokens.refresh_token}; Max-Age=${maxAge}; Path=/; HttpOnly; Secure; SameSite=Lax`,
-          ]);
-        }
-      }
+      // Set session cookies for Supabase client
+      const maxAge = 60 * 60 * 24 * 7; // 7 days
+      
+      res.setHeader('Set-Cookie', [
+        `sb-access-token=${tokens.access_token}; Max-Age=${maxAge}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+        `sb-refresh-token=${tokens.refresh_token || ''}; Max-Age=${maxAge}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+        `sb-provider-token=${tokens.access_token}; Max-Age=${maxAge}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+      ]);
     }
 
     // Redirect to intended destination

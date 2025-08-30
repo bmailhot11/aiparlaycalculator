@@ -135,14 +135,6 @@ async function fetchLineShoppingData(sport, filters = {}) {
     // Step 3: Extract and process all betting lines
     let allLines = await extractAndProcessLines(oddsData, sport, filters);
     
-    // Fallback: if player props don't work, use h2h instead of returning nothing
-    if (allLines.length === 0 && markets.includes('player_')) {
-      console.log(`⚠️ [LineShopping] No lines found with player props for ${sport}, falling back to h2h`);
-      markets = 'h2h';
-      oddsData = await eventsCache.getOddsForEvents(upcomingEvents, markets, false);
-      allLines = await extractAndProcessLines(oddsData, sport, filters);
-    }
-    
     // Step 4: Add Pinnacle deviation calculations
     const linesWithDeviations = await calculatePinnacleDeviations(allLines);
     
@@ -190,14 +182,14 @@ async function fetchLineShoppingData(sport, filters = {}) {
 function getMarketsForLineShopping(sport, marketFilter) {
   const baseMarkets = 'h2h,spreads,totals';
   
-  // Add player props for supported sports
+  // Add player props for supported sports - exact Odds API market names
   const playerPropMarkets = {
-    'NFL': 'player_pass_tds,player_pass_yds,player_rush_yds,player_receptions,player_reception_yds,player_anytime_td',
-    'NBA': 'player_points,player_rebounds,player_assists,player_threes',
-    'NHL': 'player_goals,player_assists,player_points', 
-    'MLB': 'player_hits,player_home_runs,player_rbis,pitcher_strikeouts',
-    'NCAAF': 'player_pass_yds,player_rush_yds,player_reception_yds',
-    'NCAAB': 'player_points,player_rebounds,player_assists'
+    'NFL': 'player_pass_yds,player_rush_yds,player_reception_yds,player_pass_tds,player_rush_tds,player_reception_tds,player_receptions',
+    'NBA': 'player_points,player_rebounds,player_assists,player_threes,player_blocks,player_steals',
+    'NHL': 'player_points,player_goals,player_assists,player_shots_on_goal', 
+    'MLB': 'batter_home_runs,batter_hits,batter_rbis,pitcher_strikeouts,batter_total_bases',
+    'NCAAF': 'player_pass_yds,player_rush_yds,player_reception_yds,player_pass_tds,player_rush_tds,player_reception_tds',
+    'NCAAB': 'player_points,player_rebounds,player_assists,player_threes,player_blocks'
   };
 
   let markets = baseMarkets;
@@ -265,7 +257,7 @@ async function extractAndProcessLines(oddsData, sport, filters) {
         for (const outcome of market.outcomes || []) {
           // Extract player name for props
           let playerName = null;
-          if (market.key.includes('player_') || market.key.includes('pitcher_')) {
+          if (market.key.includes('player_') || market.key.includes('pitcher_') || market.key.includes('batter_')) {
             playerName = extractPlayerName(outcome.name, outcome.description);
           }
           
@@ -418,20 +410,29 @@ function getMarketDisplayName(marketKey) {
     'h2h': 'Moneyline',
     'spreads': 'Point Spread',
     'totals': 'Over/Under',
+    // NFL markets
     'player_pass_tds': 'Passing TDs',
     'player_pass_yds': 'Passing Yards',
     'player_rush_yds': 'Rushing Yards',
+    'player_rush_tds': 'Rushing TDs',
     'player_receptions': 'Receptions',
     'player_reception_yds': 'Receiving Yards',
-    'player_anytime_td': 'Anytime TD',
+    'player_reception_tds': 'Receiving TDs',
+    // NBA markets
     'player_points': 'Points',
     'player_rebounds': 'Rebounds',
     'player_assists': 'Assists',
     'player_threes': '3-Pointers Made',
+    'player_blocks': 'Blocks',
+    'player_steals': 'Steals',
+    // NHL markets
     'player_goals': 'Goals',
-    'player_hits': 'Hits',
-    'player_home_runs': 'Home Runs',
-    'player_rbis': 'RBIs',
+    'player_shots_on_goal': 'Shots on Goal',
+    // MLB markets (corrected to batter_)
+    'batter_hits': 'Hits',
+    'batter_home_runs': 'Home Runs',
+    'batter_rbis': 'RBIs',
+    'batter_total_bases': 'Total Bases',
     'pitcher_strikeouts': 'Strikeouts'
   };
   
